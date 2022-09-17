@@ -19,7 +19,7 @@ let conn_obj = {
 
 }
 
-let knex = require('knex')({
+global.knex = require('knex')({
   client: 'mysql2',
   connection: conn_obj,
   pool: { min: 0, max: 7 }
@@ -51,6 +51,8 @@ function base_de_datos_iniciada(){
 
   //MIDLEWARE
   app_API.use("/precios", require("./middleware/Precios"))
+  app_API.use("/admin", require("./middleware/Admin"))
 
   server_API.listen(process.env.service_port_api)
+  console.log('Servidor escuchando en: ',process.env.service_port_api)
 }

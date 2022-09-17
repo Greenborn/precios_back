@@ -8,8 +8,10 @@ exports.check_roles = function (request, response, next, paths) {
   //console.log("logged", request.path)
 
   //  if (session.isLogged == undefined) {
-  console.log("logueado", session.isLogged)
-
+  //console.log("logueado", session.isLogged)
+  //TODO: No se controlan los roles
+  next() 
+  return
   for (let i = 0; i < paths.length; i++) {
     if (paths[i]["permisos"] == undefined && request.path == paths[i].path) {
       console.log("check roles dice que pasa", request.path)

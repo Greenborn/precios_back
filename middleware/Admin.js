@@ -6,15 +6,14 @@ const { check_roles } = require("../helpers/authorization")
 module.exports = router
 
 router.use(function (request, response, next) {
-  console.log("Precios middleware", request.path)
+  console.log("Admin middleware", request.path)
   check_roles(request, response, next, paths)
 })
 
 
-router.use("/categoria-comercio", require("../routes/categoriaComercio"))
+router.use("/user", require("../routes/userAdmin"))
 
 var paths = [
- 
-  { path: "/categoria-comercio/getAll" },
-  { path: "/categoria-comercio/put_one" }
+  { path: "/user/info" },
+  { path: "/user/login" }
 ]
