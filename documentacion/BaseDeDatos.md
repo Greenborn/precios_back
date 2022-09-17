@@ -47,6 +47,7 @@ Por ej: Pure de tomate, Manzana, etc
 Por ej: kilo, unidad, litro
 - id
 - nombre
+- abreviacion
 - cargado_el
 - modificado_el
 

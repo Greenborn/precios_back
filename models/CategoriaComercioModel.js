@@ -44,4 +44,6 @@ module.exports = class CategoriaComercioModel extends BaseModel {
       }
     ]
   }
+
+  data = {}
 }
