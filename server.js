@@ -1,4 +1,5 @@
 require("dotenv").config({ path: '.env' })
+const almacenDatos = require('./controllers/almacenDatos')
 
 //conexion a base de datos
 let conn_obj = {
@@ -27,14 +28,15 @@ global.knex = require('knex')({
 
 //Es de esperar que en 3s ya tenemos conexion disponible
 setTimeout(async () => {
-  base_de_datos_iniciada()
+  await base_de_datos_iniciada()
 }, 2000)
 
-function base_de_datos_iniciada(){
+async function base_de_datos_iniciada(){
   console.log('se establecio conexion DB')
 
   let app_API = require('express')();
   let server_API = require('http').Server(app_API);
+  await almacenDatos.cargar_datos()
 
   //CORS
   let cors_origin = process.env.cors_origin.split(' ')
@@ -50,7 +52,7 @@ function base_de_datos_iniciada(){
   app_API.use(bodyParser.json())
 
   //MIDLEWARE
-  app_API.use("/precios", require("./middleware/Precios"))
+  app_API.use("/publico", require("./middleware/Publico"))
   app_API.use("/admin", require("./middleware/Admin"))
 
   server_API.listen(process.env.service_port_api)
