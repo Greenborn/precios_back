@@ -127,7 +127,12 @@ router.get('/precios', async function (req, res) {
     let res_busqueda = await hacer_busqueda( product_name, 'AND' ) 
     if (res_busqueda){
       await global.knex('search_query_history')
-              .insert({ "query": product_name, "date": new Date(), "cant_results": res_busqueda.length})
+              .insert({ 
+                "query": product_name, 
+                "date": new Date(), 
+                "cant_results": res_busqueda.length,
+                "ipv4": req.header('x-forwarded-for') || req.connection.remoteAddress
+              })
               
       res.status(200).send({ stat: true, items: res_busqueda })
     }
