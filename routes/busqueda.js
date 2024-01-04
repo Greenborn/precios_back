@@ -125,8 +125,12 @@ router.get('/precios', async function (req, res) {
   try {
     product_name = nombre_producto_filtrado( product_name)
     let res_busqueda = await hacer_busqueda( product_name, 'AND' ) 
-    if (res_busqueda)
+    if (res_busqueda){
+      await global.knex('search_query_history')
+              .insert({ "query": product_name, "date": new Date(), "cant_results": res_busqueda.length})
+              
       res.status(200).send({ stat: true, items: res_busqueda })
+    }
   } catch {
     res.status(200).send({ stat: false, items: [], error: true })
   }
