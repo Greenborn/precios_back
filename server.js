@@ -1,5 +1,4 @@
 require("dotenv").config({ path: '.env' })
-const almacenDatos = require('./controllers/almacenDatos')
 
 //conexion a base de datos
 let conn_obj = {
@@ -25,6 +24,7 @@ global.knex = require('knex')({
   connection: conn_obj,
   pool: { min: 0, max: 7 }
 });
+global.branchs_diccio = {}
 
 //Es de esperar que en 3s ya tenemos conexion disponible
 setTimeout(async () => {
@@ -36,7 +36,14 @@ async function base_de_datos_iniciada(){
 
   let app_API = require('express')();
   let server_API = require('http').Server(app_API);
-  await almacenDatos.cargar_datos()
+
+  let locales = await global.knex('branch').select()
+  
+  if (locales){
+    for (let i=0; i < locales.length; i++){
+      global.branchs_diccio[Number(locales[i].id)] = locales[i]
+    }
+  }
 
   //CORS
   let cors_origin = process.env.cors_origin.split(' ')
