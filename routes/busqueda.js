@@ -111,7 +111,11 @@ function nombre_producto_filtrado( nombre ){
     nuevo.push( palabras[i] )
   }
 
-  return nuevo.join(" ")
+  let nuevo_termino = nuevo.join(" ")
+
+  let alias = global.alias_busqueda[nuevo_termino.toLowerCase()]
+  console.log(alias)
+  return alias != undefined ? alias : nuevo_termino
 }
 
 router.get('/precios', async function (req, res) {
@@ -131,7 +135,7 @@ router.get('/precios', async function (req, res) {
                 "query": product_name, 
                 "date": new Date(), 
                 "cant_results": res_busqueda.length,
-                "ipv4": req.header('x-forwarded-for') || req.connection.remoteAddress
+                "ipv4": req?.ip ? req.ip : req.header('x-forwarded-for') || req.connection.remoteAddress
               })
               
       res.status(200).send({ stat: true, items: res_busqueda })

@@ -25,6 +25,7 @@ global.knex = require('knex')({
   pool: { min: 0, max: 7 }
 });
 global.branchs_diccio = {}
+global.alias_busqueda = {}
 
 //Es de esperar que en 3s ya tenemos conexion disponible
 setTimeout(async () => {
@@ -38,12 +39,18 @@ async function base_de_datos_iniciada(){
   let server_API = require('http').Server(app_API);
 
   let locales = await global.knex('branch').select()
+  let alias = await global.knex('alias_busqueda').select()
   
   if (locales){
     for (let i=0; i < locales.length; i++){
       global.branchs_diccio[Number(locales[i].id)] = locales[i]
     }
   }
+
+  if (alias)
+    for (let i=0; i < alias.length; i++)
+      global.alias_busqueda[alias[i].alias.toLowerCase()] = alias[i].termino
+  
 
   //CORS
   let cors_origin = process.env.cors_origin.split(' ')
