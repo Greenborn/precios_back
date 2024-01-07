@@ -121,12 +121,13 @@ function nombre_producto_filtrado( nombre ){
 router.get('/precios', async function (req, res) {
   console.log("query ", req.query)
 
-  let product_name = req.query.product_name
-
-  if (product_name.length < LIMITE_MIN_CARACTERES)
-    return res.status(200).send({ stat: false, items: [], error: true })
-
   try {
+    let product_name = req?.query?.product_name
+
+    if (product_name.length < LIMITE_MIN_CARACTERES)
+      return res.status(200).send({ stat: false, items: [], error: true })
+
+  
     product_name = nombre_producto_filtrado( product_name)
     let res_busqueda = await hacer_busqueda( product_name, 'AND' ) 
     if (res_busqueda){
@@ -135,7 +136,7 @@ router.get('/precios', async function (req, res) {
                 "query": product_name, 
                 "date": new Date(), 
                 "cant_results": res_busqueda.length,
-                "ipv4": req?.ip ? req.ip : req.header('x-forwarded-for') || req.connection.remoteAddress
+                "ipv4": req.header('x-forwarded-for')
               })
               
       res.status(200).send({ stat: true, items: res_busqueda })
