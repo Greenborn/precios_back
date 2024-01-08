@@ -34,7 +34,7 @@ async function buscar_precios_producto( id_producto ){
   })
 }
 
-function insertar_ordenado( array_, elemento ){
+function insertar_ordenado( array_, elemento, campo="price", sentido = "asc" ){
   const ARR_LEN = array_.length
 
   if (ARR_LEN == 0){
@@ -43,7 +43,10 @@ function insertar_ordenado( array_, elemento ){
   }
 
   for (let i=0; i < ARR_LEN; i++){
-    if (array_[i].price > elemento.price){
+    if (sentido == "asc" && array_[i][campo] > elemento[campo]){
+      array_.splice(i, 0, elemento)
+      return array_
+    } else if (sentido == "desc" && array_[i][campo] < elemento[campo]){
       array_.splice(i, 0, elemento)
       return array_
     }
@@ -98,8 +101,14 @@ async function hacer_busqueda( termino, metodo ){
             }
           }
 
+          let aux = []
+          for (let i=0; i < list_precios.length; i++){
+            list_precios[i]['date_time'] = new Date(list_precios[i]['date_time']).getTime()
+            aux = insertar_ordenado(aux, list_precios[i], 'date_time', "desc")
+          }
+
           console.log(SQL, params)
-          resolve(list_precios)   
+          resolve(aux)   
         } else
           resolve([])
         
