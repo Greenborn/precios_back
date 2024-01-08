@@ -7,13 +7,26 @@ const fs = require("fs")
 async function buscar_precios_producto( id_producto ){
   return new Promise(async (resolve, reject) => {
     try{
+      let branch_diccio = {}
+
       let precios = await global.knex('price')
                     .where('product_id', id_producto)
                     .andWhere('date_time', '>', knex.raw('DATE_SUB(NOW(), INTERVAL 1 MONTH)'))
                     .orderBy('date_time', 'desc')
-                    .limit(1)
+      
+      let salida = []
+      if (precios){
+        for (let i=0; i < precios.length; i++){
+          let branch_id = precios[i].branch_id
+          if (!branch_diccio[branch_id]){
+            branch_diccio[branch_id] = true
+            salida.push(precios[i])
+          }
+        }
+        resolve(salida)  
+      } else
+        resolve([])
 
-      resolve(precios)   
     } catch (error) {
       console.log(error)
       resolve([])
