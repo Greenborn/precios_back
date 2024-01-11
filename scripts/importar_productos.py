@@ -88,7 +88,10 @@ for reg in precios:
                 text_nuevo_precio = "Se actualiza precio - Carga Masiva - "+reg['name']+" - "+str(reg['price'])
                 cursor.execute("INSERT INTO news (text, datetime, type_id) VALUES (%s, %s, %s)", (text_nuevo_precio, fecha_actual, 1))
             else:
-                cursor.execute("UPDATE price SET date_time = %s WHERE id = %s", (fecha_actual, id_precio))
+                url_prod = ""
+                if "url" in reg:
+                    url_prod = reg['url']
+                cursor.execute("UPDATE price SET date_time = %s, url = %s WHERE id = %s", (fecha_actual, url_prod, id_precio))
                 print('Ya existe un precio para ese articulo en ese local, se actualiza la fecha')
                 #text_nuevo_precio = "Se reafirma precio - Carga Masiva - "+reg['name']+" - "+str(reg['price'])
                 #cursor.execute("INSERT INTO news (text, datetime, type_id) VALUES (%s, %s, %s)", (text_nuevo_precio, fecha_actual, 1))
@@ -98,7 +101,7 @@ for reg in precios:
         productos_existentes.append(reg)
 
 sql = "DELETE FROM news WHERE id NOT IN ( SELECT id  FROM ( SELECT id FROM news ORDER BY datetime DESC LIMIT 1000 ) AS subquery)"
-cursor.execute(sql)
+#cursor.execute(sql)
 
 sql = "DELETE FROM price WHERE price = 0"
 cursor.execute(sql)
