@@ -67,24 +67,24 @@ for reg in precios:
         cursor.execute("UPDATE products SET ultimo_precio_conocido = %s WHERE id = %s", (fecha_actual, id_producto))
         cursor.execute("UPDATE products SET last_price = %s WHERE id = %s", (reg['price'], id_producto))
         cursor.execute("SELECT * FROM price WHERE product_id = %s and branch_id = %s AND confiabilidad > 90 ORDER BY date_time DESC LIMIT 1  ", (id_producto, reg['branch_id']))
-        resultados = cursor.fetchone()
+        precio_db = cursor.fetchone()
 
-        if (resultados == None):
+        if (precio_db == None):
             print('No se encontro precio, se agrega')
             agregar_precio(cursor, reg)
             registros_agregados.append(reg)
         else:
-            id_precio = resultados[0]
-            if abs(round(resultados[2]) - round(reg['price'])) > 1:
-                precios_cambiados.append([ reg,  resultados ])
+            id_precio = precio_db[0]
+            if abs(round(precio_db[2]) - round(reg['price'])) > 1:
+                precios_cambiados.append([ reg,  precio_db ])
                 agregar_precio(cursor, reg)
                 text_nuevo_precio = "Se actualiza precio - Carga Masiva - "+reg['name']+" - "+str(reg['price'])
                 cursor.execute("INSERT INTO news (text, datetime, type_id) VALUES (%s, %s, %s)", (text_nuevo_precio, fecha_actual, 1))
             else:
                 cursor.execute("UPDATE price SET date_time = %s WHERE id = %s", (fecha_actual, id_precio))
                 print('Ya existe un precio para ese articulo en ese local, se actualiza la fecha')
-                text_nuevo_precio = "Se reafirma precio - Carga Masiva - "+reg['name']+" - "+str(reg['price'])
-                cursor.execute("INSERT INTO news (text, datetime, type_id) VALUES (%s, %s, %s)", (text_nuevo_precio, fecha_actual, 1))
+                #text_nuevo_precio = "Se reafirma precio - Carga Masiva - "+reg['name']+" - "+str(reg['price'])
+                #cursor.execute("INSERT INTO news (text, datetime, type_id) VALUES (%s, %s, %s)", (text_nuevo_precio, fecha_actual, 1))
                 fecha_ultimo_precio_upd.append(reg)
             precios_existentes.append(reg)
 
@@ -96,6 +96,9 @@ cursor.execute(sql)
 sql = "DELETE FROM price WHERE price = 0"
 cursor.execute(sql)
 
+sql = "SELECT count(*) as total FROM price"
+cantidad_total_precios = cursor.fetchall()
+
 conexion.commit()
 
 for precio in precios_cambiados:
@@ -103,6 +106,7 @@ for precio in precios_cambiados:
     print(precio[1])
     print("")
 
+print("Cantidad total de precios: ", cantidad_total_precios)
 print("Cantidad productos existentes: ", len(productos_existentes))
 print("Cantidad total de precios: ", len(precios))
 print("Cantidad registros erroneos: ", len(productos_erroneos))

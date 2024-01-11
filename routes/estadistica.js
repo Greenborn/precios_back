@@ -48,4 +48,34 @@ router.get('/data', async function (req, res) {
     } 
   
     
-  })
+})
+
+router.post('/precios_usuarios', async function (req, res) {
+    console.log("body ", req.body)
+    
+    try {
+        let prom_arr = []
+        for (let i=0; i < req.body.productos.length && i < 100; i++){
+            prom_arr.push(
+                global.knex('formulario_carga_comunitaria ')
+                    .insert({
+                        "fecha":req.body.fecha,
+                        "nombre":req.body.nombre,
+                        "nombre_comercio":req.body.comercio,
+                        "nombre_producto": req.body.productos[i].nombre,
+                        "marca": req.body.productos[i].marca,
+                        "precio": req.body.productos[i].precio,
+                        "presentacion": req.body.productos[i].presentacion,
+                        "IP": req.header('x-forwarded-for') ? req.header('x-forwarded-for') : "local"
+                    })
+            )
+        }
+
+        await Promise.all(prom_arr)
+        res.status(200).send({ stat: true, items: [], error: false })
+    } catch (error) {
+        console.log("error", error)
+        res.status(200).send({ stat: false, items: [], error: true })
+    } 
+
+})

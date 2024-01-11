@@ -19,4 +19,5 @@ var paths = [
  
   { path: "/busqueda/precios" },
   { path: "/estadistica/data" },
+  { path: "/estadistica/precios_usuarios" },
 ]
