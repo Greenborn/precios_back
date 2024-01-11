@@ -55,6 +55,8 @@ router.post('/precios_usuarios', async function (req, res) {
     
     try {
         let prom_arr = []
+        if (typeof req.body.fecha == "string")
+            req.body.fecha = new Date(req.body.fecha)
         for (let i=0; i < req.body.productos.length && i < 100; i++){
             prom_arr.push(
                 global.knex('formulario_carga_comunitaria ')
