@@ -29,8 +29,11 @@ fecha_ultimo_precio_upd = []
 NO_CAT = 155
 
 def agregar_precio(cursor, reg):
+    url_prod = ""
+    if "url" in reg:
+        url_prod = reg['url']
     text_nuevo_precio = "Se agregó nuevo precio - Carga Masiva - "+reg['name']+" - "+str(reg['price'])
-    cursor.execute("INSERT INTO price (product_id, price, date_time, branch_id, es_oferta, confiabilidad) VALUES (%s, %s, %s, %s, %s, %s)", (id_producto, reg['price'], fecha_actual, reg['branch_id'], 0, 100))
+    cursor.execute("INSERT INTO price (product_id, price, date_time, branch_id, es_oferta, confiabilidad, url) VALUES (%s, %s, %s, %s, %s, %s, %s)", (id_producto, reg['price'], fecha_actual, reg['branch_id'], 0, 100, url_prod))
     cursor.execute("INSERT INTO news (text, datetime, type_id) VALUES (%s, %s, %s)", (text_nuevo_precio, fecha_actual, 1))
           
 with open(path) as archivo_json:
@@ -56,7 +59,10 @@ for reg in precios:
         cursor.execute("INSERT INTO product_category (product_id, category_id) VALUES (%s, %s)", (id_producto_agregado, reg['category']))
         
         text_nuevo_precio = "Se agregó nuevo precio - Carga Masiva - "+reg['name']+" - "+str(reg['price'])
-        cursor.execute("INSERT INTO price (product_id, price, date_time, branch_id, es_oferta, confiabilidad) VALUES (%s, %s, %s, %s, %s, %s)", (id_producto_agregado, reg['price'], fecha_actual, reg['branch_id'], 0, 100))
+        url_prod = ""
+        if "url" in reg:
+            url_prod = reg['url']
+        cursor.execute("INSERT INTO price (product_id, price, date_time, branch_id, es_oferta, confiabilidad, url) VALUES (%s, %s, %s, %s, %s, %s, %s)", (id_producto_agregado, reg['price'], fecha_actual, reg['branch_id'], 0, 100, url_prod))
         cursor.execute("INSERT INTO news (text, datetime, type_id) VALUES (%s, %s, %s)", (text_nuevo_precio, fecha_actual, 1))
         print("Se inserto el producto")
         registros_agregados.append(reg)
@@ -64,6 +70,7 @@ for reg in precios:
     else:
         print("El producto ya existe")
         id_producto = resultados[0][0]
+        
         cursor.execute("UPDATE products SET ultimo_precio_conocido = %s WHERE id = %s", (fecha_actual, id_producto))
         cursor.execute("UPDATE products SET last_price = %s WHERE id = %s", (reg['price'], id_producto))
         cursor.execute("SELECT * FROM price WHERE product_id = %s and branch_id = %s AND confiabilidad > 90 ORDER BY date_time DESC LIMIT 1  ", (id_producto, reg['branch_id']))
