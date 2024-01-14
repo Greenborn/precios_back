@@ -31,6 +31,12 @@ router.get('/data', async function (req, res) {
                                 .orderBy('cantidad', "DESC")
                 res.status(200).send({ stat: true, items: salida })
                 break;
+            
+            case "mayor_aumento_diario":
+                salida = await global.knex('estadistica_aumento_diario')
+                                .orderBy('porcentaje_aumento', "DESC")
+                res.status(200).send({ stat: true, items: salida })
+                break;
 
             case "variacion_precio":
                 let precios = await global.knex('price')

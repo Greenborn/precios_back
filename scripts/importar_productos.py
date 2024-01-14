@@ -101,7 +101,7 @@ for reg in precios:
         productos_existentes.append(reg)
 
 sql = "DELETE FROM news WHERE id NOT IN ( SELECT id  FROM ( SELECT id FROM news ORDER BY datetime DESC LIMIT 1000 ) AS subquery)"
-#cursor.execute(sql)
+cursor.execute(sql)
 
 sql = "DELETE FROM price WHERE price = 0"
 cursor.execute(sql)
