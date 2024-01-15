@@ -11,6 +11,7 @@ router.get('/data', async function (req, res) {
         const ESTADISTICA = req.query?.id_estadistica
         const ID_PRODUCTO = req.query?.id_producto
         const ID_LOCAL    = req.query?.id_local
+        const LIMIT       = req.query?.limit
 
         let salida = []
         switch (ESTADISTICA) {
@@ -35,6 +36,7 @@ router.get('/data', async function (req, res) {
             case "mayor_aumento_diario":
                 salida = await global.knex('estadistica_aumento_diario')
                                 .orderBy('porcentaje_aumento', "DESC")
+                                .limit(LIMIT)
                 res.status(200).send({ stat: true, items: salida })
                 break;
 
