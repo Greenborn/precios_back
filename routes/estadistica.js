@@ -37,7 +37,10 @@ router.get('/data', async function (req, res) {
                 salida = await global.knex('estadistica_aumento_diario')
                                 .orderBy('porcentaje_aumento', "DESC")
                                 .limit(LIMIT)
-                res.status(200).send({ stat: true, items: salida })
+                let media =undefined
+                if (salida.length > 2)     
+                    media = salida[salida.length/2]
+                res.status(200).send({ stat: true, items: salida, media: media })
                 break;
 
             case "variacion_precio":

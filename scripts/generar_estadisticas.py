@@ -97,7 +97,7 @@ for producto in todos_productos:
     #print(ultimo_precio[3], hoy_inicio_dia)
     
     if (ultimo_precio[3] > hoy_inicio_dia):
-        porcentaje =  abs(ultimo_precio[2] - anteultimo_precio[2]) / (anteultimo_precio[2] / 100)
+        porcentaje =  (ultimo_precio[2] - anteultimo_precio[2]) / (anteultimo_precio[2] / 100)
         if (porcentaje > 0):
             variacion = {
                 'id_producto':        ultimo_precio[1],
