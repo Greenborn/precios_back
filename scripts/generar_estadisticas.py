@@ -82,34 +82,40 @@ for branch in branches:
 
 variacion_precios = []
 
+menos_dos_precios = 0
 for producto in todos_productos:
-    cursor.execute("SELECT * FROM price WHERE product_id = %s ORDER BY date_time DESC", (producto[0],))
+    cursor.execute("SELECT * FROM price WHERE product_id = %s ORDER BY date_time DESC LIMIT 2", (producto[0],))
     precios = cursor.fetchall()
 
-    if(len(precios)<2):
+    if len(precios) != 2:
+        menos_dos_precios = menos_dos_precios + 1
         continue
 
-    ultimo_precio = precios[len(precios)-1]
-    anteultimo_precio = precios[len(precios)-2] 
+    ultimo_precio = precios[0]
+    anteultimo_precio = precios[1] 
     
-    if ultimo_precio[3] > hoy_inicio_dia:
+    #print(ultimo_precio[3], hoy_inicio_dia)
+    
+    if (ultimo_precio[3] > hoy_inicio_dia):
         porcentaje =  abs(ultimo_precio[2] - anteultimo_precio[2]) / (anteultimo_precio[2] / 100)
-        variacion = {
-            'id_producto':        ultimo_precio[1],
-            'branch_id':          ultimo_precio[5],
-            'porcentaje_aumento': porcentaje,
-            'precio_ayer':        anteultimo_precio[2],
-            'precio_hoy':         ultimo_precio[2],
-            'nombre_producto':    producto[1],
-            'nombre_comercio':    dicc_enterprice[ dicc_branches[ultimo_precio[5]][6] ][1]
-        }
-        variacion_precios.append( variacion )
-
-variacion_precios = sorted(variacion_precios, key=lambda x: x['porcentaje_aumento'], reverse=True)
+        if (porcentaje > 0):
+            variacion = {
+                'id_producto':        ultimo_precio[1],
+                'branch_id':          ultimo_precio[5],
+                'porcentaje_aumento': porcentaje,
+                'precio_ayer':        anteultimo_precio[2],
+                'precio_hoy':         ultimo_precio[2],
+                'nombre_producto':    producto[1],
+                'nombre_comercio':    dicc_enterprice[ dicc_branches[ultimo_precio[5]][6] ][1],
+                'fecha_ultimo':       ultimo_precio[3]
+            }
+            variacion_precios.append( variacion )
 
 cursor.execute("DELETE FROM estadistica_aumento_diario WHERE 1")
 for variacion in variacion_precios:
     print(variacion)
-    cursor.execute("INSERT INTO estadistica_aumento_diario (id_producto, branch_id, porcentaje_aumento, precio_ayer, precio_hoy,nombre_producto,nombre_comercio) VALUES (%s, %s,%s, %s, %s, %s, %s)", 
-                   (variacion[0], variacion[1], variacion[2], variacion[3], variacion[4], variacion[5], variacion[6]))
+    cursor.execute("INSERT INTO estadistica_aumento_diario (id_producto, branch_id, porcentaje_aumento, precio_ayer, precio_hoy,nombre_producto,nombre_comercio, fecha_utlimo_precio) VALUES (%s, %s,%s, %s, %s, %s, %s, %s)", 
+                   (variacion['id_producto'], variacion['branch_id'], variacion['porcentaje_aumento'], variacion['precio_ayer'], variacion['precio_hoy'], variacion['nombre_producto'], variacion['nombre_comercio'], variacion['fecha_ultimo'],))
 conexion.commit()
+
+print("Menos de dos precios ", menos_dos_precios, " precios totales ",len(todos_productos) )
