@@ -92,7 +92,7 @@ async function cargar_precio( trx, articulo, producto_db ){
         let ultimo_precio = await knex('price').select()
                 .where({'product_id': producto_db.data.id, 'branch_id': articulo.branch_id })
                 .orderBy('date_time', 'desc').first()
-        if (ultimo_precio && (ultimo_precio.price - articulo?.price) > 1){
+        if (ultimo_precio && Math.abs(ultimo_precio.price - articulo?.price) > 1){
             let nuevo_precio = await nuevo_reg_precio( trx, articulo, producto_db )
             if (nuevo_precio){
                 await trx('news').insert( {
@@ -140,17 +140,19 @@ async function procesar_variacion( trx, variacion){
     if (porcentage > 50 || porcentage < -50){
         console.log(variacion)
     }
-    await trx("estadistica_aumento_diario").insert(
-        {
-            "id_producto": reg_nuevo.product_id,
-            "branch_id": reg_nuevo.branch_id,
-            "porcentaje_aumento": porcentage,
-            "precio_ayer": reg_anterior.price,
-            "precio_hoy": reg_nuevo.price,
-            "nombre_producto": reg_nuevo.name,
-            "nombre_comercio": diccio_enterprise[ diccio_branch[reg_nuevo.branch_id].enterprise_id ].name,
-            "fecha_utlimo_precio": HOY
-        })
+    if (reg_anterior.price != reg_nuevo.price){
+        await trx("estadistica_aumento_diario").insert(
+            {
+                "id_producto": reg_nuevo.product_id,
+                "branch_id": reg_nuevo.branch_id,
+                "porcentaje_aumento": porcentage,
+                "precio_ayer": reg_anterior.price,
+                "precio_hoy": reg_nuevo.price,
+                "nombre_producto": reg_nuevo.name,
+                "nombre_comercio": diccio_enterprise[ diccio_branch[reg_nuevo.branch_id].enterprise_id ].name,
+                "fecha_utlimo_precio": HOY
+            })
+    }
     return
 }
 
