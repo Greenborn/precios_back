@@ -25,7 +25,9 @@ global.knex = require('knex')({
   pool: { min: 0, max: 7 }
 });
 global.branchs_diccio = {}
+global.branch_enterprice_diccio = {}
 global.alias_busqueda = {}
+global.enterprice_diccio = {}
 
 //Es de esperar que en 3s ya tenemos conexion disponible
 setTimeout(async () => {
@@ -39,11 +41,18 @@ async function base_de_datos_iniciada(){
   let server_API = require('http').Server(app_API);
 
   let locales = await global.knex('branch').select()
+  let enterprice = await global.knex('enterprice').select()
   let alias = await global.knex('alias_busqueda').select()
   
-  if (locales){
+  if (locales && enterprice){
+    for (let i=0; i < enterprice.length; i++){
+      global.enterprice_diccio[Number(enterprice[i].id)] = enterprice[i]
+      global.branch_enterprice_diccio[Number(enterprice[i].id)] = []
+    }
+
     for (let i=0; i < locales.length; i++){
       global.branchs_diccio[Number(locales[i].id)] = locales[i]
+      global.branch_enterprice_diccio[Number(locales[i].enterprise_id)].push( locales[i] )
     }
   }
 
