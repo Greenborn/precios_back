@@ -140,7 +140,7 @@ async function procesar_variacion( trx, variacion){
     if (porcentage > 50 || porcentage < -50){
         console.log(variacion)
     }
-    if (reg_anterior.price != reg_nuevo.price){
+    if (reg_anterior.price != reg_nuevo.price && reg_nuevo.branch_id == reg_anterior.branch_id){
         await trx("estadistica_aumento_diario").insert(
             {
                 "id_producto": reg_nuevo.product_id,
