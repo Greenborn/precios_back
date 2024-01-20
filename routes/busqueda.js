@@ -94,7 +94,7 @@ async function hacer_busqueda( termino, metodo ){
                 continue
 
               diccio_precios[Number(result_precio["id"])] = result_precio
-              result_precio["branch"] = global.branchs_diccio[result_precio["branch_id"]] //quitar
+              result_precio["empresa"] = global.enterprice_diccio[global.branchs_diccio[result_precio["branch_id"]].enterprise_id]
               result_precio["locales"] = global.branch_enterprice_diccio[global.branchs_diccio[result_precio["branch_id"]].enterprise_id]
               result_precio["products"] = diccio_productos[result_precio["product_id"]]
 
