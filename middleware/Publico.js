@@ -15,6 +15,7 @@ router.use(function (request, response, next) {
 router.use("/busqueda", require("../routes/busqueda"))
 router.use("/estadistica", require("../routes/estadistica"))
 router.use("/categorias", require("../routes/categorias"))
+router.use("/productos", require("../routes/productos"))
 
 var paths = [
  
@@ -24,4 +25,5 @@ var paths = [
   { path: "/categorias/all" },
   { path: "/categorias/get_empresas_categoria" },
   { path: "/categorias/get_categoria_empresa" },
+  { path: "/productos/all" },
 ]

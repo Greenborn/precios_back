@@ -29,6 +29,8 @@ global.branch_enterprice_diccio = {}
 global.alias_busqueda = {}
 global.enterprice_diccio = {}
 global.category_diccio = {}
+global.products_diccio = {}
+global.products_category_diccio = { by_product_id: {}, by_category_id: {} }
 
 //Es de esperar que en 3s ya tenemos conexion disponible
 setTimeout(async () => {
@@ -45,6 +47,27 @@ async function base_de_datos_iniciada(){
   let enterprice = await global.knex('enterprice').select()
   let alias = await global.knex('alias_busqueda').select()
   let category = await global.knex('category').select()
+  let products = await global.knex('products').select()
+
+  let product_category = await global.knex('product_category').select()
+
+  if (product_category && products){
+    for (let i=0; i < products.length; i++)
+      global.products_diccio[Number(products[i].id)] = products[i]
+
+    for (let i=0; i < product_category.length; i++){
+      const ID_PROD = product_category[i].product_id
+      const ID_CAT = product_category[i].category_id
+      if (global.products_category_diccio.by_product_id[ID_PROD] == undefined)
+        global.products_category_diccio.by_product_id[ID_PROD] = []
+      global.products_category_diccio.by_product_id[ID_PROD].push( ID_CAT )
+      
+      if (global.products_category_diccio.by_category_id[ID_CAT] == undefined)
+        global.products_category_diccio.by_category_id[ID_CAT] = {}
+    
+      global.products_category_diccio.by_category_id[ID_CAT][ID_PROD] = global.products_diccio[ID_PROD]
+    }
+  }
   
   if (category)
     for (let i=0; i < category.length; i++)
