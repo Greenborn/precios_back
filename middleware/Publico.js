@@ -23,4 +23,5 @@ var paths = [
   { path: "/estadistica/precios_usuarios" },
   { path: "/categorias/all" },
   { path: "/categorias/get_empresas_categoria" },
+  { path: "/categorias/get_categoria_empresa" },
 ]

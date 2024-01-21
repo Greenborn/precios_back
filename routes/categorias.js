@@ -34,3 +34,21 @@ router.get('/get_empresas_categoria', async function (req, res) {
         res.status(200).send({ stat: false, items: [], error: true })
     }    
 })
+
+router.get('/get_categoria_empresa', async function (req, res) {
+    console.log("query ", req.query)
+    
+    try {
+        salida = await global.knex('enterprise_category')
+                        .where('enterprise_id', req.query.enterprise_id)
+        if (salida){
+            for (let i=0; i < salida.length; i++){
+                salida[i]['category'] = global.category_diccio[salida[i]['category_id']]
+            }
+            res.status(200).send({ stat: true, items: salida, error: true })
+        }
+    } catch (error) {
+        console.log("error", error)
+        res.status(200).send({ stat: false, items: [], error: true })
+    }    
+})

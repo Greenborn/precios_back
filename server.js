@@ -28,6 +28,7 @@ global.branchs_diccio = {}
 global.branch_enterprice_diccio = {}
 global.alias_busqueda = {}
 global.enterprice_diccio = {}
+global.category_diccio = {}
 
 //Es de esperar que en 3s ya tenemos conexion disponible
 setTimeout(async () => {
@@ -43,7 +44,12 @@ async function base_de_datos_iniciada(){
   let locales = await global.knex('branch').select()
   let enterprice = await global.knex('enterprice').select()
   let alias = await global.knex('alias_busqueda').select()
+  let category = await global.knex('category').select()
   
+  if (category)
+    for (let i=0; i < category.length; i++)
+      global.category_diccio[Number(category[i].id)] = category[i]
+
   if (locales && enterprice){
     for (let i=0; i < enterprice.length; i++){
       global.enterprice_diccio[Number(enterprice[i].id)] = enterprice[i]
