@@ -21,5 +21,6 @@ var paths = [
   { path: "/busqueda/precios" },
   { path: "/estadistica/data" },
   { path: "/estadistica/precios_usuarios" },
-  { path: "/estadistica/all" },
+  { path: "/categorias/all" },
+  { path: "/categorias/get_empresas_categoria" },
 ]
