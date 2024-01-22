@@ -37,6 +37,40 @@ setTimeout(async () => {
   await base_de_datos_iniciada()
 }, 2000)
 
+async function asignar_precio( product ){
+  let precios_aux = {}
+
+  let precios = await global.knex('price')
+                  .where({ product_id: product.id })
+                  .orderBy('date_time', 'desc')
+  if (precios){
+    for (let i=0; i < precios.length; i++){
+      let branch_id = precios[i].branch_id
+      if (!precios_aux[branch_id]){
+        precios_aux[branch_id] = precios[i]
+      }
+    }
+
+    product['precios'] = []
+    let _keys = Object.keys(precios_aux)
+    for (let i=0; i < _keys.length; i++){
+      const branch_ = global.branchs_diccio[ Number(precios_aux[_keys[i]].branch_id ) ]
+      const precio_reg = {... 
+        precios_aux[_keys[i]],
+        branch: {...
+            branch_,
+            "enterprise":{
+              ... global.enterprice_diccio[ Number(branch_.enterprise_id ) ]
+            }
+        }
+      }
+      product['precios'].push( precio_reg )
+    }
+    return true
+  } else
+    return false
+}
+
 async function base_de_datos_iniciada(){
   console.log('se establecio conexion DB')
 
@@ -48,12 +82,27 @@ async function base_de_datos_iniciada(){
   let alias = await global.knex('alias_busqueda').select()
   let category = await global.knex('category').select()
   let products = await global.knex('products').select()
-
+   
   let product_category = await global.knex('product_category').select()
 
-  if (product_category && products){
-    for (let i=0; i < products.length; i++)
+  if (product_category && products && locales && enterprice){
+
+    for (let i=0; i < enterprice.length; i++){
+      global.enterprice_diccio[Number(enterprice[i].id)] = enterprice[i]
+      global.branch_enterprice_diccio[Number(enterprice[i].id)] = []
+    }
+
+    for (let i=0; i < locales.length; i++){
+      global.branchs_diccio[Number(locales[i].id)] = locales[i]
+      global.branch_enterprice_diccio[Number(locales[i].enterprise_id)].push( locales[i] )
+    }
+
+    let proms_precios = []
+    for (let i=0; i < products.length; i++){
       global.products_diccio[Number(products[i].id)] = products[i]
+      proms_precios.push(asignar_precio( global.products_diccio[Number(products[i].id)] ))
+    }
+    await Promise.all( proms_precios )
 
     for (let i=0; i < product_category.length; i++){
       const ID_PROD = product_category[i].product_id
@@ -72,18 +121,6 @@ async function base_de_datos_iniciada(){
   if (category)
     for (let i=0; i < category.length; i++)
       global.category_diccio[Number(category[i].id)] = category[i]
-
-  if (locales && enterprice){
-    for (let i=0; i < enterprice.length; i++){
-      global.enterprice_diccio[Number(enterprice[i].id)] = enterprice[i]
-      global.branch_enterprice_diccio[Number(enterprice[i].id)] = []
-    }
-
-    for (let i=0; i < locales.length; i++){
-      global.branchs_diccio[Number(locales[i].id)] = locales[i]
-      global.branch_enterprice_diccio[Number(locales[i].enterprise_id)].push( locales[i] )
-    }
-  }
 
   if (alias)
     for (let i=0; i < alias.length; i++)
