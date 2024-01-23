@@ -35,6 +35,25 @@ router.get('/get_empresas_categoria', async function (req, res) {
     }    
 })
 
+
+router.get('/get_sub_categorias', async function (req, res) {
+    console.log("query ", req.query)
+    
+    try {
+        salida = await global.knex('category_obtaineds_category_menu')
+                        .where('category_menu_id', req.query.cat_menu_id)
+        if (salida){
+            for (let i=0; i < salida.length; i++){
+                salida[i]['category'] = global.category_diccio[salida[i]['category_id']]
+            }
+            res.status(200).send({ stat: true, items: salida, error: true })
+        }
+    } catch (error) {
+        console.log("error", error)
+        res.status(200).send({ stat: false, items: [], error: true })
+    }    
+})
+
 router.get('/get_categoria_empresa', async function (req, res) {
     console.log("query ", req.query)
     
