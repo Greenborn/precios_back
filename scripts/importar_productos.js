@@ -106,26 +106,36 @@ async function cargar_precio( trx, articulo, producto_db ){
                 "date_time": HOY, "url": ( articulo.url ) ? articulo.url : null
             } ).where("id", ultimo_precio.id)
             precios_reafirmados.push(ultimo_precio)
-        } else {
-            return 
-        }
+        } else  if (!ultimo_precio) {
+            let nuevo_precio = await nuevo_reg_precio( trx, articulo, producto_db )
+            if (nuevo_precio){
+                await trx('news').insert( {
+                    text: "Se agrega nuevo precio de "+articulo.name+" que sale "+articulo.price
+                } )
+                return
+            } else 
+                return 
+        } else 
+            return
     }
 }
 
 let nuevos_productos = []
 async function procesar_articulo(trx, articulo ){
     try {
+        
         let producto_db = await agregar_producto_sino_esta(trx, articulo)
-        let procesa_precio = await cargar_precio(trx, articulo, producto_db)
+        
         if (producto_db){
             articulo['product_id'] = producto_db.data.id
             if (producto_db.nuevo)
                 nuevos_productos.push( articulo )
+            let procesa_precio = await cargar_precio(trx, articulo, producto_db)
+            if (procesa_precio){
+                return true
+            }
         }
 
-        if (procesa_precio){
-            return true
-        }
     } catch( error ){
         console.log(error)
         return false
