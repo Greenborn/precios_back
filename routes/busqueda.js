@@ -7,6 +7,10 @@ const fs = require("fs")
 async function buscar_precios_producto( id_producto ){
   return new Promise(async (resolve, reject) => {
     try{
+      let inicio_dia = new Date()
+      inicio_dia.setHours(0,0,0,0)
+      inicio_dia.getTime()
+
       let branch_diccio = {}
 
       let precios = await global.knex('price')
@@ -18,7 +22,8 @@ async function buscar_precios_producto( id_producto ){
       if (precios){
         for (let i=0; i < precios.length; i++){
           let branch_id = precios[i].branch_id
-          if (!branch_diccio[branch_id]){
+          let fecha_precio = new Date(precios[i].date_time).getTime()
+          if (!branch_diccio[branch_id] || (branch_diccio[branch_id] && fecha_precio >= inicio_dia)){
             branch_diccio[branch_id] = true
             salida.push(precios[i])
           }
