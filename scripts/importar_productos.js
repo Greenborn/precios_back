@@ -92,6 +92,7 @@ async function cargar_precio( trx, articulo, producto_db ){
         let ultimo_precio = await knex('price').select()
                 .where({'product_id': producto_db.data.id, 'branch_id': articulo.branch_id })
                 .orderBy('date_time', 'desc').first()
+        
         if (ultimo_precio && Math.abs(ultimo_precio.price - articulo?.price) > 1){
             let nuevo_precio = await nuevo_reg_precio( trx, articulo, producto_db )
             if (nuevo_precio){
@@ -101,7 +102,7 @@ async function cargar_precio( trx, articulo, producto_db ){
                 precios_actualizados.push( [ ultimo_precio, articulo ] )
             } else 
                 return 
-        } else if (ultimo_precio && (ultimo_precio.price - articulo?.price) <= 1){
+        } else if (ultimo_precio && Math.abs(ultimo_precio.price - articulo?.price) <= 1){
             await trx('price').update( {
                 "date_time": HOY, "url": ( articulo.url ) ? articulo.url : null
             } ).where("id", ultimo_precio.id)
@@ -121,6 +122,7 @@ async function cargar_precio( trx, articulo, producto_db ){
 }
 
 let nuevos_productos = []
+
 async function procesar_articulo(trx, articulo ){
     try {
         
@@ -175,6 +177,8 @@ async function generar_estadisticas_variacion_diaria(trx, variaciones){
     await Promise.all( proms )
 }
 
+let diccio = {}
+
 setTimeout( async ()=>{
 
     const archivo_importacion = await fs.promises.readFile(rutaPrecios, 'utf8')
@@ -188,6 +192,13 @@ setTimeout( async ()=>{
         let trx = await knex.transaction()
         for (let i=0; i < array_importacion.length; i++){
             const articulo = array_importacion[i]
+            const reg_concat = articulo.name+articulo.price+articulo.branch_id
+            if (diccio[reg_concat] == undefined){
+                diccio[reg_concat] = 1
+            } else 
+                continue
+            
+            console.log("procesando", articulo)
             proms_procesar.push(procesar_articulo(trx, articulo))
         }
         for (let i =0; i < enterprises.length; i++)
