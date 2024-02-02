@@ -10,6 +10,7 @@ async function buscar_precios_producto( id_producto ){
       let inicio_dia = new Date()
       inicio_dia.setHours(0,0,0,0)
       inicio_dia.getTime()
+      inicio_dia = inicio_dia - 1000*60*60*24
 
       let branch_diccio = {}
 
@@ -23,7 +24,7 @@ async function buscar_precios_producto( id_producto ){
         for (let i=0; i < precios.length; i++){
           let branch_id = precios[i].branch_id
           let fecha_precio = new Date(precios[i].date_time).getTime()
-          if (!branch_diccio[branch_id] || (branch_diccio[branch_id] && fecha_precio >= inicio_dia)){
+          if (!branch_diccio[branch_id] || (branch_diccio[branch_id] && fecha_precio >= inicio_dia && precios[i].notas !== null)){
             branch_diccio[branch_id] = true
             salida.push(precios[i])
           }
