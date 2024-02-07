@@ -1,8 +1,10 @@
 const express = require('express')
+require("dotenv").config({ path: '../.env' })
 var router = express.Router()
 module.exports = router
 const bcrypt = require('bcrypt')
 const fs = require("fs")
+const cargador_precios = require("../scripts/importar_productos")
 
 router.get('/all', async function (req, res) {
     console.log("query ", req.query)
@@ -74,6 +76,35 @@ router.put('/cargar_nuevo_precio', async function (req, res) {
         }
         
         res.status(200).send({ stat: await global.knex('price').insert( insert ) })
+    } catch (error) {
+        console.log("error", error)
+        res.status(200).send({ stat: false,  error: "Error interno, reintente luego" })
+    }    
+})
+
+router.post('/importar', async function (req, res) {
+    console.log("data ", req.body)
+    const KEY = req.body?.key
+    try {
+        const KEY_VALID = process.env.KEY_INT
+        if (KEY != KEY_VALID){
+            res.status(200).send({ stat: false,  error: "Error interno, reintente luego" })
+            return
+        }
+
+        let trx = await knex.transaction()
+        let res_procesa = await cargador_precios.procesar_articulo( trx, req.body )
+        if (res_procesa){
+            await trx.commit()
+            res.status(200).send({ stat: true })
+            return
+        } else {
+            console.log(res_procesa)
+            await trx.rollback()
+            res.status(200).send({ stat: false,  error: "Error interno, reintente luego" })
+            return
+        }
+        
     } catch (error) {
         console.log("error", error)
         res.status(200).send({ stat: false,  error: "Error interno, reintente luego" })

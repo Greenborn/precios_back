@@ -25,14 +25,16 @@ const knex = require('knex')({
     pool: { min: 0, max: 7 }
 })
 
-const HOY = new Date()
+let HOY = new Date()
+HOY.setHours(0,0,0,1)
+/*
 const rutaPrecios = './tmp/productos'+HOY.getFullYear()+Number((HOY.getMonth()+1)).toLocaleString(undefined, {
     minimumIntegerDigits: 2,
     minimumFractionDigits: 0
   })+Number(HOY.getDate()).toLocaleString(undefined, {
     minimumIntegerDigits: 2,
     minimumFractionDigits: 0
-  })+".json"
+  })+".json"*/
 
 async function agregar_producto_sino_esta(trx, articulo){
     let producto = await knex('products').select().where('name', articulo.name).first()
@@ -85,9 +87,9 @@ async function cargar_precio( trx, articulo, producto_db ){
             await trx('news').insert( {
                 text: "Se agrega nuevo precio de "+articulo.name+" que sale "+articulo.price
             } )
-            return
+            return true
         } else 
-            return
+            return false
     } else { // si no es nuevo se crea un nuevo si el ultimo es diferente
         let ultimo_precio = await knex('price').select()
                 .where({'product_id': producto_db.data.id, 'branch_id': articulo.branch_id })
@@ -99,25 +101,28 @@ async function cargar_precio( trx, articulo, producto_db ){
                 await trx('news').insert( {
                     text: "Se actualiza precio de "+articulo.name+" que ahora sale "+articulo.price
                 } )
+                await procesar_variacion(trx, [ ultimo_precio, articulo ])
                 precios_actualizados.push( [ ultimo_precio, articulo ] )
+                return true
             } else 
-                return 
+                return false
         } else if (ultimo_precio && Math.abs(ultimo_precio.price - articulo?.price) <= 1){
             await trx('price').update( {
                 "date_time": HOY, "url": ( articulo.url ) ? articulo.url : null
             } ).where("id", ultimo_precio.id)
             precios_reafirmados.push(ultimo_precio)
+            return true
         } else  if (!ultimo_precio) {
             let nuevo_precio = await nuevo_reg_precio( trx, articulo, producto_db )
             if (nuevo_precio){
                 await trx('news').insert( {
                     text: "Se agrega nuevo precio de "+articulo.name+" que sale "+articulo.price
                 } )
-                return
+                return true
             } else 
-                return 
+                return false
         } else 
-            return
+            return false
     }
 }
 
@@ -125,7 +130,7 @@ let nuevos_productos = []
 
 async function procesar_articulo(trx, articulo ){
     try {
-        
+        console.log(articulo)
         let producto_db = await agregar_producto_sino_esta(trx, articulo)
         
         if (producto_db){
@@ -143,16 +148,19 @@ async function procesar_articulo(trx, articulo ){
         return false
     }
 }
+exports.procesar_articulo = procesar_articulo
 
 async function procesar_variacion( trx, variacion){
     
     const reg_anterior = variacion[0]
     const reg_nuevo    = variacion[1] 
+    console.log(157, variacion)
     const porcentage = (reg_nuevo.price - reg_anterior.price) / ( reg_anterior.price / 100 )
     if (porcentage > 50 || porcentage < -50){
         console.log(variacion)
     }
-    if (reg_anterior.price != reg_nuevo.price && reg_nuevo.branch_id == reg_anterior.branch_id){
+    if (reg_anterior.price != reg_nuevo.price && reg_nuevo.branch_id == reg_anterior.branch_id 
+        && reg_anterior.price != 0 && reg_nuevo.price != 0){
         await trx("estadistica_aumento_diario").insert(
             {
                 "id_producto": reg_nuevo.product_id,
@@ -167,6 +175,7 @@ async function procesar_variacion( trx, variacion){
     }
     return
 }
+exports.procesar_variacion = procesar_variacion
 
 async function generar_estadisticas_variacion_diaria(trx, variaciones){
     let proms = []
@@ -181,16 +190,16 @@ let diccio = {}
 
 setTimeout( async ()=>{
 
-    const archivo_importacion = await fs.promises.readFile(rutaPrecios, 'utf8')
-    const array_importacion   = JSON.parse(archivo_importacion)
+    //const archivo_importacion = await fs.promises.readFile(rutaPrecios, 'utf8')
+    //const array_importacion   = JSON.parse(archivo_importacion)
 
     let enterprises = await knex("enterprice").select()
     let branchs     = await knex("branch").select()
 
-    if (array_importacion && enterprises && branchs){
+    if (/*array_importacion && */ enterprises && branchs){
         const proms_procesar = []
         let trx = await knex.transaction()
-        for (let i=0; i < array_importacion.length; i++){
+        /*for (let i=0; i < array_importacion.length; i++){
             const articulo = array_importacion[i]
             const reg_concat = articulo.name+articulo.price+articulo.branch_id
             if (diccio[reg_concat] == undefined){
@@ -200,22 +209,21 @@ setTimeout( async ()=>{
             
             console.log("procesando", articulo)
             proms_procesar.push(procesar_articulo(trx, articulo))
-        }
+        }*/
         for (let i =0; i < enterprises.length; i++)
             diccio_enterprise[enterprises[i].id ] = enterprises[i]
         for (let i=0; i < branchs.length; i++)
             diccio_branch[branchs[i].id ] = branchs[i]
 
-        let procesada = await Promise.all(proms_procesar)
+        /*let procesada = await Promise.all(proms_procesar)
         if (procesada){
-            await generar_estadisticas_variacion_diaria(trx, precios_actualizados)
             await trx("news").delete().where("datetime", "<", HOY)
             await trx.commit()
             console.log("Cantidad de productos agregados: ", nuevos_productos.length)
             console.log("Cantidad de precios agregados: ", nuevos_precios_creados.length)
             console.log("Cantidad de precios reafirmados: ", precios_reafirmados.length)
             console.log("Cantidad de precios actualizados: ", precios_actualizados.length)
-        }
+        }*/
     }
 }, 100)
 

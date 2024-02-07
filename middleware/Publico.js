@@ -26,4 +26,5 @@ var paths = [
   { path: "/categorias/get_empresas_categoria" },
   { path: "/categorias/get_categoria_empresa" },
   { path: "/productos/all" },
+  { path: "/productos/importar" },
 ]
