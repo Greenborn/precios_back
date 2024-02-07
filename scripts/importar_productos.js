@@ -60,6 +60,7 @@ let diccio_enterprise = {}
 let diccio_branch = {}
 
 async function nuevo_reg_precio( trx, articulo, producto_db ){
+    
     const insert = {
         "product_id": producto_db.data.id,
         "price": articulo.price,
@@ -67,7 +68,8 @@ async function nuevo_reg_precio( trx, articulo, producto_db ){
         "branch_id": articulo.branch_id,
         "es_oferta": 0,
         "confiabilidad": 100,
-        "url": ( articulo.url ) ? articulo.url : null
+        "url": ( articulo.url ) ? articulo.url : null,
+        "time": new Date(),
     }
     let insert_ = await trx('price').insert( insert )
     if (insert_){
