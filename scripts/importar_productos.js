@@ -25,8 +25,7 @@ const knex = require('knex')({
     pool: { min: 0, max: 7 }
 })
 
-let HOY = new Date()
-HOY.setHours(0,0,0,1)
+
 /*
 const rutaPrecios = './tmp/productos'+HOY.getFullYear()+Number((HOY.getMonth()+1)).toLocaleString(undefined, {
     minimumIntegerDigits: 2,
@@ -59,8 +58,8 @@ let nuevos_precios_creados = []
 let diccio_enterprise = {}
 let diccio_branch = {}
 
-async function nuevo_reg_precio( trx, articulo, producto_db ){
-    
+async function nuevo_reg_precio( trx, articulo, producto_db, fecha_registro ){
+
     const insert = {
         "product_id": producto_db.data.id,
         "price": articulo.price,
@@ -84,7 +83,7 @@ async function nuevo_reg_precio( trx, articulo, producto_db ){
 async function cargar_precio( trx, articulo, producto_db ){
     //si es nuevo se inserta un nuevo precio
     if (producto_db.nuevo){
-        let nuevo_precio = await nuevo_reg_precio( trx, articulo, producto_db )
+        let nuevo_precio = await nuevo_reg_precio( trx, articulo, producto_db, fecha_registro )
         if (nuevo_precio){
             await trx('news').insert( {
                 text: "Se agrega nuevo precio de "+articulo.name+" que sale "+articulo.price
@@ -98,12 +97,12 @@ async function cargar_precio( trx, articulo, producto_db ){
                 .orderBy('date_time', 'desc').first()
         
         if (ultimo_precio && Math.abs(ultimo_precio.price - articulo?.price) > 1){
-            let nuevo_precio = await nuevo_reg_precio( trx, articulo, producto_db )
+            let nuevo_precio = await nuevo_reg_precio( trx, articulo, producto_db, fecha_registro )
             if (nuevo_precio){
                 await trx('news').insert( {
                     text: "Se actualiza precio de "+articulo.name+" que ahora sale "+articulo.price
                 } )
-                await procesar_variacion(trx, [ ultimo_precio, articulo ])
+                await procesar_variacion(trx, [ ultimo_precio, articulo ], fecha_registro)
                 precios_actualizados.push( [ ultimo_precio, articulo ] )
                 return true
             } else 
@@ -115,7 +114,7 @@ async function cargar_precio( trx, articulo, producto_db ){
             precios_reafirmados.push(ultimo_precio)
             return true
         } else  if (!ultimo_precio) {
-            let nuevo_precio = await nuevo_reg_precio( trx, articulo, producto_db )
+            let nuevo_precio = await nuevo_reg_precio( trx, articulo, producto_db, fecha_registro )
             if (nuevo_precio){
                 await trx('news').insert( {
                     text: "Se agrega nuevo precio de "+articulo.name+" que sale "+articulo.price
@@ -130,7 +129,7 @@ async function cargar_precio( trx, articulo, producto_db ){
 
 let nuevos_productos = []
 
-async function procesar_articulo(trx, articulo ){
+async function procesar_articulo(trx, articulo, fecha_registro ){
     try {
         console.log(articulo)
         let producto_db = await agregar_producto_sino_esta(trx, articulo)
@@ -139,7 +138,7 @@ async function procesar_articulo(trx, articulo ){
             articulo['product_id'] = producto_db.data.id
             if (producto_db.nuevo)
                 nuevos_productos.push( articulo )
-            let procesa_precio = await cargar_precio(trx, articulo, producto_db)
+            let procesa_precio = await cargar_precio(trx, articulo, producto_db, fecha_registro)
             if (procesa_precio){
                 return true
             }
@@ -152,7 +151,7 @@ async function procesar_articulo(trx, articulo ){
 }
 exports.procesar_articulo = procesar_articulo
 
-async function procesar_variacion( trx, variacion){
+async function procesar_variacion( trx, variacion, fecha_registro){
     
     const reg_anterior = variacion[0]
     const reg_nuevo    = variacion[1] 
@@ -172,7 +171,7 @@ async function procesar_variacion( trx, variacion){
                 "precio_hoy": reg_nuevo.price,
                 "nombre_producto": reg_nuevo.name,
                 "nombre_comercio": diccio_enterprise[ diccio_branch[reg_nuevo.branch_id].enterprise_id ].name,
-                "fecha_utlimo_precio": HOY
+                "fecha_utlimo_precio": fecha_registro
             })
     }
     return

@@ -92,8 +92,11 @@ router.post('/importar', async function (req, res) {
             return
         }
 
+        let HOY = new Date()
+        HOY.setHours(0,0,0,1)
+
         let trx = await knex.transaction()
-        let res_procesa = await cargador_precios.procesar_articulo( trx, req.body )
+        let res_procesa = await cargador_precios.procesar_articulo( trx, req.body, HOY )
         if (res_procesa){
             await trx.commit()
             res.status(200).send({ stat: true })
