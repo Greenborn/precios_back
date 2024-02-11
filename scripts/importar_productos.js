@@ -80,7 +80,7 @@ async function nuevo_reg_precio( trx, articulo, producto_db, fecha_registro ){
 }
 
 
-async function cargar_precio( trx, articulo, producto_db ){
+async function cargar_precio( trx, articulo, producto_db, fecha_registro ){
     //si es nuevo se inserta un nuevo precio
     if (producto_db.nuevo){
         let nuevo_precio = await nuevo_reg_precio( trx, articulo, producto_db, fecha_registro )
