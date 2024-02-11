@@ -63,7 +63,7 @@ async function nuevo_reg_precio( trx, articulo, producto_db, fecha_registro ){
     const insert = {
         "product_id": producto_db.data.id,
         "price": articulo.price,
-        "date_time": HOY,
+        "date_time": new Date(fecha_registro),
         "branch_id": articulo.branch_id,
         "es_oferta": 0,
         "confiabilidad": 100,
@@ -109,7 +109,7 @@ async function cargar_precio( trx, articulo, producto_db ){
                 return false
         } else if (ultimo_precio && Math.abs(ultimo_precio.price - articulo?.price) <= 1){
             await trx('price').update( {
-                "date_time": HOY, "url": ( articulo.url ) ? articulo.url : null
+                "date_time": new Date(fecha_registro), "time": new Date(), "url": ( articulo.url ) ? articulo.url : null
             } ).where("id", ultimo_precio.id)
             precios_reafirmados.push(ultimo_precio)
             return true
