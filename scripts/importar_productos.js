@@ -67,6 +67,7 @@ async function nuevo_reg_precio( trx, articulo, producto_db, fecha_registro ){
         "branch_id": articulo.branch_id,
         "es_oferta": 0,
         "confiabilidad": 100,
+        "notas": (articulo?.nota) ? articulo.nota : null,
         "url": ( articulo.url ) ? articulo.url : null,
         "time": new Date(),
     }

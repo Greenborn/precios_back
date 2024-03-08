@@ -42,29 +42,29 @@ for categoria in categorias:
         categorias[categoria]["category"] = id_categoria
         print(id_categoria)
 
-    for sub_categoria in categorias[categoria]['sub_items']:
-        cant_categorias_total = cant_categorias_total + 1
-        texto_sub_cat = sub_categoria['texto']
-        print("----> Procesando sub categoría: ",texto_sub_cat)
+    if 'sub_items' in categorias[categoria]:
+        for sub_categoria in categorias[categoria]['sub_items']:
+            cant_categorias_total = cant_categorias_total + 1
+            texto_sub_cat = sub_categoria['texto']
+            print("----> Procesando sub categoría: ",texto_sub_cat)
 
-        cursor.execute("SELECT * FROM category WHERE name =  %s", (str(texto_sub_cat),))
-        categoria_db = cursor.fetchone()
+            cursor.execute("SELECT * FROM category WHERE name =  %s", (str(texto_sub_cat),))
+            categoria_db = cursor.fetchone()
 
-        if categoria_db == None:
-            print("No existe la sub categoria, se insertara nueva")
-            insert = (str(texto_sub_cat), categorias[categoria]['category'])
-            print('Se insertara ',insert)
-            cursor.execute("INSERT INTO category (name, root_category_id) VALUES (%s, %s)", insert)
-            id_categoria_agregada = cursor.lastrowid
-            sub_categoria['category'] = id_categoria_agregada
-            cant_categorias_nuevas = cant_categorias_nuevas + 1
-        else:
-            cant_categorias_existentes = cant_categorias_existentes + 1
-            print("Ya existe la categoria, se actualiza JSON")
-            id_categoria = categoria_db[0]
-            sub_categoria['category'] = id_categoria
-            print(id_categoria)
-
+            if categoria_db == None:
+                print("No existe la sub categoria, se insertara nueva")
+                insert = (str(texto_sub_cat), categorias[categoria]['category'])
+                print('Se insertara ',insert)
+                cursor.execute("INSERT INTO category (name, root_category_id) VALUES (%s, %s)", insert)
+                id_categoria_agregada = cursor.lastrowid
+                sub_categoria['category'] = id_categoria_agregada
+                cant_categorias_nuevas = cant_categorias_nuevas + 1
+            else:
+                cant_categorias_existentes = cant_categorias_existentes + 1
+                print("Ya existe la categoria, se actualiza JSON")
+                id_categoria = categoria_db[0]
+                sub_categoria['category'] = id_categoria
+                print(id_categoria)
 
 conexion.commit()
 
