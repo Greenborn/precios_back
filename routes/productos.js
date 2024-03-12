@@ -123,10 +123,10 @@ router.post('/importar_alquiler', async function (req, res) {
     const KEY = req.body?.key
     try {
         const KEY_VALID = process.env.KEY_INT
-        /*if (KEY != KEY_VALID){
+        if (KEY != KEY_VALID){
             res.status(200).send({ stat: false,  error: "Error interno, reintente luego" })
             return
-        }*/
+        }
         let es_nuevo = 0
         let suma_valores_props = ""
         let keys_ = Object.keys(req.body?.especificaciones)
