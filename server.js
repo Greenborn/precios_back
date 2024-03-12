@@ -77,6 +77,26 @@ async function base_de_datos_iniciada(){
   let app_API = require('express')();
   let server_API = require('http').Server(app_API);
 
+  //CORS
+  let cors_origin = process.env.cors_origin.split(' ')
+  let cors = require('cors')
+  let corsOptions = {
+    credentials: true,
+    origin: cors_origin
+  }
+  app_API.use(cors(corsOptions))
+
+  //FORMATEO
+  let bodyParser = require("body-parser")
+  app_API.use(bodyParser.json())
+
+  //MIDLEWARE
+  app_API.use("/publico", require("./middleware/Publico"))
+  app_API.use("/admin", require("./middleware/Admin"))
+
+  server_API.listen(process.env.service_port_api)
+  console.log('Servidor escuchando en: ',process.env.service_port_api)
+
   let locales = await global.knex('branch').select()
   let enterprice = await global.knex('enterprice').select()
   let alias = await global.knex('alias_busqueda').select()
@@ -125,25 +145,4 @@ async function base_de_datos_iniciada(){
   if (alias)
     for (let i=0; i < alias.length; i++)
       global.alias_busqueda[alias[i].alias.toLowerCase()] = alias[i].termino
-  
-
-  //CORS
-  let cors_origin = process.env.cors_origin.split(' ')
-  let cors = require('cors')
-  let corsOptions = {
-    credentials: true,
-    origin: cors_origin
-  }
-  app_API.use(cors(corsOptions))
-
-  //FORMATEO
-  let bodyParser = require("body-parser")
-  app_API.use(bodyParser.json())
-
-  //MIDLEWARE
-  app_API.use("/publico", require("./middleware/Publico"))
-  app_API.use("/admin", require("./middleware/Admin"))
-
-  server_API.listen(process.env.service_port_api)
-  console.log('Servidor escuchando en: ',process.env.service_port_api)
 }

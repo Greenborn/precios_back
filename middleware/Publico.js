@@ -27,4 +27,5 @@ var paths = [
   { path: "/categorias/get_categoria_empresa" },
   { path: "/productos/all" },
   { path: "/productos/importar" },
+  { path: "/productos/importar_alquiler" },
 ]
