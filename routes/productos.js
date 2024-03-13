@@ -182,6 +182,12 @@ router.post('/importar_alquiler', async function (req, res) {
                     'fecha': HOY
                 } )
             }
+
+            await trx('propiedades_alquiler').update( {
+                "precio": req.body.precio,
+                "moneda": req.body.moneda,
+                "ultima_fecha": HOY
+            }).where('id', existe_.id)
         }
 
         await trx.commit()

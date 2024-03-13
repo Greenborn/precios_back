@@ -131,6 +131,76 @@ async function hacer_busqueda( termino, metodo ){
   })
 }
 
+async function hacer_busqueda_alquiler( termino, metodo ){
+  return new Promise(async (resolve, reject) => {
+    try{
+      let nueva_fecha = new Date()
+      nueva_fecha.setDate( nueva_fecha.getDate() - 1 )
+
+      let PALABRAS = termino.split(" ")
+
+      let SQL = "(titulo LIKE ?) "
+      params = ['%'+PALABRAS[0]+'%']
+      for (let i=1; i < PALABRAS.length; i++){
+        SQL += " AND (titulo LIKE ?) "
+        params.push('%'+PALABRAS[i]+'%')
+      }
+
+      let propiedades = await global.knex('propiedades_alquiler')
+                    .select()
+                    .whereRaw(SQL, params)
+                    .andWhere( "ultima_fecha", '>', nueva_fecha )
+
+      if (propiedades){
+        let aux = []
+        //console.log(propiedades)
+        for (let i=0; i < propiedades.length; i++){
+          aux.push(
+            {
+              "id": propiedades[i].id,
+              "tipo": "ALQUILER",
+              "moneda": propiedades[i].moneda, 
+              "product_id": propiedades[i].id,
+              "price": propiedades[i].precio,
+              "date_time": new Date(propiedades[i].ultima_fecha).getTime(),
+              "user_id": null,
+              "branch_id": '',
+              "es_oferta": 0,
+              "porcentage_oferta": null,
+              "confiabilidad": 100,
+              "url": propiedades[i].url,
+              "notas": null,
+              "time": new Date(propiedades[i].ultima_fecha).getTime(),
+              "empresa": {
+                "id": -1,
+                "name": propiedades[i].locador,
+                "url_website": ""
+              },
+              "locales": [],
+              "caracteristicas": JSON.parse(propiedades[i].especificaciones),
+              "products": {
+                "id": propiedades[i].id,
+                "name": propiedades[i].titulo,
+                "vendor_id": -1,
+                "ultimo_precio_conocido": new Date(propiedades[i].ultima_fecha),
+                "last_price": propiedades[i].precio,
+                "alias": ""
+              }
+            }
+          )
+        }
+        resolve(aux)
+      } else 
+        resolve([])
+
+    } catch (error) {
+      console.log(error)
+      resolve([])
+    }
+            
+  })
+}
+
 const LIMITE_MAX_PALABRAS = 15
 const LIMITE_MIN_CARACTERES = 3
 
@@ -158,20 +228,35 @@ router.get('/precios', async function (req, res) {
     if (product_name.length < LIMITE_MIN_CARACTERES)
       return res.status(200).send({ stat: false, items: [], error: true })
 
-  
-    product_name = nombre_producto_filtrado( product_name)
-    let res_busqueda = await hacer_busqueda( product_name, 'AND' ) 
-    if (res_busqueda){
-      await global.knex('search_query_history')
-              .insert({ 
-                "query": product_name, 
-                "date": new Date(), 
-                "cant_results": res_busqueda.length,
-                "ipv4": req.header('x-forwarded-for')
-              })
-              
-      res.status(200).send({ stat: true, items: res_busqueda })
+    if (product_name.search("alquiler") > -1){
+      let res_busqueda = await hacer_busqueda_alquiler( product_name, 'AND' ) 
+      if (res_busqueda){
+        await global.knex('search_query_history')
+                .insert({ 
+                  "query": product_name, 
+                  "date": new Date(), 
+                  "cant_results": res_busqueda.length,
+                  "ipv4": req.header('x-forwarded-for')
+                })
+                
+        res.status(200).send({ stat: true, items: res_busqueda })
+      }
+    } else {
+      product_name = nombre_producto_filtrado( product_name)
+      let res_busqueda = await hacer_busqueda( product_name, 'AND' ) 
+      if (res_busqueda){
+        await global.knex('search_query_history')
+                .insert({ 
+                  "query": product_name, 
+                  "date": new Date(), 
+                  "cant_results": res_busqueda.length,
+                  "ipv4": req.header('x-forwarded-for')
+                })
+                
+        res.status(200).send({ stat: true, items: res_busqueda })
+      }
     }
+      
   } catch {
     res.status(200).send({ stat: false, items: [], error: true })
   }
