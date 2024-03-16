@@ -143,7 +143,7 @@ router.post('/importar_alquiler', async function (req, res) {
             return
         }
         let HOY = new Date()
-        HOY.setHours(0,0,0,1)
+        //HOY.setHours(0,0,0,1)
 
         let trx = await knex.transaction()
         let existe_ = await knex('propiedades_alquiler').select().where('hash', hash).first()

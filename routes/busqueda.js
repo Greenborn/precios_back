@@ -134,63 +134,69 @@ async function hacer_busqueda( termino, metodo ){
 async function hacer_busqueda_alquiler( termino, metodo ){
   return new Promise(async (resolve, reject) => {
     try{
-      let nueva_fecha = new Date()
-      nueva_fecha.setDate( nueva_fecha.getDate() - 1 )
+      let ultimo_registro =  await global.knex('propiedades_alquiler').select().orderBy('ultima_fecha', 'desc').first()
 
-      let PALABRAS = termino.split(" ")
+      if (ultimo_registro) {
+        let nueva_fecha = new Date( ultimo_registro.ultima_fecha )
+        nueva_fecha.setDate( nueva_fecha.getDate() - 1 )
 
-      let SQL = "(titulo LIKE ?) "
-      params = ['%'+PALABRAS[0]+'%']
-      for (let i=1; i < PALABRAS.length; i++){
-        SQL += " AND (titulo LIKE ?) "
-        params.push('%'+PALABRAS[i]+'%')
-      }
+        let PALABRAS = termino.split(" ")
 
-      let propiedades = await global.knex('propiedades_alquiler')
-                    .select()
-                    .whereRaw(SQL, params)
-                    .andWhere( "ultima_fecha", '>', nueva_fecha )
-
-      if (propiedades){
-        let aux = []
-        //console.log(propiedades)
-        for (let i=0; i < propiedades.length; i++){
-          aux.push(
-            {
-              "id": propiedades[i].id,
-              "tipo": "ALQUILER",
-              "moneda": propiedades[i].moneda, 
-              "product_id": propiedades[i].id,
-              "price": propiedades[i].precio,
-              "date_time": new Date(propiedades[i].ultima_fecha).getTime(),
-              "user_id": null,
-              "branch_id": '',
-              "es_oferta": 0,
-              "porcentage_oferta": null,
-              "confiabilidad": 100,
-              "url": propiedades[i].url,
-              "notas": null,
-              "time": new Date(propiedades[i].ultima_fecha).getTime(),
-              "empresa": {
-                "id": -1,
-                "name": propiedades[i].locador,
-                "url_website": ""
-              },
-              "locales": [],
-              "caracteristicas": JSON.parse(propiedades[i].especificaciones),
-              "products": {
-                "id": propiedades[i].id,
-                "name": propiedades[i].titulo,
-                "vendor_id": -1,
-                "ultimo_precio_conocido": new Date(propiedades[i].ultima_fecha),
-                "last_price": propiedades[i].precio,
-                "alias": ""
-              }
-            }
-          )
+        let SQL = "(titulo LIKE ?) "
+        params = ['%'+PALABRAS[0]+'%']
+        for (let i=1; i < PALABRAS.length; i++){
+          SQL += " AND (titulo LIKE ?) "
+          params.push('%'+PALABRAS[i]+'%')
         }
-        resolve(aux)
-      } else 
+
+        let propiedades = await global.knex('propiedades_alquiler')
+                      .select()
+                      .whereRaw(SQL, params)
+                      .andWhere( "ultima_fecha", '>', nueva_fecha )
+
+        if (propiedades){
+          let aux = []
+          //console.log(propiedades)
+          for (let i=0; i < propiedades.length; i++){
+            aux.push(
+              {
+                "id": propiedades[i].id,
+                "tipo": "ALQUILER",
+                "moneda": propiedades[i].moneda, 
+                "product_id": propiedades[i].id,
+                "price": propiedades[i].precio,
+                "date_time": new Date(propiedades[i].ultima_fecha).getTime(),
+                "user_id": null,
+                "branch_id": '',
+                "es_oferta": 0,
+                "porcentage_oferta": null,
+                "confiabilidad": 100,
+                "url": propiedades[i].url,
+                "notas": null,
+                "time": propiedades[i].ultima_fecha,
+                "empresa": {
+                  "id": -1,
+                  "name": propiedades[i].locador,
+                  "url_website": ""
+                },
+                "locales": [],
+                "caracteristicas": JSON.parse(propiedades[i].especificaciones),
+                "products": {
+                  "id": propiedades[i].id,
+                  "name": propiedades[i].titulo,
+                  "vendor_id": -1,
+                  "ultimo_precio_conocido": new Date(propiedades[i].ultima_fecha),
+                  "last_price": propiedades[i].precio,
+                  "alias": ""
+                }
+              }
+            )
+          }
+          resolve(aux)
+        } else 
+          resolve([])
+
+      } else
         resolve([])
 
     } catch (error) {
