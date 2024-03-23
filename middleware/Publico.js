@@ -18,8 +18,8 @@ router.use("/categorias", require("../routes/categorias"))
 router.use("/productos", require("../routes/productos"))
 
 var paths = [
- 
   { path: "/busqueda/precios" },
+  { path: "/busqueda/promociones" },
   { path: "/estadistica/data" },
   { path: "/estadistica/precios_usuarios" },
   { path: "/categorias/all" },

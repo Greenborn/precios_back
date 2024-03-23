@@ -267,5 +267,110 @@ router.get('/precios', async function (req, res) {
     res.status(200).send({ stat: false, items: [], error: true })
   }
 
+})
+
+async function hacer_busqueda_promo( termino, metodo ){
+  return new Promise(async (resolve, reject) => {
+    try{
+      let ultimo_registro =  await global.knex('promociones').select().orderBy('fecha', 'desc').first()
+
+      if (ultimo_registro) {
+        let nueva_fecha = new Date( ultimo_registro.fecha )
+        nueva_fecha.setDate( nueva_fecha.getDate() - 1 )
+
+        let PALABRAS = termino.split(" ")
+//console.log(nueva_fecha)
+        let SQL = "(titulo LIKE ?) "
+        params = ['%'+PALABRAS[0]+'%']
+        for (let i=1; i < PALABRAS.length; i++){
+          SQL += " AND (titulo LIKE ?) "
+          params.push('%'+PALABRAS[i]+'%')
+        }
+
+        let promos = await global.knex('promociones')
+                      .select()
+                      .whereRaw(SQL, params)
+                      .andWhere( "fecha", '>', nueva_fecha )
+
+        if (promos){
+          let aux = []
+          //console.log(propiedades)
+          for (let i=0; i < promos.length; i++){
+            aux.push(
+              {
+                "id": promos[i].id,
+                "tipo": "PROMO",
+                "product_id": promos[i].id_producto,
+                "price": promos[i].precio,
+                "date_time": new Date(promos[i].fecha).getTime(),
+                "user_id": null,
+                "branch_id": promos[i].branch_id,
+                "es_oferta": 1,
+                "porcentage_oferta": null,
+                "confiabilidad": 100,
+                "url": promos[i].url,
+                "notas": null,
+                "time": promos[i].fecha,
+                "empresa": {
+                  "id": -1,
+                  "name": global.enterprice_diccio[global.branchs_diccio[promos[i]["branch_id"]].enterprise_id],
+                  "url_website": ""
+                },
+                "locales": global.branch_enterprice_diccio[global.branchs_diccio[promos[i]["branch_id"]].enterprise_id],
+                "caracteristicas": JSON.parse(promos[i].datos_extra),
+                "products": {
+                  "id": promos[i].id,
+                  "name": promos[i].titulo,
+                  "vendor_id": -1,
+                  "ultimo_precio_conocido": new Date(promos[i].fecha),
+                  "last_price": promos[i].precio,
+                  "alias": ""
+                }
+              }
+            )
+          }
+          resolve(aux)
+        } else 
+          resolve([])
+
+      } else
+        resolve([])
+
+    } catch (error) {
+      console.log(error)
+      resolve([])
+    }
+            
+  })
+}
+
+router.get('/promociones', async function (req, res) {
+  console.log("query ", req.query)
+
+  try {
+    let product_name = req?.query?.product_name
+
+    if (product_name.length < LIMITE_MIN_CARACTERES)
+      return res.status(200).send({ stat: false, items: [], error: true })
+
+    
+      product_name = nombre_producto_filtrado( product_name)
+      let res_busqueda = await hacer_busqueda_promo( product_name, 'AND' ) 
+      if (res_busqueda){
+        await global.knex('search_query_history')
+                .insert({ 
+                  "query": product_name, 
+                  "date": new Date(), 
+                  "cant_results": res_busqueda.length,
+                  "ipv4": req.header('x-forwarded-for')
+                })
+                
+        res.status(200).send({ stat: true, items: res_busqueda })
+      }
+  } catch {
+    res.status(200).send({ stat: false, items: [], error: true })
+  }
+
   
 })
+
