@@ -28,4 +28,5 @@ var paths = [
   { path: "/productos/all" },
   { path: "/productos/importar" },
   { path: "/productos/importar_alquiler" },
+  { path: "/productos/importar_oferta" },
 ]
