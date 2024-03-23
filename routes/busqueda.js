@@ -313,7 +313,7 @@ async function hacer_busqueda_promo( termino, metodo ){
                 "time": promos[i].fecha,
                 "empresa": {
                   "id": -1,
-                  "name": global.enterprice_diccio[global.branchs_diccio[promos[i]["branch_id"]].enterprise_id],
+                  "name": global.enterprice_diccio[global.branchs_diccio[promos[i]["branch_id"]].enterprise_id]?.name,
                   "url_website": ""
                 },
                 "locales": global.branch_enterprice_diccio[global.branchs_diccio[promos[i]["branch_id"]].enterprise_id],
