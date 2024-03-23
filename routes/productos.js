@@ -122,6 +122,10 @@ router.post('/importar_oferta', async function (req, res) {
     console.log("data ", req.body)
     const KEY = req.body?.key
     try {
+        if (KEY != KEY_VALID){
+            res.status(200).send({ stat: false,  error: "Error interno, reintente luego" })
+            return
+        }
         let HOY = new Date()
         HOY.setHours(0,0,0,1)
         
