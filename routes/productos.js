@@ -122,6 +122,7 @@ router.post('/importar_oferta', async function (req, res) {
     console.log("data ", req.body)
     const KEY = req.body?.key
     try {
+        const KEY_VALID = process.env.KEY_INT
         if (KEY != KEY_VALID){
             res.status(200).send({ stat: false,  error: "Error interno, reintente luego" })
             return
