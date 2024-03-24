@@ -130,10 +130,10 @@ router.post('/importar_oferta', async function (req, res) {
         let HOY = new Date()
         HOY.setHours(0,0,0,1)
         
-        let existe_ = await global.knex('promociones')
+        await global.knex('promociones_hoy').delete().where('fecha', '<', HOY)
+        let existe_ = await global.knex('promociones_hoy')
                         .select()
                         .where('titulo', req.body?.titulo)
-                        .andWhere('fecha', '<>', HOY)
                         .first()
         
         if (existe_){
@@ -141,7 +141,7 @@ router.post('/importar_oferta', async function (req, res) {
             return res.status(200).send({ stat: false,  error: "existe" })
         } else {
             console.log('no existe')
-            let res_ins = await global.knex('promociones').insert( {
+            let res_ins = await global.knex('promociones_hoy').insert( {
                 'orden': 0,
                 'fecha': HOY,
                 'titulo': req.body?.titulo,
