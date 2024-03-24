@@ -141,7 +141,7 @@ router.post('/importar_oferta', async function (req, res) {
             return res.status(200).send({ stat: false,  error: "existe" })
         } else {
             console.log('no existe')
-            let res_ins = await global.knex('promociones_hoy').insert( {
+            const insert_ = {
                 'orden': 0,
                 'fecha': HOY,
                 'titulo': req.body?.titulo,
@@ -150,8 +150,10 @@ router.post('/importar_oferta', async function (req, res) {
                 'datos_extra': req.body?.datos_extra,
                 'branch_id': req.body?.branch_id,
                 'url': req.body?.url
-            })
-            if (res_ins)
+            }
+            let res_ins = await global.knex('promociones_hoy').insert( insert_ )
+            let res_ins2 = await global.knex('promociones').insert( insert_ )
+            if (res_ins && res_ins2)
                 return res.status(200).send({ stat: true, nuevo: 1 })
             else
                 return res.status(200).send({ stat: false,  error: "Error interno, reintente luego" })
