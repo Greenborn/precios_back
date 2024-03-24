@@ -123,14 +123,25 @@ router.post('/importar_oferta', async function (req, res) {
     const KEY = req.body?.key
     try {
         const KEY_VALID = process.env.KEY_INT
-        if (KEY != KEY_VALID){
-            res.status(200).send({ stat: false,  error: "Error interno, reintente luego" })
-            return
-        }
+        //if (KEY != KEY_VALID){
+        //    res.status(200).send({ stat: false,  error: "Error interno, reintente luego" })
+        //    return
+        //}
         let HOY = new Date()
-        HOY.setHours(0,0,0,1)
-        
-        await global.knex('promociones_hoy').delete().where('fecha', '<', HOY)
+        HOY.setUTCHours(0,0,0,1)
+
+        let AYER = new Date()
+        AYER.setUTCDate(AYER.getDate() - 1)
+        AYER.setUTCHours(23,59,59)
+
+        let proms_arr = []
+        console.log(HOY)
+        proms_arr.push(
+            global.knex('promociones_hoy').delete().where('fecha', '<', new Date(AYER))
+        )
+        proms_arr.push(
+            global.knex('promociones').delete().where('fecha', '>', new Date(AYER))
+        )
         let existe_ = await global.knex('promociones_hoy')
                         .select()
                         .where('titulo', req.body?.titulo)
@@ -151,12 +162,18 @@ router.post('/importar_oferta', async function (req, res) {
                 'branch_id': req.body?.branch_id,
                 'url': req.body?.url
             }
-            let res_ins = await global.knex('promociones_hoy').insert( insert_ )
-            let res_ins2 = await global.knex('promociones').insert( insert_ )
-            if (res_ins && res_ins2)
+            proms_arr.push( global.knex('promociones_hoy').insert( insert_ ) )
+            proms_arr.push( await global.knex('promociones').insert( insert_ ) )
+
+            let proms_res = await Promise.all(proms_arr)
+            if (proms_res){
+                let cant_reg = await global.knex("promociones_hoy").count("id").first()
+                await global.knex("incremental_stats").update({ "value": cant_reg['count(`id`)'] }).where("key", "cant_promos")
                 return res.status(200).send({ stat: true, nuevo: 1 })
-            else
+            } else{
+                console.log(proms_res)
                 return res.status(200).send({ stat: false,  error: "Error interno, reintente luego" })
+            }
         }
     } catch (error) {
         console.log("error", error)

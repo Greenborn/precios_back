@@ -271,15 +271,9 @@ router.get('/precios', async function (req, res) {
 
 async function hacer_busqueda_promo( termino, metodo ){
   return new Promise(async (resolve, reject) => {
-    try{
-      let ultimo_registro =  await global.knex('promociones').select().orderBy('fecha', 'desc').first()
-
-      if (ultimo_registro) {
-        let nueva_fecha = new Date( ultimo_registro.fecha )
-        nueva_fecha.setDate( nueva_fecha.getDate() - 1 )
+    try{       
 
         let PALABRAS = termino.split(" ")
-//console.log(nueva_fecha)
         let SQL = "(titulo LIKE ?) "
         params = ['%'+PALABRAS[0]+'%']
         for (let i=1; i < PALABRAS.length; i++){
@@ -287,10 +281,9 @@ async function hacer_busqueda_promo( termino, metodo ){
           params.push('%'+PALABRAS[i]+'%')
         }
 
-        let promos = await global.knex('promociones')
+        let promos = await global.knex('promociones_hoy')
                       .select()
                       .whereRaw(SQL, params)
-                      .andWhere( "fecha", '>', nueva_fecha )
 
         if (promos){
           let aux = []
@@ -332,9 +325,6 @@ async function hacer_busqueda_promo( termino, metodo ){
           resolve(aux)
         } else 
           resolve([])
-
-      } else
-        resolve([])
 
     } catch (error) {
       console.log(error)
