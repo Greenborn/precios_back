@@ -145,6 +145,7 @@ router.post('/importar_oferta', async function (req, res) {
         let existe_ = await global.knex('promociones_hoy')
                         .select()
                         .where('titulo', req.body?.titulo)
+                        .andWhere('fecha', '<', new Date(AYER))
                         .first()
         
         if (existe_){

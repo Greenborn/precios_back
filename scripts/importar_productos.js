@@ -71,8 +71,9 @@ async function nuevo_reg_precio( trx, articulo, producto_db, fecha_registro ){
         "url": ( articulo.url ) ? articulo.url : null,
         "time": new Date(),
     }
-    let insert_ = await trx('price').insert( insert )
-    if (insert_){
+    let insert_1 = await trx('price').insert( insert )
+    let insert_2 = await trx('price_today').insert( insert )
+    if (insert_1 && insert_2){
         nuevos_precios_creados.push( insert )
         return insert
     } else {
@@ -112,6 +113,11 @@ async function cargar_precio( trx, articulo, producto_db, fecha_registro ){
             await trx('price').update( {
                 "date_time": new Date(fecha_registro), "time": new Date(), "url": ( articulo.url ) ? articulo.url : null
             } ).where("id", ultimo_precio.id)
+            const precio_hoy = {
+                ...ultimo_precio,
+                "date_time": new Date(fecha_registro), "time": new Date(), "url": ( articulo.url ) ? articulo.url : null
+            }
+            await trx('price_today').insert( precio_hoy )
             precios_reafirmados.push(ultimo_precio)
             return true
         } else  if (!ultimo_precio) {
@@ -134,7 +140,10 @@ async function procesar_articulo(trx, articulo, fecha_registro ){
     try {
         console.log(articulo)
         let producto_db = await agregar_producto_sino_esta(trx, articulo)
-        
+        let AYER = new Date()
+        AYER.setDate( AYER.getDate() - 1 )
+        AYER.setUTCHours(23,59,59)
+        await knex('price_today').delete().where('date_time', '<', AYER)
         if (producto_db){
             articulo['product_id'] = producto_db.data.id
             if (producto_db.nuevo)
