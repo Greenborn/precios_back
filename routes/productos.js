@@ -100,6 +100,8 @@ router.post('/importar', async function (req, res) {
         if (res_procesa){
             let cant_reg = await trx("price").count("id").first()
             await trx("incremental_stats").update({ "value": cant_reg['count(`id`)'] }).where("key", "cant_price")
+            let cant_reg2 = await trx("price_today").count("id").first()
+            await trx("incremental_stats").update({ "value": cant_reg2['count(`id`)'] }).where("key", "precios_hoy")
             await trx.commit()
             res.status(200).send({ stat: true })
             return
