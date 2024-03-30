@@ -125,10 +125,10 @@ router.post('/importar_oferta', async function (req, res) {
     const KEY = req.body?.key
     try {
         const KEY_VALID = process.env.KEY_INT
-        //if (KEY != KEY_VALID){
-        //    res.status(200).send({ stat: false,  error: "Error interno, reintente luego" })
-        //    return
-        //}
+        if (KEY != KEY_VALID){
+            res.status(200).send({ stat: false,  error: "Error interno, reintente luego" })
+            return
+        }
         let HOY = new Date()
         HOY.setUTCHours(0,0,0,1)
 
@@ -140,9 +140,6 @@ router.post('/importar_oferta', async function (req, res) {
         console.log(HOY)
         proms_arr.push(
             global.knex('promociones_hoy').delete().where('fecha', '<', new Date(AYER))
-        )
-        proms_arr.push(
-            global.knex('promociones').delete().where('fecha', '>', new Date(AYER))
         )
         let existe_ = await global.knex('promociones_hoy')
                         .select()

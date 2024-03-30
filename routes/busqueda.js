@@ -272,19 +272,25 @@ router.get('/precios', async function (req, res) {
 async function hacer_busqueda_promo( termino, metodo ){
   return new Promise(async (resolve, reject) => {
     try{       
+        let promos = undefined
 
-        let PALABRAS = termino.split(" ")
-        let SQL = "(titulo LIKE ?) "
-        params = ['%'+PALABRAS[0]+'%']
-        for (let i=1; i < PALABRAS.length; i++){
-          SQL += " AND (titulo LIKE ?) "
-          params.push('%'+PALABRAS[i]+'%')
-        }
+        if (termino !== 'cod_todas_las_ofertas'){
+          let PALABRAS = termino.split(" ")
+          let SQL = "(titulo LIKE ?) "
+          params = ['%'+PALABRAS[0]+'%']
+          for (let i=1; i < PALABRAS.length; i++){
+            SQL += " AND (titulo LIKE ?) "
+            params.push('%'+PALABRAS[i]+'%')
+          }
 
-        let promos = await global.knex('promociones_hoy')
+          promos = await global.knex('promociones_hoy')
+                        .select()
+                        .whereRaw(SQL, params)
+        } else 
+          promos = await global.knex('promociones_hoy')
                       .select()
-                      .whereRaw(SQL, params)
 
+        
         if (promos){
           let aux = []
           //console.log(propiedades)
