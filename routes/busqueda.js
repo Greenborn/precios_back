@@ -365,8 +365,24 @@ router.get('/promociones', async function (req, res) {
       }
   } catch {
     res.status(200).send({ stat: false, items: [], error: true })
-  }
+  }  
+})
 
-  
+router.get('/comercios_promociones', async function (req, res) {
+  console.log("query ", req.query)
+
+  try {
+    let comercios_promos = await global.knex('enterprice')
+                            .select('enterprice.*')
+                            .join('branch', 'branch.enterprise_id', 'enterprice.id')
+                            .join('promociones_hoy', 'promociones_hoy.branch_id', 'branch.id')
+                            .distinct('enterprice.id')
+
+    res.status(200).send({ stat: true, items: comercios_promos })
+      
+  } catch (error) {
+    console.log(error)
+    res.status(200).send({ stat: false, items: [], error: true })
+  }  
 })
 
