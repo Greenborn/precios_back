@@ -373,7 +373,7 @@ router.get('/comercios_promociones', async function (req, res) {
 
   try {
     let comercios_promos = await global.knex('enterprice')
-                            .select('enterprice.*')
+                            .select(['enterprice.*', 'promociones_hoy.branch_id'])
                             .join('branch', 'branch.enterprise_id', 'enterprice.id')
                             .join('promociones_hoy', 'promociones_hoy.branch_id', 'branch.id')
                             .distinct('enterprice.id')
