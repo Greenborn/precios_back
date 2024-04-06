@@ -75,7 +75,7 @@ async function nuevo_reg_precio( trx, articulo, producto_db, fecha_registro ){
     let insert_1 = await trx('price').insert( insert )
     precio_hoy = {...insert}
     precio_hoy['id'] = uuid.v4()
-    let insert_2 = await trx('price_today').insert( insert )
+    let insert_2 = await trx('price_today').insert( precio_hoy )
     if (insert_1 && insert_2){
         nuevos_precios_creados.push( insert )
         return insert
