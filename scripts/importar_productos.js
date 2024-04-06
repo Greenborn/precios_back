@@ -143,7 +143,7 @@ async function procesar_articulo(trx, articulo, fecha_registro ){
         let AYER = new Date()
         AYER.setDate( AYER.getDate() - 1 )
         AYER.setUTCHours(23,59,59)
-        await knex('price_today').delete().where('date_time', '<', AYER)
+        await trx('price_today').delete().where('date_time', '<', AYER)
         if (producto_db){
             articulo['product_id'] = producto_db.data.id
             if (producto_db.nuevo)
