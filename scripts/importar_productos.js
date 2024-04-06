@@ -113,10 +113,11 @@ async function cargar_precio( trx, articulo, producto_db, fecha_registro ){
             await trx('price').update( {
                 "date_time": new Date(fecha_registro), "time": new Date(), "url": ( articulo.url ) ? articulo.url : null
             } ).where("id", ultimo_precio.id)
-            const precio_hoy = {
+            let precio_hoy = {
                 ...ultimo_precio,
                 "date_time": new Date(fecha_registro), "time": new Date(), "url": ( articulo.url ) ? articulo.url : null
             }
+            delete precio_hoy.id
             await trx('price_today').insert( precio_hoy )
             precios_reafirmados.push(ultimo_precio)
             return true
