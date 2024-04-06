@@ -1,5 +1,6 @@
 require("dotenv").config({ path: '../.env' })
 const fs = require('fs')
+const uuid = require("uuid")
 
 let conn_obj = {
     host: process.env.mysql_host,
@@ -72,6 +73,8 @@ async function nuevo_reg_precio( trx, articulo, producto_db, fecha_registro ){
         "time": new Date(),
     }
     let insert_1 = await trx('price').insert( insert )
+    precio_hoy = {...insert}
+    precio_hoy['id'] = uuid.v4()
     let insert_2 = await trx('price_today').insert( insert )
     if (insert_1 && insert_2){
         nuevos_precios_creados.push( insert )
@@ -117,7 +120,7 @@ async function cargar_precio( trx, articulo, producto_db, fecha_registro ){
                 ...ultimo_precio,
                 "date_time": new Date(fecha_registro), "time": new Date(), "url": ( articulo.url ) ? articulo.url : null
             }
-            delete precio_hoy.id
+            precio_hoy['id'] = uuid.v4()
             await trx('price_today').insert( precio_hoy )
             precios_reafirmados.push(ultimo_precio)
             return true
