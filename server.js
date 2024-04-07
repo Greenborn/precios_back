@@ -22,7 +22,7 @@ let conn_obj = {
 global.knex = require('knex')({
   client: 'mysql2',
   connection: conn_obj,
-  pool: { min: 0, max: 7 }
+  pool: { min: 0, max: 1000 }
 });
 global.branchs_diccio = {}
 global.branch_enterprice_diccio = {}
