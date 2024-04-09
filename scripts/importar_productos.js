@@ -39,12 +39,18 @@ const rutaPrecios = './tmp/productos'+HOY.getFullYear()+Number((HOY.getMonth()+1
 async function agregar_producto_sino_esta(trx, articulo){
     let producto = await knex('products').select().where('name', articulo.name).first()
     if (producto){
+        if (articulo?.barcode){
+            await trx('products').update( {
+                "barcode": articulo.barcode
+            } ).where('id','=',producto.id)
+        }
         return { 'data':producto, 'nuevo': false }
     } else {
-        const insert = {
+        let insert = {
             "name": articulo.name,
-            "vendor_id": articulo.vendor_id
+            "vendor_id": articulo.vendor_id,
         }
+        if (articulo?.barcode) insert['barcode'] = articulo.barcode
         let nuevo_reg = await trx('products').insert( insert )
         await trx('product_category').insert( {
             "product_id": nuevo_reg[0],
