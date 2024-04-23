@@ -14,56 +14,76 @@ conexion = mysql.connector.connect(
 cursor = conexion.cursor()
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--producto", type=str, help="Nombre de producto")
-parser.add_argument("--alias", type=str, help="Nombre de producto")
-parser.add_argument("--refiere", type=str, help="Nombre de producto refiere")
+parser.add_argument("--termino_busqueda", type=str, help="Termino de búsqueda producto")
 args = parser.parse_args()
 
-producto = args.producto
-alias = args.alias
-refiere_nombre = args.refiere
-print("Buscando producto: ", producto, "alias: ", alias, "refiere: ", refiere_nombre)
+termino_busqueda = args.termino_busqueda
 
-cursor.execute(f"SELECT * FROM products WHERE name LIKE  '%{producto}%'")
-productos = cursor.fetchall()
+offset = 0
+if (termino_busqueda == None):
+    while True:
+        print("No se indico termino_busqueda, se muestra sugerencia del primer producto sin alias \n")
+        cursor.execute(f"SELECT * FROM products WHERE alias is null or alias = '' limit 1 offset "+str(offset))
+        sugerencia = cursor.fetchone()
+        print(sugerencia)
 
+        acepta = input("¿Acepta Sugerencia? (s/n): \n")
+
+        if (acepta == 'n'):
+            print("Se avanza al siguiente \n")
+            offset = offset + 1
+            continue
+
+        if (acepta == 's'):
+            termino_busqueda = input("Ingrese termino de búsqueda: \n")
+            break
+
+while True:
+    print("Buscando producto: ", termino_busqueda)
+    cursor.execute(f"SELECT * FROM products WHERE name LIKE  '%{termino_busqueda}%'")
+    productos = cursor.fetchall()
+
+    numero = 1
+    for reg in productos:
+        print(numero, ' - ', reg)
+        numero = numero + 1
+
+    referenciado = input("Indicar numero de producto referenciado: (-1 para repetir búsqueda) \n")
+
+    if (referenciado != '-1'):
+        break
+    else:
+        termino_busqueda = input("Ingrese termino de búsqueda: \n")
+
+prod_ref = productos[int(referenciado) - 1]
+alias = input("Indicar alias ("+prod_ref[1]+"): \n")
+
+pos_actual = 0
 for reg in productos:
-    print(reg)
+    print("Registro encontrado: \n")
+    entrada = input("¿'"+alias+"' es alias del producto '"+reg[1]+"' ? (s/n/a): ("+str(pos_actual)+"/"+str(len(productos))+") \n")
+    print("Se ingresó: ", entrada)
+    pos_actual = pos_actual + 1
+    if (entrada == 'a'):
+        print("saliendo \n")
+        exit()
 
-if (alias != None):
-    print("Buscando Alias", alias)
-    cursor.execute(f"SELECT * FROM products_alias WHERE alias LIKE  '%{alias}%'")
-    res_alias = cursor.fetchall()
-    for reg_alias in res_alias:
-        print(reg_alias)
+    if (entrada == 'n'):
+        print("Ignorando \n")
+        continue
 
-if (len(productos) > 1):
-    print("Hay multiples coincidencias")
-    exit()
-id_prod_adquirido = productos[0][0]
+    if (entrada == 's'):
+        print('Agregando alias \n')
 
-if (alias == None or refiere_nombre == None):
-    print("No hay alias o  refiere nombre")
-    exit()
+    print("")
 
-cursor.execute("SELECT * FROM productos_estadisticas WHERE name =  %s", (refiere_nombre,))
-existe = cursor.fetchone()
 
-id_refiere_prod = 0
-if (existe != None):
-    id_refiere_prod = existe[0]
-    print("Ya existe el producto en productos_estadisticas")
-else:
-    insert = (refiere_nombre, productos[0][2], productos[0][3])
-    cursor.execute("INSERT INTO productos_estadisticas (name, vendor_id, fecha_actualizacion ) VALUES (%s, %s, %s)", insert)
-    id_refiere_prod = cursor.lastrowid
-    print("Se crea el producto en productos_estadisticas: ", id_refiere_prod)
-
+"""
 insert_alias = (alias, id_refiere_prod, id_prod_adquirido)
 cursor.execute("INSERT INTO products_alias (alias, product_id, id_adquirido ) VALUES (%s, %s, %s)", insert_alias)
 
 conexion.commit()
 
 print("Alias relacionado a producto")
-
+"""
 conexion.close()
