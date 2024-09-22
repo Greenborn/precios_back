@@ -82,6 +82,24 @@ router.put('/cargar_nuevo_precio', async function (req, res) {
     }    
 })
 
+async function procesa_item(trx, item, HOY){
+    return new Promise(async (resolve, reject) => {
+        let res_procesa = await cargador_precios.procesar_articulo( trx, item, HOY )
+        if (res_procesa){
+            let cant_reg = await global.knex("price").count("id").first()
+            await trx("incremental_stats").update({ "value": cant_reg['count(`id`)'] }).where("key", "cant_price")
+            let cant_reg2 = await global.knex("price_today").count("id").first()
+            await trx("incremental_stats").update({ "value": cant_reg2['count(`id`)'] }).where("key", "precios_hoy")
+            resolve({ stat: true })
+            return
+        } else {
+            console.log(res_procesa)
+            resolve({ stat: false, error: "Error interno, reintente luego" })
+            return
+        }
+    })
+}
+
 router.post('/importar', async function (req, res) {
     console.log("data ", req.body)
     const KEY = req.body?.key
@@ -94,19 +112,24 @@ router.post('/importar', async function (req, res) {
 
         let HOY = new Date()
         HOY.setHours(0,0,0,1)
+        const ARR_IMPORTA = req.body?.lst_importa
 
         let trx = await knex.transaction()
-        let res_procesa = await cargador_precios.procesar_articulo( trx, req.body, HOY )
-        if (res_procesa){
-            let cant_reg = await trx("price").count("id").first()
-            await trx("incremental_stats").update({ "value": cant_reg['count(`id`)'] }).where("key", "cant_price")
-            let cant_reg2 = await trx("price_today").count("id").first()
-            await trx("incremental_stats").update({ "value": cant_reg2['count(`id`)'] }).where("key", "precios_hoy")
+
+        let proms_arr= []
+
+        for (let index = 0; index < ARR_IMPORTA.length; index++) {
+            let item = ARR_IMPORTA[index]
+            proms_arr.push( procesa_item(trx, item, HOY) )
+        }
+
+        let res_proms = await Promise.all(proms_arr)
+        if (res_proms){
             await trx.commit()
-            res.status(200).send({ stat: true })
+            res.status(200).send({ stat: true, res: res_proms })
             return
         } else {
-            console.log(res_procesa)
+            console.log(res_proms)
             await trx.rollback()
             res.status(200).send({ stat: false,  error: "Error interno, reintente luego" })
             return
