@@ -22,7 +22,7 @@ router.get('/all', async function (req, res) {
 let diccio_limit = {}
 
 router.put('/cargar_nuevo_precio', async function (req, res) {
-    console.log("data ", req.body)
+    //console.log("data ", req.body)
     
     try {
         const AHORA = new Date()
@@ -85,7 +85,7 @@ router.put('/cargar_nuevo_precio', async function (req, res) {
 async function procesa_item(trx, item, HOY){
     return new Promise(async (resolve, reject) => {
         let res_procesa = await cargador_precios.procesar_articulo( trx, item, HOY )
-        if (res_procesa){
+        if (res_procesa.stat){
             let cant_reg = await global.knex("price").count("id").first()
             await trx("incremental_stats").update({ "value": cant_reg['count(`id`)'] }).where("key", "cant_price")
             let cant_reg2 = await global.knex("price_today").count("id").first()
@@ -94,19 +94,19 @@ async function procesa_item(trx, item, HOY){
             return
         } else {
             console.log(res_procesa)
-            resolve({ stat: false, error: "Error interno, reintente luego" })
+            resolve({ stat: false, error: res_procesa?.text ? res_procesa.text :"Error interno, reintente luego" })
             return
         }
     })
 }
 
 router.post('/importar', async function (req, res) {
-    console.log("data ", req.body)
+    //console.log("data ", req.body)
     const KEY = req.body?.key
     try {
         const KEY_VALID = process.env.KEY_INT
         if (KEY != KEY_VALID){
-            res.status(200).send({ stat: false,  error: "Error interno, reintente luego" })
+            res.status(200).send({ stat: false,  error: "Error interno, reintente luego_" })
             return
         }
 
@@ -192,14 +192,14 @@ async function procesar_oferta(item, HOY, AYER){
 }
 
 router.post('/importar_oferta', async function (req, res) {
-    console.log("data ", req.body)
+    //console.log("data ", req.body)
     const KEY = req.body?.key
     try {
         const KEY_VALID = process.env.KEY_INT
         const ARR_IMPORTA = req.body?.lst_importa
 
         if (KEY != KEY_VALID){
-            res.status(200).send({ stat: false,  error: "Error interno, reintente luego" })
+            res.status(200).send({ stat: false,  error: "Error interno, reintente luego_" })
             return
         }
         let HOY = new Date()

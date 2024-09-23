@@ -37,6 +37,10 @@ const rutaPrecios = './tmp/productos'+HOY.getFullYear()+Number((HOY.getMonth()+1
   })+".json"*/
 
 async function agregar_producto_sino_esta(trx, articulo){
+    console.log('agregar_producto_sino_esta ', articulo)
+    if (articulo.category == '')
+        return { stat:false, text: 'sin categoria'}
+
     let producto = await knex('products').select().where('name', articulo.name).first()
     if (producto){
         if (articulo?.barcode){
@@ -44,7 +48,7 @@ async function agregar_producto_sino_esta(trx, articulo){
                 "barcode": articulo.barcode
             } ).where('id','=',producto.id)
         }
-        return { 'data':producto, 'nuevo': false }
+        return { stat: true, 'data':producto, 'nuevo': false }
     } else {
         let insert = {
             "name": articulo.name,
@@ -56,7 +60,7 @@ async function agregar_producto_sino_esta(trx, articulo){
             "product_id": nuevo_reg[0],
             "category_id": articulo.category
         } )
-        return { 'data': {...insert, "id": nuevo_reg[0] }, 'nuevo': true }
+        return { stat: true, 'data': {...insert, "id": nuevo_reg[0] }, 'nuevo': true }
     }
 }
 let precios_reafirmados = []
@@ -154,19 +158,19 @@ async function procesar_articulo(trx, articulo, fecha_registro ){
         AYER.setDate( AYER.getDate() - 1 )
         AYER.setUTCHours(23,59,59)
         await trx('price_today').delete().where('date_time', '<', AYER)
-        if (producto_db){
+        if (producto_db.stat){
             articulo['product_id'] = producto_db.data.id
             if (producto_db.nuevo)
                 nuevos_productos.push( articulo )
             let procesa_precio = await cargar_precio(trx, articulo, producto_db, fecha_registro)
             if (procesa_precio){
-                return true
+                return { stat: true }
             }
-        }
+        } return { stat: false, text: producto_db.text }
 
     } catch( error ){
         console.log(error)
-        return false
+        return { stat: false, text: error}
     }
 }
 exports.procesar_articulo = procesar_articulo

@@ -22,7 +22,7 @@ let conn_obj = {
 global.knex = require('knex')({
   client: 'mysql2',
   connection: conn_obj,
-  pool: { min: 0, max: 1000 }
+  pool: { min: 0, max: 800 }
 });
 global.branchs_diccio = {}
 global.branch_enterprice_diccio = {}
@@ -97,7 +97,7 @@ async function base_de_datos_iniciada(){
   server_API.listen(process.env.service_port_api)
   console.log('Servidor escuchando en: ',process.env.service_port_api)
 
-  let locales = await global.knex('branch').select()
+  /*let locales = await global.knex('branch').select()
   let enterprice = await global.knex('enterprice').select()
   let alias = await global.knex('alias_busqueda').select()
   let category = await global.knex('category').select()
@@ -144,5 +144,5 @@ async function base_de_datos_iniciada(){
 
   if (alias)
     for (let i=0; i < alias.length; i++)
-      global.alias_busqueda[alias[i].alias.toLowerCase()] = alias[i].termino
+      global.alias_busqueda[alias[i].alias.toLowerCase()] = alias[i].termino*/
 }
