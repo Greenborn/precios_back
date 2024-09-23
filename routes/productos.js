@@ -161,7 +161,7 @@ async function procesar_oferta(trx, item, HOY, AYER){
                 'branch_id': item.branch_id,
                 'url': item.url
             }
-            proms_arr.push( trx('promociones_hoy').delete().where('titulo', item.titulo) )
+            proms_arr.push( trx('promociones_hoy').delete().where({'titulo' : item.titulo}) )
             proms_arr.push( trx('promociones_hoy').insert( insert_ ) )
             proms_arr.push( trx('promociones').insert( insert_ ) )
 
