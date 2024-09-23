@@ -120,7 +120,7 @@ router.post('/importar', async function (req, res) {
         let AYER = new Date()
         AYER.setDate( AYER.getDate() - 1 )
         AYER.setUTCHours(23,59,59)
-        proms_arr.push( trx('price_today').delete().where('date_time', '<', AYER) )
+        //proms_arr.push( trx('price_today').delete().where('date_time', '<', AYER) )
         for (let index = 0; index < ARR_IMPORTA.length; index++) {
             let item = ARR_IMPORTA[index]
             proms_arr.push( procesa_item(trx, item, HOY) )
@@ -151,9 +151,9 @@ async function procesar_oferta(trx, item, HOY, AYER){
         
         let proms_arr = []
         console.log(HOY)
-        proms_arr.push(
-            global.knex('promociones_hoy').delete().where('fecha', '<', new Date(AYER))
-        )
+        //proms_arr.push(
+        //    global.knex('promociones_hoy').delete().where('fecha', '<', new Date(AYER))
+        //)
         let existe_ = await global.knex('promociones_hoy')
                         .select()
                         .where('titulo', '=', item.titulo)

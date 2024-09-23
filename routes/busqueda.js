@@ -19,7 +19,7 @@ async function buscar_precios_producto( id_producto ){
                     .where('product_id', id_producto)
                     .andWhere('date_time', '>', knex.raw('DATE_SUB(NOW(), INTERVAL 1 MONTH)'))
                     .orderBy('date_time', 'desc')
-                    .limit(200)
+                    .limit(20)
       
       let salida = []
       if (precios){
@@ -83,7 +83,7 @@ async function hacer_busqueda( termino, metodo ){
                     .select()
                     .from('products')
                     .whereRaw(SQL, params)
-                    .limit(2000)
+                    .limit(200)
 
       let diccio_productos = {}
       let diccio_precios = {}

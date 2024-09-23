@@ -38,7 +38,6 @@ const rutaPrecios = './tmp/productos'+HOY.getFullYear()+Number((HOY.getMonth()+1
 
 async function agregar_producto_sino_esta(trx, articulo){
     console.log('agregar_producto_sino_esta ', articulo)
-    
     if (articulo.category == '' && articulo?.category_name){
         let category_db = await knex('category').select().where('name', articulo.category_name).first()
         articulo.category = category_db.id
