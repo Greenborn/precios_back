@@ -150,7 +150,7 @@ async function procesar_oferta(trx, item, HOY, AYER){
     return new Promise(async (resolve, reject) => {
         try{
             if (!item?.titulo)
-                return resolve({ stat: false,  error: "Revisar titulo ", 'item':item })
+                return resolve({ stat: false,  error: "Revisar titulo ", 'item':JSON.stringify(item) })
             
             let proms_arr = []
             
