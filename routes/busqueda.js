@@ -4,6 +4,7 @@ module.exports = router
 const bcrypt = require('bcrypt')
 const fs = require("fs")
 
+
 async function buscar_precios_producto( id_producto ){
   return new Promise(async (resolve, reject) => {
     try{
@@ -18,9 +19,11 @@ async function buscar_precios_producto( id_producto ){
                     .where('product_id', id_producto)
                     .andWhere('date_time', '>', knex.raw('DATE_SUB(NOW(), INTERVAL 1 MONTH)'))
                     .orderBy('date_time', 'desc')
+                    .limit(200)
       
       let salida = []
       if (precios){
+        console.log('buscar_precios_producto precios', precios.length, 'id_producto ', id_producto)
         for (let i=0; i < precios.length; i++){
           let branch_id = precios[i].branch_id
           let fecha_precio = new Date(precios[i].date_time).getTime()
@@ -35,7 +38,7 @@ async function buscar_precios_producto( id_producto ){
         resolve([])
 
     } catch (error) {
-      console.log(error)
+      console.log('buscar_precios_producto',error)
       resolve([])
     }       
   })
@@ -80,6 +83,7 @@ async function hacer_busqueda( termino, metodo ){
                     .select()
                     .from('products')
                     .whereRaw(SQL, params)
+                    .limit(20)
 
       let diccio_productos = {}
       let diccio_precios = {}
