@@ -157,7 +157,7 @@ async function procesar_oferta(trx, item, HOY, AYER){
                 'titulo': item.titulo,
                 'id_producto': -1,
                 'precio': item.precio,
-                'datos_extra': item.datos_extra,
+                'datos_extra': item?.datos_extra ? item?.datos_extra : '{ }',
                 'branch_id': item.branch_id,
                 'url': item.url
             }
