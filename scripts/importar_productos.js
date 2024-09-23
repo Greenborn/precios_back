@@ -38,8 +38,17 @@ const rutaPrecios = './tmp/productos'+HOY.getFullYear()+Number((HOY.getMonth()+1
 
 async function agregar_producto_sino_esta(trx, articulo){
     console.log('agregar_producto_sino_esta ', articulo)
-    if (articulo.category == '')
-        return { stat:false, text: 'sin categoria'}
+    
+    if (articulo.category == '' && articulo?.category_name){
+        let category_db = await knex('category').select().where('name', articulo.category_name).first()
+        articulo.category = category_db.id
+    } else {
+        if (articulo.category_name == '' || !articulo?.category_name)
+            return { stat: false, text: 'Falta category_name' }
+
+        let nueva_cat = await trx('category').insert( { name: articulo.category_name } )
+        articulo.category = nueva_cat[0]
+    }
 
     let producto = await knex('products').select().where('name', articulo.name).first()
     if (producto){
