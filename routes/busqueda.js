@@ -83,7 +83,7 @@ async function hacer_busqueda( termino, metodo ){
                     .select()
                     .from('products')
                     .whereRaw(SQL, params)
-                    .limit(20)
+                    .limit(2000)
 
       let diccio_productos = {}
       let diccio_precios = {}

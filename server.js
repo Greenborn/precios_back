@@ -105,7 +105,7 @@ async function base_de_datos_iniciada(){
    
   let product_category = await global.knex('product_category').select()
 
-  /*if (product_category && products && locales && enterprice){
+  if (product_category && products && locales && enterprice){
 
     for (let i=0; i < enterprice.length; i++){
       global.enterprice_diccio[Number(enterprice[i].id)] = enterprice[i]
@@ -116,7 +116,7 @@ async function base_de_datos_iniciada(){
       global.branchs_diccio[Number(locales[i].id)] = locales[i]
       global.branch_enterprice_diccio[Number(locales[i].enterprise_id)].push( locales[i] )
     }
-
+/*
     let proms_precios = []
     for (let i=0; i < products.length; i++){
       global.products_diccio[Number(products[i].id)] = products[i]
@@ -135,8 +135,8 @@ async function base_de_datos_iniciada(){
         global.products_category_diccio.by_category_id[ID_CAT] = {}
     
       global.products_category_diccio.by_category_id[ID_CAT][ID_PROD] = global.products_diccio[ID_PROD]
-    }
-  }*/
+    }*/
+  }
   
   if (category)
     for (let i=0; i < category.length; i++)
