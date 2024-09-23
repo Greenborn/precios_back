@@ -87,9 +87,9 @@ async function procesa_item(trx, item, HOY){
         let res_procesa = await cargador_precios.procesar_articulo( trx, item, HOY )
         if (res_procesa.stat){
             let cant_reg = await global.knex("price").count("id").first()
-            await trx("incremental_stats").update({ "value": cant_reg['count(`id`)'] }).where("key", "cant_price")
+            await global.knex("incremental_stats").update({ "value": cant_reg['count(`id`)'] }).where("key", "cant_price")
             let cant_reg2 = await global.knex("price_today").count("id").first()
-            await trx("incremental_stats").update({ "value": cant_reg2['count(`id`)'] }).where("key", "precios_hoy")
+            await global.knex("incremental_stats").update({ "value": cant_reg2['count(`id`)'] }).where("key", "precios_hoy")
             resolve({ stat: true })
             return
         } else {
