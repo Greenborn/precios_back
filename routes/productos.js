@@ -148,49 +148,54 @@ const MD5 = function(d){var r = M(V(Y(X(d),8*d.length)));return r.toLowerCase()}
 
 async function procesar_oferta(trx, item, HOY, AYER){
     return new Promise(async (resolve, reject) => {
-        
-        let proms_arr = []
-        console.log(HOY)
-        //proms_arr.push(
-        //    global.knex('promociones_hoy').delete().where('fecha', '<', new Date(AYER))
-        //)
-        let existe_ = await global.knex('promociones_hoy')
-                        .select()
-                        .where('titulo', '=', item.titulo)
-                        .andWhere('fecha', '<', new Date(AYER))
-                        .first()
-        
-        if (existe_){
-            console.log('existe')
-            resolve({ stat: false, error: "Ya existe una oferta con ese título" })
-            return
-        } else {
-            console.log('no existe')
-            const insert_ = {
-                'orden': 0,
-                'fecha': HOY,
-                'titulo': item.titulo,
-                'id_producto': -1,
-                'precio': item.precio,
-                'datos_extra': item.datos_extra,
-                'branch_id': item.branch_id,
-                'url': item.url
-            }
-            proms_arr.push( trx('promociones_hoy').insert( insert_ ) )
-            proms_arr.push( trx('promociones').insert( insert_ ) )
+        try{
+            let proms_arr = []
+            console.log(HOY)
+            //proms_arr.push(
+            //    global.knex('promociones_hoy').delete().where('fecha', '<', new Date(AYER))
+            //)
+            let existe_ = await global.knex('promociones_hoy')
+                            .select()
+                            .where('titulo', '=', item?.titulo)
+                            .andWhere('fecha', '<', new Date(AYER))
+                            .first()
+            
+            if (existe_){
+                console.log('existe')
+                resolve({ stat: false, error: "Ya existe una oferta con ese título" })
+                return
+            } else {
+                console.log('no existe')
+                const insert_ = {
+                    'orden': 0,
+                    'fecha': HOY,
+                    'titulo': item.titulo,
+                    'id_producto': -1,
+                    'precio': item.precio,
+                    'datos_extra': item.datos_extra,
+                    'branch_id': item.branch_id,
+                    'url': item.url
+                }
+                proms_arr.push( trx('promociones_hoy').insert( insert_ ) )
+                proms_arr.push( trx('promociones').insert( insert_ ) )
 
-            let proms_res = await Promise.all(proms_arr)
-            if (proms_res){
-                let cant_reg = await global.knex("promociones_hoy").count("id").first()
-                await trx("incremental_stats").update({ "value": cant_reg['count(`id`)'] }).where("key", "cant_promos")
-                resolve({ stat: true, nuevo: 1 })
-                return
-            } else{
-                console.log(proms_res)
-                resolve({ stat: false,  error: "Error interno, reintente luego" })
-                return
+                let proms_res = await Promise.all(proms_arr)
+                if (proms_res){
+                    let cant_reg = await global.knex("promociones_hoy").count("id").first()
+                    await trx("incremental_stats").update({ "value": cant_reg['count(`id`)'] }).where("key", "cant_promos")
+                    resolve({ stat: true, nuevo: 1 })
+                    return
+                } else{
+                    console.log(proms_res)
+                    resolve({ stat: false,  error: "Error interno, reintente luego" })
+                    return
+                }
             }
+        } catch (e){
+            console.log('procesar_oferta', e)
+            return resolve({ stat: false,  error: "Error interno, reintente luego" })
         }
+        
     })
 }
 
