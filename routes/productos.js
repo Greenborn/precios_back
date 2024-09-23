@@ -149,6 +149,9 @@ const MD5 = function(d){var r = M(V(Y(X(d),8*d.length)));return r.toLowerCase()}
 async function procesar_oferta(trx, item, HOY, AYER){
     return new Promise(async (resolve, reject) => {
         try{
+            if (!item?.titulo)
+                return resolve({ stat: false,  error: "Revisar titulo" })
+            
             let proms_arr = []
             
             const insert_ = {
