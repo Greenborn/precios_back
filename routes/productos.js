@@ -117,7 +117,10 @@ router.post('/importar', async function (req, res) {
         let trx = await knex.transaction()
 
         let proms_arr= []
-
+        let AYER = new Date()
+        AYER.setDate( AYER.getDate() - 1 )
+        AYER.setUTCHours(23,59,59)
+        proms_arr.push( trx('price_today').delete().where('date_time', '<', AYER) )
         for (let index = 0; index < ARR_IMPORTA.length; index++) {
             let item = ARR_IMPORTA[index]
             proms_arr.push( procesa_item(trx, item, HOY) )
@@ -166,12 +169,12 @@ async function procesar_oferta(item, HOY, AYER){
             const insert_ = {
                 'orden': 0,
                 'fecha': HOY,
-                'titulo': req.body?.titulo,
+                'titulo': item.titulo,
                 'id_producto': -1,
-                'precio': req.body?.precio,
-                'datos_extra': req.body?.datos_extra,
-                'branch_id': req.body?.branch_id,
-                'url': req.body?.url
+                'precio': item.precio,
+                'datos_extra': item.datos_extra,
+                'branch_id': item.branch_id,
+                'url': item.url
             }
             proms_arr.push( global.knex('promociones_hoy').insert( insert_ ) )
             proms_arr.push( global.knex('promociones').insert( insert_ ) )
