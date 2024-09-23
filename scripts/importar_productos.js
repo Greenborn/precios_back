@@ -169,6 +169,10 @@ async function procesa_precio( trx, producto_db, articulo, fecha_registro ){
 async function procesar_articulo(trx, articulo, fecha_registro ){
     return new Promise( async (resolve, reject) => {
         try {
+            if (!articulo?.category_name){
+                return resolve({stat:false, text: 'No se especifica categoria!'})
+            }
+
             let res = { stat: true, text: '' }
             let proms_arr = []
 
