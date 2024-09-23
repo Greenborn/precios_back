@@ -37,6 +37,18 @@ const rutaPrecios = './tmp/productos'+HOY.getFullYear()+Number((HOY.getMonth()+1
   })+".json"*/
 
 async function agregar_producto_sino_esta(trx, articulo){
+    console.log('agregar_producto_sino_esta ', articulo)
+    if (articulo.category == '' && articulo?.category_name){
+        let category_db = await knex('category').select().where('name', articulo.category_name).first()
+        articulo.category = category_db.id
+    } else {
+        if (articulo.category_name == '' || !articulo?.category_name)
+            return { stat: false, text: 'Falta category_name' }
+
+        let nueva_cat = await trx('category').insert( { name: articulo.category_name } )
+        articulo.category = nueva_cat[0]
+    }
+
     let producto = await knex('products').select().where('name', articulo.name).first()
     if (producto){
         if (articulo?.barcode){
@@ -44,7 +56,7 @@ async function agregar_producto_sino_esta(trx, articulo){
                 "barcode": articulo.barcode
             } ).where('id','=',producto.id)
         }
-        return { 'data':producto, 'nuevo': false }
+        return { stat: true, 'data':producto, 'nuevo': false }
     } else {
         let insert = {
             "name": articulo.name,
@@ -56,7 +68,7 @@ async function agregar_producto_sino_esta(trx, articulo){
             "product_id": nuevo_reg[0],
             "category_id": articulo.category
         } )
-        return { 'data': {...insert, "id": nuevo_reg[0] }, 'nuevo': true }
+        return { stat: true, 'data': {...insert, "id": nuevo_reg[0] }, 'nuevo': true }
     }
 }
 let precios_reafirmados = []
@@ -147,27 +159,28 @@ async function cargar_precio( trx, articulo, producto_db, fecha_registro ){
 let nuevos_productos = []
 
 async function procesar_articulo(trx, articulo, fecha_registro ){
-    try {
-        console.log(articulo)
-        let producto_db = await agregar_producto_sino_esta(trx, articulo)
-        let AYER = new Date()
-        AYER.setDate( AYER.getDate() - 1 )
-        AYER.setUTCHours(23,59,59)
-        await trx('price_today').delete().where('date_time', '<', AYER)
-        if (producto_db){
-            articulo['product_id'] = producto_db.data.id
-            if (producto_db.nuevo)
-                nuevos_productos.push( articulo )
-            let procesa_precio = await cargar_precio(trx, articulo, producto_db, fecha_registro)
-            if (procesa_precio){
-                return true
-            }
+    return new Promise( async (resolve, reject) => {
+        try {
+            console.log(articulo)
+            let producto_db = await agregar_producto_sino_esta(trx, articulo)
+            
+            if (producto_db.stat){
+                articulo['product_id'] = producto_db.data.id
+                if (producto_db.nuevo)
+                    nuevos_productos.push( articulo )
+                let procesa_precio = await cargar_precio(trx, articulo, producto_db, fecha_registro)
+                if (procesa_precio){
+                    return resolve({ stat: true })
+                } else 
+                    return resolve({ stat: true, text: "cargar precio false" })
+            } return resolve({ stat: false, text: producto_db.text })
+    
+        } catch( error ){
+            console.log(error)
+            return resolve({ stat: false, text: error})
         }
-
-    } catch( error ){
-        console.log(error)
-        return false
-    }
+    })
+    
 }
 exports.procesar_articulo = procesar_articulo
 

@@ -22,7 +22,7 @@ let conn_obj = {
 global.knex = require('knex')({
   client: 'mysql2',
   connection: conn_obj,
-  pool: { min: 0, max: 1000 }
+  pool: { min: 0, max: 1000, "propagateCreateError": false }
 });
 global.branchs_diccio = {}
 global.branch_enterprice_diccio = {}
@@ -116,7 +116,7 @@ async function base_de_datos_iniciada(){
       global.branchs_diccio[Number(locales[i].id)] = locales[i]
       global.branch_enterprice_diccio[Number(locales[i].enterprise_id)].push( locales[i] )
     }
-
+/*
     let proms_precios = []
     for (let i=0; i < products.length; i++){
       global.products_diccio[Number(products[i].id)] = products[i]
@@ -135,7 +135,7 @@ async function base_de_datos_iniciada(){
         global.products_category_diccio.by_category_id[ID_CAT] = {}
     
       global.products_category_diccio.by_category_id[ID_CAT][ID_PROD] = global.products_diccio[ID_PROD]
-    }
+    }*/
   }
   
   if (category)
