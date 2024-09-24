@@ -30,7 +30,6 @@ const knex = require('knex')({
 
 
 async function definir_ultimo( producto ){
-    let hoy = new Date()
     let trx = await knex.transaction()
     console.log('procesando ', producto.name)
     let precio = await knex("price").select().where('product_id', producto.id)
@@ -55,8 +54,6 @@ setTimeout( async ()=>{
         
         setInterval( async ()=>{
             let producto = productos.pop()
-            
-            console.log('procesando ', producto.name)
             return await definir_ultimo(producto) 
         }, PROC_TIME)
         
