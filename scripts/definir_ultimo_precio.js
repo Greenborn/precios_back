@@ -43,7 +43,7 @@ async function definir_ultimo( producto ){
         return trx.rollback()
 }
 
-const PROC_TIME = 40
+const PROC_TIME = 70
 
 setTimeout( async ()=>{
     
