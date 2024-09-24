@@ -288,6 +288,7 @@ async function hacer_busqueda_promo( termino, metodo ){
 
           promos = await global.knex('promociones_hoy')
                         .select()
+                        .distinct('promociones_hoy.titulo')
                         .whereRaw(SQL, params)
         } else 
           promos = await global.knex('promociones_hoy')
