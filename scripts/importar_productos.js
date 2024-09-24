@@ -51,7 +51,7 @@ async function nuevo_reg_precio( trx, articulo, producto_db, fecha_registro ){
     }
     let insert_1 = await trx('price').insert( insert )
     precio_hoy = {...insert}
-    precio_hoy['id'] = uuid.v4()
+    precio_hoy['id'] = uuid.v7()
     let insert_2 = await trx('price_today').insert( precio_hoy )
     if (insert_1 && insert_2){
         nuevos_precios_creados.push( insert )
@@ -129,12 +129,13 @@ async function procesa_precio( trx, producto_db, articulo, fecha_registro ){
                     await trx('price').update( {
                         "date_time": new Date(fecha_registro), "time": new Date(), "url": ( articulo.url ) ? articulo.url : null
                     } ).where("id", ultimo_precio.id)
+                    
                     let precio_hoy = {
                         ...ultimo_precio,
                         "date_time": new Date(fecha_registro), "time": new Date(), "url": ( articulo.url ) ? articulo.url : null
                     }
                     precio_hoy['id'] = uuid.v4()
-                    //await trx('price_today').insert( precio_hoy )
+                    await trx('price_today').insert( precio_hoy )
                     precios_reafirmados.push(ultimo_precio)
                     return resolve(true)
                 } else  if (!ultimo_precio) {

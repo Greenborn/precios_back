@@ -28,11 +28,11 @@ const knex = require('knex')({
     pool: { min: 0, max: 1000, "propagateCreateError": false }
 })
 
-
+let i=0
 async function definir_ultimo( producto ){
     let trx = await knex.transaction()
-    console.log('procesando ', producto.name)
-    let precio = await knex("price").select().where('product_id', producto.id)
+    console.log(i++,' - ','procesando ', producto.name )
+    let precio = await trx("price").select().where('product_id', producto.id)
                     .orderBy('date_time', 'desc').first()
     if (precio){
         //console.log(precio)
@@ -43,7 +43,7 @@ async function definir_ultimo( producto ){
         return trx.rollback()
 }
 
-const PROC_TIME = 100
+const PROC_TIME = 40
 
 setTimeout( async ()=>{
     

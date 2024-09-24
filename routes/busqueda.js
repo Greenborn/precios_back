@@ -17,7 +17,7 @@ async function buscar_precios_producto( id_producto ){
 
       let precios = await global.knex('price_today')
                     .where('product_id', id_producto)
-                    .andWhere('date_time', '>', knex.raw('DATE_SUB(NOW(), INTERVAL 1 MONTH)'))
+                    //.andWhere('date_time', '>', knex.raw('DATE_SUB(NOW(), INTERVAL 1 MONTH)'))
                     .orderBy('date_time', 'desc')
       
       let salida = []
