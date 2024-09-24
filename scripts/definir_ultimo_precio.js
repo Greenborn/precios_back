@@ -29,19 +29,22 @@ const knex = require('knex')({
 })
 
 
-async function definir_ultimo( trx, producto ){
+async function definir_ultimo( producto ){
     let hoy = new Date()
-
+    let trx = await knex.transaction()
+    console.log('procesando ', producto.name)
     let precio = await knex("price").select().where('product_id', producto.id)
-        .andWhere('date_time', '>', new Date( hoy.getTime() - 30*24*60*60*1000 )).orderBy('date_time', 'desc').first()
+                    .orderBy('date_time', 'desc').first()
     if (precio){
-        console.log(precio)
-        return await trx('price_today').insert(precio)
-    }else
-        return
+        //console.log(precio)
+        await trx('price_today').insert(precio)
+        
+        return await trx.commit()
+    } else
+        return trx.rollback()
 }
 
-const PROC_TIME = 70
+const PROC_TIME = 100
 
 setTimeout( async ()=>{
     
@@ -50,16 +53,11 @@ setTimeout( async ()=>{
     let productos = await knex("products").select()
     if (productos){
         
-        
         setInterval( async ()=>{
             let producto = productos.pop()
-            var trx = await knex.transaction()
+            
             console.log('procesando ', producto.name)
-            let res = await definir_ultimo(trx, producto) 
-            if (res){
-                console.log(res)
-                await trx.commit()
-            }
+            return await definir_ultimo(producto) 
         }, PROC_TIME)
         
     }
