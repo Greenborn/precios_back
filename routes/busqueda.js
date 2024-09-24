@@ -15,11 +15,10 @@ async function buscar_precios_producto( id_producto ){
 
       let branch_diccio = {}
 
-      let precios = await global.knex('price')
+      let precios = await global.knex('price_today')
                     .where('product_id', id_producto)
                     .andWhere('date_time', '>', knex.raw('DATE_SUB(NOW(), INTERVAL 1 MONTH)'))
                     .orderBy('date_time', 'desc')
-                    .limit(20)
       
       let salida = []
       if (precios){
@@ -105,8 +104,8 @@ async function hacer_busqueda( termino, metodo ){
                 continue
 
               diccio_precios[Number(result_precio["id"])] = result_precio
-              result_precio["empresa"] = global.enterprice_diccio[global.branchs_diccio[result_precio["branch_id"]].enterprise_id]
-              result_precio["locales"] = global.branch_enterprice_diccio[global.branchs_diccio[result_precio["branch_id"]].enterprise_id]
+              result_precio["empresa"]  = global.enterprice_diccio[global.branchs_diccio[result_precio["branch_id"]].enterprise_id]
+              result_precio["locales"]  = global.branch_enterprice_diccio[global.branchs_diccio[result_precio["branch_id"]].enterprise_id]
               result_precio["products"] = diccio_productos[result_precio["product_id"]]
 
               list_precios = insertar_ordenado(list_precios, result_precio)
