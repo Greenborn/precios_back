@@ -150,7 +150,7 @@ async function procesar_oferta(trx, item, HOY, AYER){
     return new Promise(async (resolve, reject) => {
         try{
             if (!item?.titulo)
-                return resolve({ stat: false,  error: "Revisar titulo" })
+                return resolve({ stat: false,  error: "Revisar titulo ", 'item':JSON.stringify(item) })
             
             let proms_arr = []
             
@@ -164,7 +164,7 @@ async function procesar_oferta(trx, item, HOY, AYER){
                 'branch_id': item.branch_id,
                 'url': item.url
             }
-            proms_arr.push( trx('promociones_hoy').delete().where('fecha' , '<', HOY) )
+            proms_arr.push( trx('promociones_hoy').delete().where('fecha' , '<', AYER) )
             proms_arr.push( trx('promociones_hoy').insert( insert_ ) )
             proms_arr.push( trx('promociones').insert( insert_ ) )
 
