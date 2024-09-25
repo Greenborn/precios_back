@@ -8,25 +8,17 @@ const fs = require("fs")
 async function buscar_precios_producto( id_producto ){
   return new Promise(async (resolve, reject) => {
     try{
-      let inicio_dia = new Date()
-      inicio_dia.setHours(0,0,0,0)
-      inicio_dia.getTime()
-      inicio_dia = inicio_dia - 1000*60*60*24
-
       let branch_diccio = {}
 
       let precios = await global.knex('price_today')
-                    .where('product_id', id_producto)
-                    //.andWhere('date_time', '>', knex.raw('DATE_SUB(NOW(), INTERVAL 1 MONTH)'))
-                    .orderBy('date_time', 'desc')
+                    .where({ 'product_id': id_producto })
       
       let salida = []
       if (precios){
         console.log('buscar_precios_producto precios', precios.length, 'id_producto ', id_producto)
         for (let i=0; i < precios.length; i++){
           let branch_id = precios[i].branch_id
-          let fecha_precio = new Date(precios[i].date_time).getTime()
-          if (!branch_diccio[branch_id] || (branch_diccio[branch_id] && fecha_precio >= inicio_dia && precios[i].notas !== null)){
+          if (!branch_diccio[branch_id] || (branch_diccio[branch_id] && precios[i].notas !== null)){
             if (precios[i].notas == null)
               branch_diccio[branch_id] = true
             salida.push(precios[i])
