@@ -10,8 +10,7 @@ async function buscar_precios_producto( id_producto ){
     try{
       let branch_diccio = {}
 
-      let precios = await global.knex('price_today')
-                    .where({ 'product_id': id_producto })
+      let precios = global.precios_diccio[id_producto]
       
       let salida = []
       if (precios){
@@ -70,9 +69,8 @@ async function hacer_busqueda( termino, metodo ){
         params.push('%'+PALABRAS[i]+'%')
       }
 
-      productos = await global.knex
+      productos = await global.knex('products')
                     .select()
-                    .from('products')
                     .whereRaw(SQL, params)
                     .limit(200)
 
