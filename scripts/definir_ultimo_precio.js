@@ -32,12 +32,16 @@ let i=0
 async function definir_ultimo( producto ){
     let trx = await knex.transaction()
     console.log(i++,' - ','procesando ', producto.name, '  ',producto.id )
-    let precio = await trx("price").select()
+    let precios = await trx("price").select()
                     .where('product_id', producto.id)
-                    .orderBy('date_time', 'desc').first()
-    if (precio){
+    
+    if (precios){ 
         //console.log(precio)
-        await trx('price_today').insert(precio)
+        let proms_ = []
+        for (let i=0; i < precios.length; i++){
+            proms_.push(trx('price_today').insert(precios[i]))
+        }
+        await Promise.all(proms_)
         
         return await trx.commit()
     } else
@@ -50,9 +54,15 @@ setTimeout( async ()=>{
     
     await knex('price_today').delete() 
 
-    let productos = await knex("products").select()
+    let productos = await knex.raw(`SELECT *
+                        FROM price
+                        WHERE (product_id, branch_id, price) IN (
+                        SELECT product_id, branch_id, MAX(date_time)
+                        FROM price
+                        GROUP BY product_id, branch_id
+                    )`)
     if (productos){
-        
+        console.log('productos obtenidos', productos.length)
         setInterval( async ()=>{
             let producto = productos.pop()
             return await definir_ultimo(producto) 
