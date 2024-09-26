@@ -8,26 +8,18 @@ const fs = require("fs")
 async function buscar_precios_producto( id_producto ){
   return new Promise(async (resolve, reject) => {
     try{
-      let inicio_dia = new Date()
-      inicio_dia.setHours(0,0,0,0)
-      inicio_dia.getTime()
-      inicio_dia = inicio_dia - 1000*60*60*24
-
       let branch_diccio = {}
 
       let precios = await global.knex('price')
-                    .where('product_id', id_producto)
-                    .andWhere('date_time', '>', knex.raw('DATE_SUB(NOW(), INTERVAL 1 MONTH)'))
-                    .orderBy('date_time', 'desc')
-                    .limit(20)
+                      .orderBy('date_time', 'desc')
+                      .where({ product_id: id_producto }).limit(10)//
       
       let salida = []
       if (precios){
-        console.log('buscar_precios_producto precios', precios.length, 'id_producto ', id_producto)
+        //console.log('buscar_precios_producto precios', precios.length, 'id_producto ', id_producto)
         for (let i=0; i < precios.length; i++){
           let branch_id = precios[i].branch_id
-          let fecha_precio = new Date(precios[i].date_time).getTime()
-          if (!branch_diccio[branch_id] || (branch_diccio[branch_id] && fecha_precio >= inicio_dia && precios[i].notas !== null)){
+          if (!branch_diccio[branch_id] || (branch_diccio[branch_id] && precios[i].notas !== null)){
             if (precios[i].notas == null)
               branch_diccio[branch_id] = true
             salida.push(precios[i])
@@ -66,30 +58,38 @@ function insertar_ordenado( array_, elemento, campo="price", sentido = "asc" ){
   return array_
 }
 
+async function hacer_busqueda_termino( termino ){
+  let encontrados = []
+  let palabras = termino.normalize('NFD')
+                  .replace(/([^n\u0300-\u036f]|n(?!\u0303(?![\u0300-\u036f])))[\u0300-\u036f]+/gi,"$1")
+                  .normalize().toLowerCase().split(" ")
+  
+  for (let i=0; i < global.products.length; i++){
+    let nombre = global.products[i].name
+    let agregar = true
+    
+    for (let j=0; j < palabras.length; j++){
+        agregar = agregar && nombre.includes(palabras[j])
+      }
+    
+    if (agregar) encontrados.push(global.products[i])
+  }
+
+  return encontrados
+}
+
 async function hacer_busqueda( termino, metodo ){
   return new Promise(async (resolve, reject) => {
     try{
 
-      let PALABRAS = termino.split(" ")
-
-      let SQL = " (name LIKE ?) "
-      params = ['%'+PALABRAS[0]+'%']
-      for (let i=1; i < PALABRAS.length; i++){
-        SQL += " AND (name LIKE ?) "
-        params.push('%'+PALABRAS[i]+'%')
-      }
-
-      productos = await global.knex
-                    .select()
-                    .from('products')
-                    .whereRaw(SQL, params)
-                    .limit(200)
+      let productos = await hacer_busqueda_termino(termino)      
 
       let diccio_productos = {}
       let diccio_precios = {}
       let list_precios = []
 
       if (productos){
+        
         let proms_precios = []
         for (let i=0; i < productos.length; i++){
           proms_precios.push(buscar_precios_producto(productos[i].id))
@@ -105,8 +105,8 @@ async function hacer_busqueda( termino, metodo ){
                 continue
 
               diccio_precios[Number(result_precio["id"])] = result_precio
-              result_precio["empresa"] = global.enterprice_diccio[global.branchs_diccio[result_precio["branch_id"]].enterprise_id]
-              result_precio["locales"] = global.branch_enterprice_diccio[global.branchs_diccio[result_precio["branch_id"]].enterprise_id]
+              result_precio["empresa"]  = global.enterprice_diccio[global.branchs_diccio[result_precio["branch_id"]].enterprise_id]
+              result_precio["locales"]  = global.branch_enterprice_diccio[global.branchs_diccio[result_precio["branch_id"]].enterprise_id]
               result_precio["products"] = diccio_productos[result_precio["product_id"]]
 
               list_precios = insertar_ordenado(list_precios, result_precio)
@@ -119,7 +119,6 @@ async function hacer_busqueda( termino, metodo ){
             aux = insertar_ordenado(aux, list_precios[i], 'date_time', "desc")
           }
 
-          console.log(SQL, params)
           resolve(aux)   
         } else
           resolve([])
@@ -289,6 +288,7 @@ async function hacer_busqueda_promo( termino, metodo ){
 
           promos = await global.knex('promociones_hoy')
                         .select()
+                        .distinct('promociones_hoy.titulo')
                         .whereRaw(SQL, params)
         } else 
           promos = await global.knex('promociones_hoy')

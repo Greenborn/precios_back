@@ -29,7 +29,8 @@ global.branch_enterprice_diccio = {}
 global.alias_busqueda = {}
 global.enterprice_diccio = {}
 global.category_diccio = {}
-global.products_diccio = {}
+global.products = []
+global.precios_diccio = {}
 global.products_category_diccio = { by_product_id: {}, by_category_id: {} }
 
 //Es de esperar que en 3s ya tenemos conexion disponible
@@ -71,6 +72,16 @@ async function asignar_precio( product ){
     return false
 }
 
+async function generar_diccio_precios(precios_hoy){
+  for (let i=0; i < precios_hoy.length; i++){
+    if (global.precios_diccio[precios_hoy[i].product_id] == undefined){
+      global.precios_diccio[precios_hoy[i].product_id] = []
+    }
+    
+    global.precios_diccio[precios_hoy[i].product_id].push(precios_hoy[i])
+  }
+}
+
 async function base_de_datos_iniciada(){
   console.log('se establecio conexion DB')
 
@@ -101,11 +112,15 @@ async function base_de_datos_iniciada(){
   let enterprice = await global.knex('enterprice').select()
   let alias = await global.knex('alias_busqueda').select()
   let category = await global.knex('category').select()
-  let products = await global.knex('products').select()
+  global.products = await global.knex('products').select()
+  let precios_hoy = await global.knex('price_today').select()
    
   let product_category = await global.knex('product_category').select()
 
-  if (product_category && products && locales && enterprice){
+  if (precios_hoy)
+    await generar_diccio_precios(precios_hoy)
+
+  if (product_category && products && locales && enterprice && global.products ){
 
     for (let i=0; i < enterprice.length; i++){
       global.enterprice_diccio[Number(enterprice[i].id)] = enterprice[i]
@@ -116,6 +131,13 @@ async function base_de_datos_iniciada(){
       global.branchs_diccio[Number(locales[i].id)] = locales[i]
       global.branch_enterprice_diccio[Number(locales[i].enterprise_id)].push( locales[i] )
     }
+
+    for (let i=0; i < global.products.length; i++){
+      global.products[i].name = global.products[i].name.normalize('NFD')
+                                .replace(/([^n\u0300-\u036f]|n(?!\u0303(?![\u0300-\u036f])))[\u0300-\u036f]+/gi,"$1")
+                                .normalize().toLowerCase()
+    }
+    
 /*
     let proms_precios = []
     for (let i=0; i < products.length; i++){
