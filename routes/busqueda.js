@@ -10,11 +10,13 @@ async function buscar_precios_producto( id_producto ){
     try{
       let branch_diccio = {}
 
-      let precios = global.precios_diccio[id_producto]
+      let precios = await global.knex('price')
+                      .orderBy('date_time', 'desc')
+                      .where({ product_id: id_producto }).limit(10)//
       
       let salida = []
       if (precios){
-        console.log('buscar_precios_producto precios', precios.length, 'id_producto ', id_producto)
+        //console.log('buscar_precios_producto precios', precios.length, 'id_producto ', id_producto)
         for (let i=0; i < precios.length; i++){
           let branch_id = precios[i].branch_id
           if (!branch_diccio[branch_id] || (branch_diccio[branch_id] && precios[i].notas !== null)){
@@ -56,29 +58,38 @@ function insertar_ordenado( array_, elemento, campo="price", sentido = "asc" ){
   return array_
 }
 
+async function hacer_busqueda_termino( termino ){
+  let encontrados = []
+  let palabras = termino.normalize('NFD')
+                  .replace(/([^n\u0300-\u036f]|n(?!\u0303(?![\u0300-\u036f])))[\u0300-\u036f]+/gi,"$1")
+                  .normalize().toLowerCase().split(" ")
+  
+  for (let i=0; i < global.products.length; i++){
+    let nombre = global.products[i].name
+    let agregar = true
+    
+    for (let j=0; j < palabras.length; j++){
+        agregar = agregar && nombre.includes(palabras[j])
+      }
+    
+    if (agregar) encontrados.push(global.products[i])
+  }
+
+  return encontrados
+}
+
 async function hacer_busqueda( termino, metodo ){
   return new Promise(async (resolve, reject) => {
     try{
 
-      let PALABRAS = termino.split(" ")
-
-      let SQL = " (name LIKE ?) "
-      params = ['%'+PALABRAS[0]+'%']
-      for (let i=1; i < PALABRAS.length; i++){
-        SQL += " AND (name LIKE ?) "
-        params.push('%'+PALABRAS[i]+'%')
-      }
-
-      productos = await global.knex('products')
-                    .select()
-                    .whereRaw(SQL, params)
-                    .limit(200)
+      let productos = await hacer_busqueda_termino(termino)      
 
       let diccio_productos = {}
       let diccio_precios = {}
       let list_precios = []
 
       if (productos){
+        
         let proms_precios = []
         for (let i=0; i < productos.length; i++){
           proms_precios.push(buscar_precios_producto(productos[i].id))
@@ -108,7 +119,6 @@ async function hacer_busqueda( termino, metodo ){
             aux = insertar_ordenado(aux, list_precios[i], 'date_time', "desc")
           }
 
-          console.log(SQL, params)
           resolve(aux)   
         } else
           resolve([])
