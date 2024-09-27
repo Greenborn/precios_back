@@ -3,7 +3,7 @@ var router = express.Router()
 module.exports = router
 const bcrypt = require('bcrypt')
 const fs = require("fs")
-
+const busqueda_productos = require("../controllers/busqueda_productos")
 
 async function buscar_precios_producto( id_producto ){
   return new Promise(async (resolve, reject) => {
@@ -58,31 +58,11 @@ function insertar_ordenado( array_, elemento, campo="price", sentido = "asc" ){
   return array_
 }
 
-async function hacer_busqueda_termino( termino ){
-  let encontrados = []
-  let palabras = termino.normalize('NFD')
-                  .replace(/([^n\u0300-\u036f]|n(?!\u0303(?![\u0300-\u036f])))[\u0300-\u036f]+/gi,"$1")
-                  .normalize().toLowerCase().split(" ")
-  
-  for (let i=0; i < global.products.length; i++){
-    let nombre = global.products[i].name
-    let agregar = true
-    
-    for (let j=0; j < palabras.length; j++){
-        agregar = agregar && nombre.includes(palabras[j])
-      }
-    
-    if (agregar) encontrados.push(global.products[i])
-  }
-
-  return encontrados
-}
-
 async function hacer_busqueda( termino, metodo ){
   return new Promise(async (resolve, reject) => {
     try{
 
-      let productos = await hacer_busqueda_termino(termino)      
+      let productos = await busqueda_productos.busqueda(termino, 200)      
 
       let diccio_productos = {}
       let diccio_precios = {}

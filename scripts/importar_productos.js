@@ -80,9 +80,15 @@ async function get_categoria( trx, articulo ){
     })
 }
 
+
 async function get_producto( trx, articulo ){
     return new Promise( async (resolve, reject) => {
-        let producto  = await knex('products').select().where('name', articulo.name).first()
+        let name = String(articulo.name).normalize('NFD')
+                    .replace(/([^n\u0300-\u036f]|n(?!\u0303(?![\u0300-\u036f])))[\u0300-\u036f]+/gi,"$1")
+                    .normalize().toLowerCase()
+        //console.log('products_diccio', global.products_diccio[name] )
+        let producto  = global.products_diccio[name] ? global.products_diccio[name]
+                        : await knex('products').select().where('name', articulo.name).first()
         if (producto){
             if (articulo?.barcode){
                 await trx('products').update( {

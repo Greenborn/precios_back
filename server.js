@@ -1,4 +1,5 @@
 require("dotenv").config({ path: '.env' })
+const busqueda_productos = require("./controllers/busqueda_productos")
 
 //conexion a base de datos
 let conn_obj = {
@@ -31,6 +32,8 @@ global.enterprice_diccio = {}
 global.category_diccio = {}
 global.products = []
 global.precios_diccio = {}
+global.products_diccio = {}
+global.products_diccio_id = {}
 global.products_category_diccio = { by_product_id: {}, by_category_id: {} }
 
 //Es de esperar que en 3s ya tenemos conexion disponible
@@ -136,8 +139,11 @@ async function base_de_datos_iniciada(){
       global.products[i].name = global.products[i].name.normalize('NFD')
                                 .replace(/([^n\u0300-\u036f]|n(?!\u0303(?![\u0300-\u036f])))[\u0300-\u036f]+/gi,"$1")
                                 .normalize().toLowerCase()
+      global.products_diccio[global.products[i].name] = global.products[i]
+      global.products_diccio_id[global.products[i].id] = global.products[i]
     }
     
+    await busqueda_productos.inicializa_buscador()
 /*
     let proms_precios = []
     for (let i=0; i < products.length; i++){
