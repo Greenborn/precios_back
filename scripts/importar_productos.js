@@ -98,14 +98,17 @@ async function get_producto( trx, articulo ){
             resolve(producto)
             return
         } else {
+            let proms_ = []
             const ID_NUEVO_PROD = uuid.v7()
             let insert = {
                 "id": ID_NUEVO_PROD,
-                "name": articulo.name,
+                "name": name,
                 "vendor_id": articulo.vendor_id,
             }
+            proms_.push( trx('alias_productos').insert( { "alias": name, "product_id": ID_NUEVO_PROD } ) ) 
             if (articulo?.barcode) insert['barcode'] = articulo.barcode
-            let nuevo_reg = await trx('products').insert( insert )
+            proms_.push( trx('products').insert( insert ) ) 
+            let nuevo_reg = await Promise.all( proms_ )
             resolve(insert)
             return
         }
