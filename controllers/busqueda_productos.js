@@ -12,8 +12,8 @@ exports.inicializa_buscador = async function() {
     console.log('Mapeando todos los posibles caracteres')
     let chars = {}
 
-    for (let i=0; i < global.products.length; i++){
-        const nombre = normalize(global.products[i].name)
+    for (let i=0; i < global.alias_productos.length; i++){
+        const nombre = normalize(global.alias_productos[i].name)
 
         for (let j=0; j < nombre.length; j++){
             const caracter = nombre[j]
@@ -26,8 +26,8 @@ exports.inicializa_buscador = async function() {
     } 
     console.log('caracteres obtenidos: ', caracteres)
     console.log('Generando matriz de busqueda')
-    for (let i=0; i < global.products.length; i++){
-        const nombre = normalize(global.products[i].name)
+    for (let i=0; i < global.alias_productos.length; i++){
+        const nombre = normalize(global.alias_productos[i].name)
         const nombre_arr = nombre.split("")
                                 
         for (let j=0; j < nombre_arr.length; j++){
@@ -37,7 +37,7 @@ exports.inicializa_buscador = async function() {
             if (!posiciones[j][caracter])
                 posiciones[j][caracter] = {}
 
-            posiciones[j][caracter][global.products[i].id] = global.products_diccio_id[global.products[i].id]
+            posiciones[j][caracter][global.alias_productos[i].id] = global.products_diccio_id[global.alias_productos[i].id]
         }
     }
     console.log('Matriz de busqueda generada', posiciones.length)
