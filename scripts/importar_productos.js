@@ -88,7 +88,9 @@ async function get_producto( trx, articulo ){
                     .normalize().toLowerCase()
         //console.log('products_diccio', global.products_diccio[name] )
         let producto  = global.products_diccio[name] ? global.products_diccio[name]
-                        : await knex('products').select().where('name', articulo.name).first()
+                        : await knex('alias_productos').select()
+                            .join('products', 'products.id', 'alias_productos.product_id')
+                            .where('alias_productos.alias', articulo.name).first()
         if (producto){
             if (articulo?.barcode){
                 await trx('products').update( {
@@ -266,40 +268,18 @@ let diccio = {}
 
 setTimeout( async ()=>{
 
-    //const archivo_importacion = await fs.promises.readFile(rutaPrecios, 'utf8')
-    //const array_importacion   = JSON.parse(archivo_importacion)
-
     let enterprises = await knex("enterprice").select()
     let branchs     = await knex("branch").select()
 
     if (/*array_importacion && */ enterprises && branchs){
         const proms_procesar = []
         let trx = await knex.transaction()
-        /*for (let i=0; i < array_importacion.length; i++){
-            const articulo = array_importacion[i]
-            const reg_concat = articulo.name+articulo.price+articulo.branch_id
-            if (diccio[reg_concat] == undefined){
-                diccio[reg_concat] = 1
-            } else 
-                continue
-            
-            console.log("procesando", articulo)
-            proms_procesar.push(procesar_articulo(trx, articulo))
-        }*/
+
         for (let i =0; i < enterprises.length; i++)
             diccio_enterprise[enterprises[i].id ] = enterprises[i]
         for (let i=0; i < branchs.length; i++)
             diccio_branch[branchs[i].id ] = branchs[i]
 
-        /*let procesada = await Promise.all(proms_procesar)
-        if (procesada){
-            await trx("news").delete().where("datetime", "<", HOY)
-            await trx.commit()
-            console.log("Cantidad de productos agregados: ", nuevos_productos.length)
-            console.log("Cantidad de precios agregados: ", nuevos_precios_creados.length)
-            console.log("Cantidad de precios reafirmados: ", precios_reafirmados.length)
-            console.log("Cantidad de precios actualizados: ", precios_actualizados.length)
-        }*/
     }
 }, 100)
 
