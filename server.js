@@ -1,4 +1,5 @@
 require("dotenv").config({ path: '.env' })
+const busqueda_productos = require("./controllers/busqueda_productos")
 
 //conexion a base de datos
 let conn_obj = {
@@ -31,6 +32,8 @@ global.enterprice_diccio = {}
 global.category_diccio = {}
 global.products = []
 global.precios_diccio = {}
+global.products_diccio = {}
+global.products_diccio_id = {}
 global.products_category_diccio = { by_product_id: {}, by_category_id: {} }
 
 //Es de esperar que en 3s ya tenemos conexion disponible
@@ -112,7 +115,8 @@ async function base_de_datos_iniciada(){
   let enterprice = await global.knex('enterprice').select()
   let alias = await global.knex('alias_busqueda').select()
   let category = await global.knex('category').select()
-  global.products = await global.knex('products').select()
+  global.alias_productos = await global.knex('alias_productos').select()
+                              .join('products', 'products.id', 'alias_productos.product_id')
   let precios_hoy = await global.knex('price_today').select()
    
   let product_category = await global.knex('product_category').select()
@@ -120,7 +124,7 @@ async function base_de_datos_iniciada(){
   if (precios_hoy)
     await generar_diccio_precios(precios_hoy)
 
-  if (product_category && products && locales && enterprice && global.products ){
+  if (product_category && products && locales && enterprice && global.alias_productos ){
 
     for (let i=0; i < enterprice.length; i++){
       global.enterprice_diccio[Number(enterprice[i].id)] = enterprice[i]
@@ -132,32 +136,16 @@ async function base_de_datos_iniciada(){
       global.branch_enterprice_diccio[Number(locales[i].enterprise_id)].push( locales[i] )
     }
 
-    for (let i=0; i < global.products.length; i++){
-      global.products[i].name = global.products[i].name.normalize('NFD')
+    for (let i=0; i < global.alias_productos.length; i++){
+      global.alias_productos[i].name = global.alias_productos[i].name.normalize('NFD')
                                 .replace(/([^n\u0300-\u036f]|n(?!\u0303(?![\u0300-\u036f])))[\u0300-\u036f]+/gi,"$1")
                                 .normalize().toLowerCase()
+      global.products_diccio[global.alias_productos[i].name] = global.alias_productos[i]
+      global.products_diccio_id[global.alias_productos[i].id] = global.alias_productos[i]
     }
     
-/*
-    let proms_precios = []
-    for (let i=0; i < products.length; i++){
-      global.products_diccio[Number(products[i].id)] = products[i]
-      proms_precios.push(asignar_precio( global.products_diccio[Number(products[i].id)] ))
-    }
-    await Promise.all( proms_precios )
+    await busqueda_productos.inicializa_buscador()
 
-    for (let i=0; i < product_category.length; i++){
-      const ID_PROD = product_category[i].product_id
-      const ID_CAT = product_category[i].category_id
-      if (global.products_category_diccio.by_product_id[ID_PROD] == undefined)
-        global.products_category_diccio.by_product_id[ID_PROD] = []
-      global.products_category_diccio.by_product_id[ID_PROD].push( ID_CAT )
-      
-      if (global.products_category_diccio.by_category_id[ID_CAT] == undefined)
-        global.products_category_diccio.by_category_id[ID_CAT] = {}
-    
-      global.products_category_diccio.by_category_id[ID_CAT][ID_PROD] = global.products_diccio[ID_PROD]
-    }*/
   }
   
   if (category)
