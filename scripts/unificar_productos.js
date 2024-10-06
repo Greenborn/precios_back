@@ -121,13 +121,14 @@ setTimeout( async ()=>{
     fs.readFile('productos_unificar.json', async function(err, data) {
         unificaciones = JSON.parse(data);
         cant_total = unificaciones.length
+
+        let c = 0
+        setInterval( async ()=>{  
+            let reg = unificaciones.pop()
+            console.log("Procesando ", reg, c, ' de ', cant_total)
+            c++
+            await procesa_unificacion( reg )
+        }, 10)
     });
-    let c = 0
-    setInterval( async ()=>{  
-        let reg = unificaciones.pop()
-        console.log("Procesando ", reg, c, ' de ', cant_total)
-        c++
-        await procesa_unificacion( reg )
-    }, 50)
 }, 100)
 
