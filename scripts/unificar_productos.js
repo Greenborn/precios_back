@@ -39,6 +39,11 @@ async function procesa_unificacion( ALIAS_PRODS ){
 
     products_consult = await products_consult
     if (products_consult){
+        console.log('Cant. prods encontrados: ', products_consult.length)
+        if (products_consult.length == 1){
+            console.log("saliendo se encontro un solo producto ")
+            return
+        }
         for (let i=0; i < products_consult.length; i++){
             arr_id_prods.push( products_consult[i].product_id )
             arr_alias.push( products_consult[i].alias )
@@ -110,21 +115,19 @@ async function procesa_unificacion( ALIAS_PRODS ){
         return false
 }
 
-
-
+let unificaciones = []
+let cant_total = 0
 setTimeout( async ()=>{
     fs.readFile('productos_unificar.json', async function(err, data) {
-        let unificaciones = JSON.parse(data);
-        console.log(unificaciones)
-        let proms_ = []
-
-        for (let i=0; i < unificaciones.length; i++){
-            proms_.push( procesa_unificacion( unificaciones[i] ) )
-        }
-
-        let res_proms_ = await Promise.all( proms_ )
-        if (res_proms_){
-            console.log(res_proms_)
-        }
+        unificaciones = JSON.parse(data);
+        cant_total = unificaciones.length
     });
+    let c = 0
+    setInterval( async ()=>{  
+        let reg = unificaciones.pop()
+        console.log("Procesando ", reg, c, ' de ', cant_total)
+        c++
+        await procesa_unificacion( reg )
+    }, 50)
 }, 100)
+
