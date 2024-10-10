@@ -34,6 +34,7 @@ function procesa_unificacion(/*trx,*/ ALIAS_PRODS, products_, prods_diccio ){
     let arr_alias = []
     //Se obtiene todos los ids de productos del alias
     let products_consult = []
+    let diccio_sql_no_rep = {}
     
     let script_sql = ""
 
@@ -70,7 +71,11 @@ function procesa_unificacion(/*trx,*/ ALIAS_PRODS, products_, prods_diccio ){
 
             console.log(" \n Se actualizan registros de alias referenciandolos solo al primer producto")
             for (let i=0; i < arr_alias.length; i++){
-                script_sql += "update alias_productos set product_id = '"+ID_PRINCIPAL+"' where alias = '"+arr_alias[i]+"';\n"
+                let aux = "update alias_productos set product_id = '"+ID_PRINCIPAL+"' where alias = '"+arr_alias[i]+"';\n"
+                if (!diccio_sql_no_rep[aux]){
+                    script_sql += aux
+                    diccio_sql_no_rep[aux] = true
+                }
                 console.log("al prod ", ID_PRINCIPAL, "Se asigna alias ",  arr_alias[i])
                 if (arr_alias[i].includes("'"))
                     return ''
@@ -78,7 +83,11 @@ function procesa_unificacion(/*trx,*/ ALIAS_PRODS, products_, prods_diccio ){
             
             console.log(" \n Se actualizan los registros de precios")
             for (let i=0; i < arr_id_prods.length; i++){
-                script_sql += "update price set product_id = '"+ID_PRINCIPAL+"' where product_id = '"+arr_id_prods[i]+"';\n"
+                let aux = "update price set product_id = '"+ID_PRINCIPAL+"' where product_id = '"+arr_id_prods[i]+"';\n"
+                if (!diccio_sql_no_rep[aux]){
+                    script_sql += aux
+                    diccio_sql_no_rep[aux] = true
+                }
                 console.log("precios de  ", arr_id_prods[i], " Se asigna a producto ",  ID_PRINCIPAL)
             }
 
@@ -87,7 +96,11 @@ function procesa_unificacion(/*trx,*/ ALIAS_PRODS, products_, prods_diccio ){
                 if (arr_id_prods[i] == ID_PRINCIPAL)
                     continue
 
-                script_sql += "delete from product_category where product_id = '"+arr_id_prods[i]+"';\n"
+                let aux = "delete from product_category where product_id = '"+arr_id_prods[i]+"';\n"
+                if (!diccio_sql_no_rep[aux]){
+                    script_sql += aux
+                    diccio_sql_no_rep[aux] = true
+                }
                 console.log("Se quita relacion producto categoria  ", arr_id_prods[i])
             }
 
@@ -96,7 +109,11 @@ function procesa_unificacion(/*trx,*/ ALIAS_PRODS, products_, prods_diccio ){
                 if (arr_id_prods[i] == ID_PRINCIPAL)
                     continue
 
-                script_sql += "delete from products where id = '"+arr_id_prods[i]+"';\n"
+                let aux = "delete from products where id = '"+arr_id_prods[i]+"';\n"
+                if (!diccio_sql_no_rep[aux]){
+                    script_sql += aux
+                    diccio_sql_no_rep[aux] = true
+                }
                 console.log("Se quita producto  ", arr_id_prods[i], " con alias ",  arr_alias[i])
                 if (arr_alias[i].includes("'"))
                     return ''
