@@ -23,61 +23,62 @@ let conn_obj = {
 const knex = require('knex')({
     client: 'mysql2',
     connection: conn_obj,
-    pool: { min: 0, max: 7 }
+    pool: { min: 0, max: 1000, "propagateCreateError": false },
+    collation: 'utf8mb4_unicode_ci'
 })
 
-async function procesa_unificacion( ALIAS_PRODS ){
+
+
+function procesa_unificacion(/*trx,*/ ALIAS_PRODS, products_, prods_diccio ){
     let arr_id_prods = []
     let arr_alias = []
     //Se obtiene todos los ids de productos del alias
-    let products_consult = knex("alias_productos")
-                    .select()
+    let products_consult = []
     
-    for (let index = 0; index < ALIAS_PRODS.length; index++) {
-        products_consult = products_consult.orWhere('alias', ALIAS_PRODS[index])
+    let script_sql = ""
+
+    for (let i=0; i < products_.length; i++){
+        if (products_[i].name.toLowerCase().includes(ALIAS_PRODS[0].toLowerCase())){
+            products_consult.push(products_[i])
+            products_.splice(i, 1)
+        }
     }
 
-    products_consult = await products_consult
     if (products_consult){
-        console.log('Cant. prods encontrados: ', products_consult.length)
+        console.log('Cant. prods encontrados: ', products_consult.length, ' total restante  ', products_.length)
         if (products_consult.length == 1){
-            console.log("saliendo se encontro un solo producto ")
-            return
+            return ''
         }
+
         for (let i=0; i < products_consult.length; i++){
-            arr_id_prods.push( products_consult[i].product_id )
-            arr_alias.push( products_consult[i].alias )
+            arr_id_prods.push( products_consult[i].id )
+            arr_alias.push( products_consult[i].name )
         }
 
         const ID_PRINCIPAL = arr_id_prods[0]
         console.log(ALIAS_PRODS, ALIAS_PRODS.length, arr_id_prods, arr_id_prods.length, ID_PRINCIPAL)
         if (!ID_PRINCIPAL){
-            console.log("No se encuentran registros 0, saliendo...")
-            return
+            console.log(ID_PRINCIPAL, products_consult)
+            return ''
         }
 
-        let product = await knex("products").where("id", ID_PRINCIPAL).first()
+        let product = prods_diccio[ID_PRINCIPAL]
         if (!product){
-            console.log("No se encuentra el producto 1, saliendo...")
-            return
+            return ''
         } else {
             console.log(product)
-            let proms = []
-            let trx = await knex.transaction()
 
             console.log(" \n Se actualizan registros de alias referenciandolos solo al primer producto")
             for (let i=0; i < arr_alias.length; i++){
-                proms.push( 
-                    trx('alias_productos').update( { "product_id": ID_PRINCIPAL } ).where('alias', arr_alias[i]) 
-                )
+                script_sql += "update alias_productos set product_id = '"+ID_PRINCIPAL+"' where alias = '"+arr_alias[i]+"';\n"
                 console.log("al prod ", ID_PRINCIPAL, "Se asigna alias ",  arr_alias[i])
+                if (arr_alias[i].includes("'"))
+                    return ''
             }
             
             console.log(" \n Se actualizan los registros de precios")
             for (let i=0; i < arr_id_prods.length; i++){
-                proms.push( 
-                    trx('price').update( { "product_id": ID_PRINCIPAL } ).where('product_id', arr_id_prods[i]) 
-                )
+                script_sql += "update price set product_id = '"+ID_PRINCIPAL+"' where product_id = '"+arr_id_prods[i]+"';\n"
                 console.log("precios de  ", arr_id_prods[i], " Se asigna a producto ",  ID_PRINCIPAL)
             }
 
@@ -86,9 +87,7 @@ async function procesa_unificacion( ALIAS_PRODS ){
                 if (arr_id_prods[i] == ID_PRINCIPAL)
                     continue
 
-                proms.push( 
-                    trx('product_category').delete().where('product_id', arr_id_prods[i]) 
-                )
+                script_sql += "delete from product_category where product_id = '"+arr_id_prods[i]+"';\n"
                 console.log("Se quita relacion producto categoria  ", arr_id_prods[i])
             }
 
@@ -97,38 +96,74 @@ async function procesa_unificacion( ALIAS_PRODS ){
                 if (arr_id_prods[i] == ID_PRINCIPAL)
                     continue
 
-                proms.push( 
-                    trx('products').delete().where('id', arr_id_prods[i]) 
-                )
-                console.log("Se quita producto  ", arr_id_prods[i])
+                script_sql += "delete from products where id = '"+arr_id_prods[i]+"';\n"
+                console.log("Se quita producto  ", arr_id_prods[i], " con alias ",  arr_alias[i])
+                if (arr_alias[i].includes("'"))
+                    return ''
             }
             
-            let proms_res =  await Promise.all( proms )
-            if (proms_res){
-                await trx.commit()
-                console.log(proms_res)
-                return true
-            }
+           
+            return script_sql
+            
         }
         
     } else 
-        return false
+        return ''
 }
 
 let unificaciones = []
-let cant_total = 0
+const INICIO = 0
+let script_sql = ""
+
 setTimeout( async ()=>{
     fs.readFile('productos_unificar.json', async function(err, data) {
         unificaciones = JSON.parse(data);
         cant_total = unificaciones.length
 
-        let c = 0
-        setInterval( async ()=>{  
-            let reg = unificaciones.pop()
-            console.log("Procesando ", reg, c, ' de ', cant_total)
-            c++
-            await procesa_unificacion( reg )
-        }, 10)
-    });
-}, 100)
+        let c = INICIO
+        let prods_diccio = {}
 
+        unificaciones = unificaciones.slice(INICIO, unificaciones.length)
+
+        let products_= await knex("products")
+                                    .select()
+        
+        if (products_){
+            fs.writeFileSync("unificar_productos.sql", script_sql, (err) => {
+                if (err) {
+                console.error(`Error al escribir el archivo: ${err.message}`)
+                } else {
+                console.log(`Archivo escrito correctamente: unificar_productos.sql`)
+                }
+            })
+
+            for (let i=0; i < products_.length; i++){
+                prods_diccio[products_[i].id] = products_[i]
+            }
+
+            for (let j=0; j < unificaciones.length; j ++){
+                let reg = unificaciones[j]
+                //console.log("Procesando ", reg, c, ' de ', cant_total)
+                script_sql += procesa_unificacion( reg, products_, prods_diccio ) 
+                c++ 
+
+                if (c % 100 == 0){
+                    fs.writeFileSync("unificar_productos.sql", script_sql, { flag: 'a' }, (err) => {
+                        if (err) {
+                            console.error(`Error al escribir el archivo: ${err.message}`)
+                        } else {
+                            console.log(`Archivo escrito correctamente: unificar_productos.sql`)
+                            
+                        }
+                    })
+                    script_sql = ''
+                }
+            }
+
+            
+            
+        }
+        
+    });
+
+}, 100)
