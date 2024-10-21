@@ -1,6 +1,4 @@
-let caracteres = []
-
-let posiciones = []
+let lst_letras = {}
 
 function normalize( str ){
     return String(str).normalize('NFD')
@@ -8,105 +6,82 @@ function normalize( str ){
             .normalize().toLowerCase()
 }
 
-exports.inicializa_buscador = async function() {
-    console.log('Mapeando todos los posibles caracteres')
-    let chars = {}
+function obtener_propiedades(name) {
+    let letras = {}
 
-    for (let i=0; i < global.alias_productos.length; i++){
-        const nombre = normalize(global.alias_productos[i].name)
+    for (let i = 0; i < name.length; i++) {
+        if (!letras[name[i]])
+            letras[name[i]] = []
 
-        for (let j=0; j < nombre.length; j++){
-            const caracter = nombre[j]
-            if (!chars[caracter]){
-                caracteres.push(caracter)
-                chars[caracter] = 1
-            }
-            
-        }
-    } 
-    console.log('caracteres obtenidos: ', caracteres)
-    console.log('Generando matriz de busqueda')
-    for (let i=0; i < global.alias_productos.length; i++){
-        const nombre = normalize(global.alias_productos[i].name)
-        const nombre_arr = nombre.split("")
-                                
-        for (let j=0; j < nombre_arr.length; j++){
-            if (!posiciones[j]) posiciones[j] = {}
-
-            const caracter = nombre_arr[j]
-            if (!posiciones[j][caracter])
-                posiciones[j][caracter] = {}
-
-            posiciones[j][caracter][global.alias_productos[i].id] = global.products_diccio_id[global.alias_productos[i].id]
-        }
+        letras[name[i]].push(i)
     }
-    console.log('Matriz de busqueda generada', posiciones.length)
+    return letras
 }
+
+exports.inicializa_buscador = async function() {
+
+    console.log('Generando estructura de busqueda')
+
+    for (let i = 0; i < global.alias_productos.length; i++) {
+        const nombre = normalize(global.alias_productos[i].name)
+        
+        let props = obtener_propiedades(nombre)
+        let aux = { dsc: props, name: nombre, id: global.alias_productos[i].id}
+
+        let o_k = Object.keys(props)
+        for (let j = 0; j < o_k.length; j++) {
+            if(!lst_letras[o_k[j]])
+                lst_letras[o_k[j]] = []
+            lst_letras[o_k[j]].push(aux)
+        }
+        
+    }
+    console.log('estructura de busqueda generada.')
+}
+
 
 exports.busqueda = async function( termino, limit = -1 ) {
-    let palabras = termino.normalize('NFD')
-                  .replace(/([^n\u0300-\u036f]|n(?!\u0303(?![\u0300-\u036f])))[\u0300-\u036f]+/gi,"$1")
-                  .normalize().toLowerCase().split(" ")
-    let res = []
-    let aux = []
-    for (let i=0; i < palabras.length; i++){
-        aux.push( buscar_termino(palabras[i]) ) 
-    }
+    termino = normalize(termino)
+    let palabras = termino.split(" ")
+    
+    let encontrados = []
+    let encontrados_k = []
+    const p_letra = termino[0]
+    let listado = [...lst_letras[p_letra] ? lst_letras[p_letra] : []]
 
-    let keys = Object.keys(aux[0])
-    for (let i=1; i < keys.length; i++){
-        let encontrado = true
-        for (let j=1; j < aux.length; j++){
-            encontrado = encontrado && aux[j][keys[i]]
+    for (let c = 0; c < palabras.length; c++) {
+        const palabra = palabras[c]
+        encontrados = []
+        encontrados_k = []
+        let primera_letra = palabra[0]
+
+        for (let i = 0; i < listado.length; i++) {
+            const e_actual = listado[i]
+            if (!e_actual.dsc[primera_letra])
+                continue
+
+            let pos_ = e_actual.dsc[primera_letra]
+
+            for (let j = 1; j < pos_.length; j++) {
+                let l = 0
+                for (let k = pos_[j]; k < e_actual.name.length; k++) {
+                    const letra_db = e_actual.name[k]
+                    if (letra_db != palabra[l])
+                        break
+                    l++
+                    if (l == palabra.length) {
+                        encontrados_k.push({id:e_actual.id, name:e_actual.name})
+                        encontrados.push(e_actual)
+                        break
+                    }
+                }
+            }
+
         }
-        if (encontrado) res.push(aux[0][keys[i]])
-
-        if (limit > 0 && res.length >= limit) return res
+        if (encontrados.length == 0)
+            return []
+        listado = [...encontrados]
     }
-    return res
 
-}
-
-function buscar_termino(termino, buscar_f_n_letras = posiciones.length){
-
-    let res = {}
-
-    cant_pos = buscar_f_n_letras - termino.length
-    
-    for (let i = 0; i < cant_pos; i++){
-        res = {...res, ...buscar(termino,i) }
-    }
-   
-    return res 
-}
-
-function buscar(termino, offset=0){
-    let res = {}
-    
-    let presel = []
-    for (let i=0; i < termino.length; i++){
-        const caracter = termino[i]
-        
-        const seccion = posiciones[i+offset][caracter]
-        
-        if (!seccion) 
-            return {}
-
-        presel[i] = seccion
-    }
-    
-    const o_k = Object.keys(presel[0])
-    
-    for (let i=0; i < o_k.length; i++){
-        
-        let encontrado = true
-        for (let j=1; j < presel.length; j++)
-            encontrado = encontrado && presel[j][o_k[i]]
-        
-        if (encontrado)
-            res[global.products_diccio_id[o_k[i]].id] = global.products_diccio_id[o_k[i]]
-    }
-    
-   return res
-    
+    return encontrados_k
 }
