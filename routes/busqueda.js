@@ -69,7 +69,7 @@ async function hacer_busqueda( termino, metodo ){
       let list_precios = []
 
       if (productos){
-        
+        console.log("Cant encontrados ", productos.length)
         let proms_precios = []
         for (let i=0; i < productos.length; i++){
           proms_precios.push(buscar_precios_producto(productos[i].id))
