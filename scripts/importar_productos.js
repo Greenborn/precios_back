@@ -90,7 +90,7 @@ async function get_producto( trx, articulo ){
         let producto  = global.products_diccio[name] ? global.products_diccio[name]
                         : await knex('alias_productos').select()
                             .join('products', 'products.id', 'alias_productos.product_id')
-                            .where('alias_productos.alias', articulo.name).first()
+                            .where('alias_productos.alias', name).first()
         if (producto){
             if (articulo?.barcode){
                 await trx('products').update( {
