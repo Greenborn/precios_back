@@ -3,7 +3,7 @@ const { text } = require("express");
 const fs = require('fs');
 const { resolve } = require("path");
 const uuid = require("uuid")
-const utils = require("./utils")
+const utils = require("../helpers/utils")
 
 let conn_obj = {
     host: process.env.mysql_host,
@@ -68,7 +68,9 @@ exports.procesar_articulo = procesar_articulo
 async function get_categoria( trx, articulo ){
     return new Promise( async (resolve, reject) => {
         const NOMBRE_CAT = utils.limpiarTexto(articulo.category_name)
-        let categoria = await knex('category').select().where('name', NOMBRE_CAT).first()
+        let categoria = (global.diccio_name_category[NOMBRE_CAT])  
+                            ? global.diccio_name_category[NOMBRE_CAT]
+                            : await knex('category').select().where('name', NOMBRE_CAT).first()
         if (categoria){
             resolve(categoria)
             return
