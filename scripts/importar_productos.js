@@ -3,6 +3,7 @@ const { text } = require("express");
 const fs = require('fs');
 const { resolve } = require("path");
 const uuid = require("uuid")
+const utils = require("./utils")
 
 let conn_obj = {
     host: process.env.mysql_host,
@@ -66,13 +67,14 @@ exports.procesar_articulo = procesar_articulo
 
 async function get_categoria( trx, articulo ){
     return new Promise( async (resolve, reject) => {
-        let categoria = await knex('category').select().where('name', articulo.category_name).first()
+        const NOMBRE_CAT = utils.limpiarTexto(articulo.category_name)
+        let categoria = await knex('category').select().where('name', NOMBRE_CAT).first()
         if (categoria){
             resolve(categoria)
             return
         } else {
             const ID_NUEVA_CAT = uuid.v7()
-            const insert = { 'id': ID_NUEVA_CAT, 'name': articulo.category_name }
+            const insert = { 'id': ID_NUEVA_CAT, 'name': NOMBRE_CAT }
             categoria = await trx('category').insert( insert )
             resolve(insert)
             return
@@ -83,14 +85,12 @@ async function get_categoria( trx, articulo ){
 
 async function get_producto( trx, articulo ){
     return new Promise( async (resolve, reject) => {
-        let name = String(articulo.name).normalize('NFD')
-                    .replace(/([^n\u0300-\u036f]|n(?!\u0303(?![\u0300-\u036f])))[\u0300-\u036f]+/gi,"$1")
-                    .normalize().toLowerCase()
+        const NAME = utils.limpiarTexto(articulo.name)
         //console.log('products_diccio', global.products_diccio[name] )
-        let producto  = global.products_diccio[name] ? global.products_diccio[name]
+        let producto  = global.products_diccio[NAME] ? global.products_diccio[NAME]
                         : await knex('alias_productos').select()
                             .join('products', 'products.id', 'alias_productos.product_id')
-                            .where('alias_productos.alias', articulo.name).first()
+                            .where('alias_productos.alias', NAME).first()
         if (producto){
             if (articulo?.barcode){
                 await trx('products').update( {
@@ -104,10 +104,10 @@ async function get_producto( trx, articulo ){
             const ID_NUEVO_PROD = uuid.v7()
             let insert = {
                 "id": ID_NUEVO_PROD,
-                "name": name,
+                "name": NAME,
                 "vendor_id": articulo.vendor_id,
             }
-            proms_.push( trx('alias_productos').insert( { "alias": name, "product_id": ID_NUEVO_PROD } ) ) 
+            proms_.push( trx('alias_productos').insert( { "alias": NAME, "product_id": ID_NUEVO_PROD } ) ) 
             if (articulo?.barcode) insert['barcode'] = articulo.barcode
             proms_.push( trx('products').insert( insert ) ) 
             let nuevo_reg = await Promise.all( proms_ )

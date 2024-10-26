@@ -1,9 +1,7 @@
 require("dotenv").config({ path: '../.env' })
 const fs = require('fs');
-const { Worker } = require('worker_threads');
 const uuid = require("uuid")
 
-const CANT_HILOS = 4
 const NOMBRE_ARCHIVO = "importacion_prod.sql"
 
 let conn_obj = {
