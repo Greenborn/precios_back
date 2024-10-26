@@ -4,7 +4,7 @@ var router = express.Router()
 module.exports = router
 const bcrypt = require('bcrypt')
 const fs = require("fs")
-const cargador_precios = require("../scripts/importar_productos")
+const cargador_precios = require("../controllers/importar_productos")
 
 router.get('/all', async function (req, res) {
     console.log("query ", req.query)
