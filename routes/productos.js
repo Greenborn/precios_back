@@ -152,33 +152,38 @@ async function procesar_oferta(trx, item, HOY, AYER){
             if (!item?.titulo)
                 return resolve({ stat: false,  error: "Revisar titulo ", 'item':JSON.stringify(item) })
             
-            let proms_arr = []
+            let existe = await global.knex("promociones_hoy").where("titulo", item.titulo).first()
+            if (existe)
+                return resolve({ stat: false,  error: "Ya existe oferta con ese título ", 'item':JSON.stringify(item) })
+            else {
+                let proms_arr = []
             
-            const insert_ = {
-                'orden': 0,
-                'fecha': HOY,
-                'titulo': item.titulo,
-                'id_producto': -1,
-                'precio': item.precio,
-                'datos_extra': item?.datos_extra ? item?.datos_extra : '{ }',
-                'branch_id': item.branch_id,
-                'url': item.url
-            }
-            proms_arr.push( trx('promociones_hoy').delete().where('fecha' , '<', AYER) )
-            proms_arr.push( trx('promociones_hoy').insert( insert_ ) )
-            proms_arr.push( trx('promociones').insert( insert_ ) )
+                const insert_ = {
+                    'orden': 0,
+                    'fecha': HOY,
+                    'titulo': item.titulo,
+                    'id_producto': -1,
+                    'precio': item.precio,
+                    'datos_extra': item?.datos_extra ? item?.datos_extra : '{ }',
+                    'branch_id': item.branch_id,
+                    'url': item.url
+                }
+                proms_arr.push( trx('promociones_hoy').delete().where('fecha' , '<', AYER) )
+                proms_arr.push( trx('promociones_hoy').insert( insert_ ) )
+                proms_arr.push( trx('promociones').insert( insert_ ) )
 
-            let proms_res = await Promise.all(proms_arr)
-            if (proms_res){
-                let cant_reg = await global.knex("promociones_hoy").count("id").first()
-                await global.knex("incremental_stats").update({ "value": cant_reg['count(`id`)'] }).where("key", "cant_promos")
-                resolve({ stat: true, nuevo: 1 })
-                return
-            } else{
-                console.log(proms_res)
-                resolve({ stat: false,  error: "Error interno, reintente luego" })
-                return
-            }
+                let proms_res = await Promise.all(proms_arr)
+                if (proms_res){
+                    let cant_reg = await global.knex("promociones_hoy").count("id").first()
+                    await global.knex("incremental_stats").update({ "value": cant_reg['count(`id`)'] }).where("key", "cant_promos")
+                    resolve({ stat: true, nuevo: 1 })
+                    return
+                } else{
+                    console.log(proms_res)
+                    resolve({ stat: false,  error: "Error interno, reintente luego" })
+                    return
+                }
+            }   
             
         } catch (e){
             console.log('procesar_oferta', e)
