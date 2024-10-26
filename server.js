@@ -118,11 +118,17 @@ async function base_de_datos_iniciada(){
   global.alias_productos = await global.knex('alias_productos').select()
                               .join('products', 'products.id', 'alias_productos.product_id')
   let precios_hoy = await global.knex('price_today').select()
+  global.diccio_name_category = {}
    
   let product_category = await global.knex('product_category').select()
 
   if (precios_hoy)
     await generar_diccio_precios(precios_hoy)
+
+  if (category){
+    for (let i=0; i < category.length; i++)
+      global.diccio_name_category[category[i].name] = category[i]
+  }
 
   if (product_category && products && locales && enterprice && global.alias_productos ){
 
