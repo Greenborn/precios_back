@@ -103,14 +103,6 @@ async function procesa_item(trx, item, HOY){
 router.post('/importar', async function (req, res) {
     //console.log("data ", req.body)
     const KEY = req.body?.key
-    let trx = null
-    try {
-        trx = await knex.transaction()
-    } catch (error) {
-        console.log(error)
-        res.status(200).send({ stat: false,  error: "Error interno, reintente luego_" })
-        return
-    }
     
     try {
         const KEY_VALID = process.env.KEY_INT
@@ -123,30 +115,18 @@ router.post('/importar', async function (req, res) {
         HOY.setHours(0,0,0,1)
         const ARR_IMPORTA = req.body?.lst_importa
 
-        let proms_arr= []
         let AYER = new Date()
         AYER.setDate( AYER.getDate() - 1 )
         AYER.setUTCHours(23,59,59)
-        //proms_arr.push( trx('price_today').delete().where('date_time', '<', AYER) )
-        for (let index = 0; index < ARR_IMPORTA.length; index++) {
-            let item = ARR_IMPORTA[index]
-            proms_arr.push( procesa_item(trx, item, HOY) )
-        }
-
-        let res_proms = await Promise.all(proms_arr)
-        if (res_proms){
-            await trx.commit()
-            res.status(200).send({ stat: true, res: res_proms })
-            return
-        } else {
-            console.log(res_proms)
-            await trx.rollback()
-            res.status(200).send({ stat: false,  error: "Error interno, reintente luego" })
-            return
-        }
+        
+        for (let index = 0; index < ARR_IMPORTA.length; index++) 
+            await procesa_item( ARR_IMPORTA[index], HOY) 
+        
+        await trx.commit()
+        res.status(200).send({ stat: true, res: res_proms })
+        return
         
     } catch (error) {
-        await trx.rollback()
         console.log("error", error)
         res.status(200).send({ stat: false,  error: "Error interno, reintente luego" })
     }    

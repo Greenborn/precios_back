@@ -178,49 +178,59 @@ async function procesa_precio( trx, producto_db, articulo, fecha_registro ){
     })
 }
 
-async function procesar_articulo(trx, articulo, fecha_registro ){
+async function procesar_articulo(articulo, fecha_registro ){
     return new Promise( async (resolve, reject) => {
-        
         if (!articulo?.category_name){
             return resolve({stat:false, text: 'No se especifica categoria!'})
         }
 
-        let res = { stat: true, text: '' }
-        let proms_arr = []
+        let trx = await knex.transaction()
 
-        let producto  = await get_producto( trx, articulo )
-        let categoria = await get_categoria( trx, articulo )
-        
-        //Si no hay relacion entre producto y categoria se la crea
-        if (producto && categoria){
-            let hay_cat = await knex('product_category').select()
-                .where({ "product_id": producto.id, "category_id": categoria.id }).first()
-            if (!hay_cat)
-                proms_arr.push(
-                    trx('product_category').insert( {
-                        "id": uuid.v7(),
-                        "product_id":  producto.id,
-                        "category_id": categoria.id
-                    } ))
+        try {
+            let res = { stat: true, text: '' }
+            let proms_arr = []
 
-            proms_arr.push( 
-                procesa_precio( trx, producto, articulo, fecha_registro )
-            )
+            let producto  = await get_producto( trx, articulo )
+            let categoria = await get_categoria( trx, articulo )
+            
+            //Si no hay relacion entre producto y categoria se la crea
+            if (producto && categoria){
+                let hay_cat = await knex('product_category').select()
+                    .where({ "product_id": producto.id, "category_id": categoria.id }).first()
+                if (!hay_cat)
+                    proms_arr.push(
+                        trx('product_category').insert( {
+                            "id": uuid.v7(),
+                            "product_id":  producto.id,
+                            "category_id": categoria.id
+                        } ))
 
-            let res_proms = await Promise.all( proms_arr )
-            if (res_proms){
-                console.log(res_proms)
-                resolve(res)
-                return
+                proms_arr.push( 
+                    procesa_precio( trx, producto, articulo, fecha_registro )
+                )
+
+                let res_proms = await Promise.all( proms_arr )
+                if (res_proms){
+                    await trx.commit()
+                    console.log(res_proms)
+                    resolve(res)
+                    return
+                } else {
+                    trx.rollback()
+                    res.stat = false
+                    resolve(res)
+                    return
+                }
             } else {
-                res.stat = false
-                resolve(res)
-                return
+                trx.rollback()
+                return resolve({ stat: false, text: "no hay producto y/o categoria"})
             }
-        } else {
-            return resolve({ stat: false, text: "no hay producto y/o categoria"})
+        } catch (error) {
+            trx.rollback()
+            console.log(error)
+            return resolve({ stat: false, text: ''})
         }
-                
+             
     })
 }
 
