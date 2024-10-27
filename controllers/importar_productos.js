@@ -1,7 +1,5 @@
 require("dotenv").config({ path: '../.env' })
-const { text } = require("express");
 const fs = require('fs');
-const { resolve } = require("path");
 const uuid = require("uuid")
 const utils = require("../helpers/utils")
 

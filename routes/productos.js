@@ -103,6 +103,15 @@ async function procesa_item(trx, item, HOY){
 router.post('/importar', async function (req, res) {
     //console.log("data ", req.body)
     const KEY = req.body?.key
+    let trx = null
+    try {
+        trx = await knex.transaction()
+    } catch (error) {
+        console.log(error)
+        res.status(200).send({ stat: false,  error: "Error interno, reintente luego_" })
+        return
+    }
+    
     try {
         const KEY_VALID = process.env.KEY_INT
         if (KEY != KEY_VALID){
@@ -113,8 +122,6 @@ router.post('/importar', async function (req, res) {
         let HOY = new Date()
         HOY.setHours(0,0,0,1)
         const ARR_IMPORTA = req.body?.lst_importa
-
-        let trx = await knex.transaction()
 
         let proms_arr= []
         let AYER = new Date()
@@ -139,6 +146,7 @@ router.post('/importar', async function (req, res) {
         }
         
     } catch (error) {
+        await trx.rollback()
         console.log("error", error)
         res.status(200).send({ stat: false,  error: "Error interno, reintente luego" })
     }    
