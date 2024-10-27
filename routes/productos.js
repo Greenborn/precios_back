@@ -122,7 +122,6 @@ router.post('/importar', async function (req, res) {
         for (let index = 0; index < ARR_IMPORTA.length; index++) 
             await procesa_item( ARR_IMPORTA[index], HOY) 
         
-        await trx.commit()
         res.status(200).send({ stat: true, res: res_proms })
         return
         
