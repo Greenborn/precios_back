@@ -61,7 +61,8 @@ async function get_producto( trx, articulo ){
     return new Promise( async (resolve, reject) => {
         const NAME = utils.limpiarTexto(articulo.name)
         //console.log('products_diccio', global.products_diccio[name] )
-        let producto  = global.products_diccio[NAME] ? global.products_diccio[NAME]
+        let producto  = (global.products_diccio[NAME]) 
+                        ? global.products_diccio[NAME]
                         : await global.knex('alias_productos').select()
                             .join('products', 'products.id', 'alias_productos.product_id')
                             .where('alias_productos.alias', NAME).first()
@@ -74,17 +75,17 @@ async function get_producto( trx, articulo ){
             resolve(producto)
             return
         } else {
-            let proms_ = []
+            
             const ID_NUEVO_PROD = uuid.v7()
             let insert = {
                 "id": ID_NUEVO_PROD,
                 "name": NAME,
                 "vendor_id": articulo.vendor_id,
             }
-            proms_.push( trx('alias_productos').insert( { "alias": NAME, "product_id": ID_NUEVO_PROD } ) ) 
+            await trx('alias_productos').insert( { "alias": NAME, "product_id": ID_NUEVO_PROD } ) 
             if (articulo?.barcode) insert['barcode'] = articulo.barcode
-            proms_.push( trx('products').insert( insert ) ) 
-            let nuevo_reg = await Promise.all( proms_ )
+            await trx('products').insert( insert ) 
+            
             resolve(insert)
             return
         }
@@ -93,62 +94,49 @@ async function get_producto( trx, articulo ){
 
 async function procesa_precio( trx, producto_db, articulo, fecha_registro ){
     return new Promise( async (resolve, reject) => {
-        try {
-            let HOY = new Date()
-            HOY.setHours(0,0,0,1)
+        
+        let HOY = new Date()
+        HOY.setHours(0,0,0,1)
 
-            let ultimo_precio = await global.knex('price').select().where('product_id', producto_db.id).orderBy('time', 'desc').first()
-            if (ultimo_precio){
-                if (Math.abs(ultimo_precio.price - articulo?.price) > 1){
-                    let nuevo_precio = await nuevo_reg_precio( trx, articulo, producto_db, fecha_registro )
-                    if (nuevo_precio){
-                        await trx('news').insert( {
-                            text: "Se actualiza precio de "+articulo.name+" que ahora sale "+articulo.price
-                        } )
-                        await procesar_variacion(trx, [ ultimo_precio, articulo ], fecha_registro)
-                        precios_actualizados.push( [ ultimo_precio, articulo ] )
-                        return resolve(true)
-                    } else 
-                        return resolve(false)
-                } else if (ultimo_precio && Math.abs(ultimo_precio.price - articulo?.price) <= 1){
-                    await trx('price').update( {
-                        "date_time": new Date(fecha_registro), "time": new Date(), "url": ( articulo.url ) ? articulo.url : null
-                    } ).where("id", ultimo_precio.id)
-                    
-                    let precio_hoy = {
-                        ...ultimo_precio,
-                        "date_time": new Date(fecha_registro), "time": new Date(), "url": ( articulo.url ) ? articulo.url : null
-                    }
-                    precio_hoy['id'] = uuid.v4()
-                    await trx('price_today').insert( precio_hoy )
-                    precios_reafirmados.push(ultimo_precio)
-                    return resolve(true)
-                } else  if (!ultimo_precio) {
-                    let nuevo_precio = await nuevo_reg_precio( trx, articulo, producto_db, fecha_registro )
-                    if (nuevo_precio){
-                        //await trx('news').insert( {
-                        //    text: "Se agrega nuevo precio de "+articulo.name+" que sale "+articulo.price
-                        //} )
-                        return resolve(true)
-                    } else 
-                        return resolve(false)
-                } else 
-                    return resolve(false)
-            } else {
+        let ultimo_precio = await global.knex('price').select().where('product_id', producto_db.id).orderBy('time', 'desc').first()
+        if (ultimo_precio){
+            if (Math.abs(ultimo_precio.price - articulo?.price) > 1){
                 let nuevo_precio = await nuevo_reg_precio( trx, articulo, producto_db, fecha_registro )
                 if (nuevo_precio){
-                // await trx('news').insert( {
-                //     text: "Se agrega nuevo precio de "+articulo.name+" que sale "+articulo.price
-                //  } )
+                    await procesar_variacion(trx, [ ultimo_precio, articulo ], fecha_registro)
+                    precios_actualizados.push( [ ultimo_precio, articulo ] )
                     return resolve(true)
                 } else 
                     return resolve(false)
-            }
-
-        } catch( error ){
-            console.log(error)
-            return resolve({ stat: false, text: error})
+            } else if (ultimo_precio && Math.abs(ultimo_precio.price - articulo?.price) <= 1){
+                await trx('price').update( {
+                    "date_time": new Date(fecha_registro), "time": new Date(), "url": ( articulo.url ) ? articulo.url : null
+                } ).where("id", ultimo_precio.id)
+                
+                let precio_hoy = {
+                    ...ultimo_precio,
+                    "date_time": new Date(fecha_registro), "time": new Date(), "url": ( articulo.url ) ? articulo.url : null
+                }
+                precio_hoy['id'] = uuid.v4()
+                await trx('price_today').insert( precio_hoy )
+                precios_reafirmados.push(ultimo_precio)
+                return resolve(true)
+            } else  if (!ultimo_precio) {
+                let nuevo_precio = await nuevo_reg_precio( trx, articulo, producto_db, fecha_registro )
+                if (nuevo_precio){
+                    return resolve(true)
+                } else 
+                    return resolve(false)
+            } else 
+                return resolve(false)
+        } else {
+            let nuevo_precio = await nuevo_reg_precio( trx, articulo, producto_db, fecha_registro )
+            if (nuevo_precio){
+                return resolve(true)
+            } else 
+                return resolve(false)
         }
+
     })
 }
 
@@ -227,7 +215,7 @@ async function procesar_variacion( trx, variacion, fecha_registro){
                 "precio_ayer":        reg_anterior.price,
                 "precio_hoy":         reg_nuevo.price,
                 "nombre_producto":    reg_nuevo.name,
-                "nombre_comercio":     diccio_enterprise[ diccio_branch[reg_nuevo.branch_id].enterprise_id ].name,
+                "nombre_comercio":     global.enterprice_diccio[ global.branchs_diccio[reg_nuevo.branch_id].enterprise_id ].name,
                 "fecha_utlimo_precio": fecha_registro
             })
     }
