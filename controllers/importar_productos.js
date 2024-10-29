@@ -59,36 +59,43 @@ async function get_categoria( trx, articulo ){
 
 async function get_producto( trx, articulo ){
     return new Promise( async (resolve, reject) => {
-        const NAME = utils.limpiarTexto(articulo.name)
-        //console.log('products_diccio', global.products_diccio[name] )
-        let producto  = (global.products_diccio[NAME]) 
-                        ? global.products_diccio[NAME]
-                        : await global.knex('alias_productos').select()
-                            .join('products', 'products.id', 'alias_productos.product_id')
-                            .where('alias_productos.alias', NAME).first()
-        if (producto){
-            if (articulo?.barcode){
-                await trx('products').update( {
-                    "barcode": articulo.barcode
-                } ).where('id','=',producto.id)
+        try {
+            const NAME = utils.limpiarTexto(articulo.name)
+            //console.log('products_diccio', global.products_diccio[name] )
+            let producto  = (global.products_diccio[NAME]) 
+                            ? global.products_diccio[NAME]
+                            : await global.knex('alias_productos').select()
+                                .join('products', 'products.id', 'alias_productos.product_id')
+                                .where('alias_productos.alias', NAME).first()
+            if (producto){
+                if (articulo?.barcode){
+                    await trx('products').update( {
+                        "barcode": articulo.barcode
+                    } ).where('id','=',producto.id)
+                }
+                resolve(producto)
+                return
+            } else {
+                
+                const ID_NUEVO_PROD = uuid.v7()
+                let insert = {
+                    "id": ID_NUEVO_PROD,
+                    "name": NAME,
+                    "vendor_id": articulo.vendor_id,
+                }
+                await trx('alias_productos').insert( { "alias": NAME, "product_id": ID_NUEVO_PROD } ) 
+                if (articulo?.barcode) insert['barcode'] = articulo.barcode
+                await trx('products').insert( insert ) 
+                
+                resolve(insert)
+                return
             }
-            resolve(producto)
-            return
-        } else {
-            
-            const ID_NUEVO_PROD = uuid.v7()
-            let insert = {
-                "id": ID_NUEVO_PROD,
-                "name": NAME,
-                "vendor_id": articulo.vendor_id,
-            }
-            await trx('alias_productos').insert( { "alias": NAME, "product_id": ID_NUEVO_PROD } ) 
-            if (articulo?.barcode) insert['barcode'] = articulo.barcode
-            await trx('products').insert( insert ) 
-            
-            resolve(insert)
+        } catch (error) {
+            console.log(error, 'no se pudo obtener / crear el producto')
+            resolve(null)
             return
         }
+        
     })
 }
 
@@ -154,6 +161,13 @@ async function procesar_articulo(articulo, fecha_registro ){
 
             let producto  = await get_producto( trx, articulo )
             let categoria = await get_categoria( trx, articulo )
+
+            if (producto === null){
+                trx.rollback()
+                res.stat = false
+                resolve(res)
+                return
+            }
             
             //Si no hay relacion entre producto y categoria se la crea
             if (producto && categoria){
