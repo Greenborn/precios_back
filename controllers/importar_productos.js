@@ -1,32 +1,6 @@
 require("dotenv").config({ path: '../.env' })
-const fs = require('fs');
 const uuid = require("uuid")
 const utils = require("../helpers/utils")
-
-let conn_obj = {
-    host: process.env.mysql_host,
-  //  port: process.env.mysql_port,
-    user: process.env.mysql_user,
-    password: process.env.mysql_password,
-    database: process.env.mysql_database,
-    supportBigNumbers: true,
-    bigNumberStrings: true,
-    typeCast: function (field, next) {
-        if (field.type == "NEWDECIMAL") {
-            var value = field.string();
-            return (value === null) ? null : Number(value);
-        }
-        return next();
-    }
-  
-  }
-  
-const knex = require('knex')({
-    client: 'mysql2',
-    connection: conn_obj,
-    pool: { min: 0, max: 7 }
-})
-
 
 let precios_reafirmados = []
 let precios_actualizados = []
@@ -68,7 +42,7 @@ async function get_categoria( trx, articulo ){
         const NOMBRE_CAT = utils.limpiarTexto(articulo.category_name)
         let categoria = (global.diccio_name_category[NOMBRE_CAT])  
                             ? global.diccio_name_category[NOMBRE_CAT]
-                            : await knex('category').select().where('name', NOMBRE_CAT).first()
+                            : await global.knex('category').select().where('name', NOMBRE_CAT).first()
         if (categoria){
             resolve(categoria)
             return
@@ -85,96 +59,91 @@ async function get_categoria( trx, articulo ){
 
 async function get_producto( trx, articulo ){
     return new Promise( async (resolve, reject) => {
-        const NAME = utils.limpiarTexto(articulo.name)
-        //console.log('products_diccio', global.products_diccio[name] )
-        let producto  = global.products_diccio[NAME] ? global.products_diccio[NAME]
-                        : await knex('alias_productos').select()
-                            .join('products', 'products.id', 'alias_productos.product_id')
-                            .where('alias_productos.alias', NAME).first()
-        if (producto){
-            if (articulo?.barcode){
-                await trx('products').update( {
-                    "barcode": articulo.barcode
-                } ).where('id','=',producto.id)
+        try {
+            const NAME = utils.limpiarTexto(articulo.name)
+            //console.log('products_diccio', global.products_diccio[name] )
+            let producto  = (global.products_diccio[NAME]) 
+                            ? global.products_diccio[NAME]
+                            : await global.knex('alias_productos').select()
+                                .join('products', 'products.id', 'alias_productos.product_id')
+                                .where('alias_productos.alias', NAME).first()
+            if (producto){
+                if (articulo?.barcode){
+                    await trx('products').update( {
+                        "barcode": articulo.barcode
+                    } ).where('id','=',producto.id)
+                }
+                resolve(producto)
+                return
+            } else {
+                
+                const ID_NUEVO_PROD = uuid.v7()
+                let insert = {
+                    "id": ID_NUEVO_PROD,
+                    "name": NAME,
+                    "vendor_id": articulo.vendor_id,
+                }
+                await trx('alias_productos').insert( { "alias": NAME, "product_id": ID_NUEVO_PROD } ) 
+                if (articulo?.barcode) insert['barcode'] = articulo.barcode
+                await trx('products').insert( insert ) 
+                
+                resolve(insert)
+                return
             }
-            resolve(producto)
-            return
-        } else {
-            let proms_ = []
-            const ID_NUEVO_PROD = uuid.v7()
-            let insert = {
-                "id": ID_NUEVO_PROD,
-                "name": NAME,
-                "vendor_id": articulo.vendor_id,
-            }
-            proms_.push( trx('alias_productos').insert( { "alias": NAME, "product_id": ID_NUEVO_PROD } ) ) 
-            if (articulo?.barcode) insert['barcode'] = articulo.barcode
-            proms_.push( trx('products').insert( insert ) ) 
-            let nuevo_reg = await Promise.all( proms_ )
-            resolve(insert)
+        } catch (error) {
+            console.log(error, 'no se pudo obtener / crear el producto')
+            resolve(null)
             return
         }
+        
     })
 }
 
 async function procesa_precio( trx, producto_db, articulo, fecha_registro ){
     return new Promise( async (resolve, reject) => {
-        try {
-            let HOY = new Date()
-            HOY.setHours(0,0,0,1)
+        
+        let HOY = new Date()
+        HOY.setHours(0,0,0,1)
 
-            let ultimo_precio = await knex('price').select().where('product_id', producto_db.id).orderBy('time', 'desc').first()
-            if (ultimo_precio){
-                if (Math.abs(ultimo_precio.price - articulo?.price) > 1){
-                    let nuevo_precio = await nuevo_reg_precio( trx, articulo, producto_db, fecha_registro )
-                    if (nuevo_precio){
-                        await trx('news').insert( {
-                            text: "Se actualiza precio de "+articulo.name+" que ahora sale "+articulo.price
-                        } )
-                        await procesar_variacion(trx, [ ultimo_precio, articulo ], fecha_registro)
-                        precios_actualizados.push( [ ultimo_precio, articulo ] )
-                        return resolve(true)
-                    } else 
-                        return resolve(false)
-                } else if (ultimo_precio && Math.abs(ultimo_precio.price - articulo?.price) <= 1){
-                    await trx('price').update( {
-                        "date_time": new Date(fecha_registro), "time": new Date(), "url": ( articulo.url ) ? articulo.url : null
-                    } ).where("id", ultimo_precio.id)
-                    
-                    let precio_hoy = {
-                        ...ultimo_precio,
-                        "date_time": new Date(fecha_registro), "time": new Date(), "url": ( articulo.url ) ? articulo.url : null
-                    }
-                    precio_hoy['id'] = uuid.v4()
-                    await trx('price_today').insert( precio_hoy )
-                    precios_reafirmados.push(ultimo_precio)
-                    return resolve(true)
-                } else  if (!ultimo_precio) {
-                    let nuevo_precio = await nuevo_reg_precio( trx, articulo, producto_db, fecha_registro )
-                    if (nuevo_precio){
-                        //await trx('news').insert( {
-                        //    text: "Se agrega nuevo precio de "+articulo.name+" que sale "+articulo.price
-                        //} )
-                        return resolve(true)
-                    } else 
-                        return resolve(false)
-                } else 
-                    return resolve(false)
-            } else {
+        let ultimo_precio = await global.knex('price').select().where('product_id', producto_db.id).orderBy('time', 'desc').first()
+        if (ultimo_precio){
+            if (Math.abs(ultimo_precio.price - articulo?.price) > 1){
                 let nuevo_precio = await nuevo_reg_precio( trx, articulo, producto_db, fecha_registro )
                 if (nuevo_precio){
-                // await trx('news').insert( {
-                //     text: "Se agrega nuevo precio de "+articulo.name+" que sale "+articulo.price
-                //  } )
+                    await procesar_variacion(trx, [ ultimo_precio, articulo ], fecha_registro)
+                    precios_actualizados.push( [ ultimo_precio, articulo ] )
                     return resolve(true)
                 } else 
                     return resolve(false)
-            }
-
-        } catch( error ){
-            console.log(error)
-            return resolve({ stat: false, text: error})
+            } else if (ultimo_precio && Math.abs(ultimo_precio.price - articulo?.price) <= 1){
+                await trx('price').update( {
+                    "date_time": new Date(fecha_registro), "time": new Date(), "url": ( articulo.url ) ? articulo.url : null
+                } ).where("id", ultimo_precio.id)
+                
+                let precio_hoy = {
+                    ...ultimo_precio,
+                    "date_time": new Date(fecha_registro), "time": new Date(), "url": ( articulo.url ) ? articulo.url : null
+                }
+                precio_hoy['id'] = uuid.v4()
+                await trx('price_today').insert( precio_hoy )
+                precios_reafirmados.push(ultimo_precio)
+                return resolve(true)
+            } else  if (!ultimo_precio) {
+                let nuevo_precio = await nuevo_reg_precio( trx, articulo, producto_db, fecha_registro )
+                if (nuevo_precio){
+                    return resolve(true)
+                } else 
+                    return resolve(false)
+            } else 
+                return resolve(false)
+        } else {
+            let nuevo_precio = await nuevo_reg_precio( trx, articulo, producto_db, fecha_registro )
+            if (nuevo_precio){
+                return resolve(true)
+            } else 
+                return resolve(false)
         }
+
     })
 }
 
@@ -184,7 +153,7 @@ async function procesar_articulo(articulo, fecha_registro ){
             return resolve({stat:false, text: 'No se especifica categoria!'})
         }
 
-        let trx = await knex.transaction()
+        let trx = await global.knex.transaction()
 
         try {
             let res = { stat: true, text: '' }
@@ -192,10 +161,17 @@ async function procesar_articulo(articulo, fecha_registro ){
 
             let producto  = await get_producto( trx, articulo )
             let categoria = await get_categoria( trx, articulo )
+
+            if (producto === null){
+                trx.rollback()
+                res.stat = false
+                resolve(res)
+                return
+            }
             
             //Si no hay relacion entre producto y categoria se la crea
             if (producto && categoria){
-                let hay_cat = await knex('product_category').select()
+                let hay_cat = await global.knex('product_category').select()
                     .where({ "product_id": producto.id, "category_id": categoria.id }).first()
                 if (!hay_cat)
                     proms_arr.push(
@@ -253,38 +229,10 @@ async function procesar_variacion( trx, variacion, fecha_registro){
                 "precio_ayer":        reg_anterior.price,
                 "precio_hoy":         reg_nuevo.price,
                 "nombre_producto":    reg_nuevo.name,
-                "nombre_comercio":     diccio_enterprise[ diccio_branch[reg_nuevo.branch_id].enterprise_id ].name,
+                "nombre_comercio":     global.enterprice_diccio[ global.branchs_diccio[reg_nuevo.branch_id].enterprise_id ].name,
                 "fecha_utlimo_precio": fecha_registro
             })
     }
     return
 }
 exports.procesar_variacion = procesar_variacion
-
-async function generar_estadisticas_variacion_diaria(trx, variaciones){
-    let proms = []
-    await trx("estadistica_aumento_diario").delete()
-    for (let i=0; i < variaciones.length; i++){
-        proms.push( procesar_variacion(trx, variaciones[i]) )
-    }
-    await Promise.all( proms )
-}
-
-let diccio = {}
-
-setTimeout( async ()=>{
-
-    let enterprises = await knex("enterprice").select()
-    let branchs     = await knex("branch").select()
-
-    if (/*array_importacion && */ enterprises && branchs){
-        const proms_procesar = []
-
-        for (let i =0; i < enterprises.length; i++)
-            diccio_enterprise[enterprises[i].id ] = enterprises[i]
-        for (let i=0; i < branchs.length; i++)
-            diccio_branch[branchs[i].id ] = branchs[i]
-
-    }
-}, 100)
-
