@@ -1,32 +1,6 @@
 require("dotenv").config({ path: '../.env' })
-const fs = require('fs');
 const uuid = require("uuid")
 const utils = require("../helpers/utils")
-
-let conn_obj = {
-    host: process.env.mysql_host,
-  //  port: process.env.mysql_port,
-    user: process.env.mysql_user,
-    password: process.env.mysql_password,
-    database: process.env.mysql_database,
-    supportBigNumbers: true,
-    bigNumberStrings: true,
-    typeCast: function (field, next) {
-        if (field.type == "NEWDECIMAL") {
-            var value = field.string();
-            return (value === null) ? null : Number(value);
-        }
-        return next();
-    }
-  
-  }
-  
-const knex = require('knex')({
-    client: 'mysql2',
-    connection: conn_obj,
-    pool: { min: 0, max: 7 }
-})
-
 
 let precios_reafirmados = []
 let precios_actualizados = []
@@ -68,7 +42,7 @@ async function get_categoria( trx, articulo ){
         const NOMBRE_CAT = utils.limpiarTexto(articulo.category_name)
         let categoria = (global.diccio_name_category[NOMBRE_CAT])  
                             ? global.diccio_name_category[NOMBRE_CAT]
-                            : await knex('category').select().where('name', NOMBRE_CAT).first()
+                            : await global.knex('category').select().where('name', NOMBRE_CAT).first()
         if (categoria){
             resolve(categoria)
             return
@@ -88,7 +62,7 @@ async function get_producto( trx, articulo ){
         const NAME = utils.limpiarTexto(articulo.name)
         //console.log('products_diccio', global.products_diccio[name] )
         let producto  = global.products_diccio[NAME] ? global.products_diccio[NAME]
-                        : await knex('alias_productos').select()
+                        : await global.knex('alias_productos').select()
                             .join('products', 'products.id', 'alias_productos.product_id')
                             .where('alias_productos.alias', NAME).first()
         if (producto){
@@ -123,7 +97,7 @@ async function procesa_precio( trx, producto_db, articulo, fecha_registro ){
             let HOY = new Date()
             HOY.setHours(0,0,0,1)
 
-            let ultimo_precio = await knex('price').select().where('product_id', producto_db.id).orderBy('time', 'desc').first()
+            let ultimo_precio = await global.knex('price').select().where('product_id', producto_db.id).orderBy('time', 'desc').first()
             if (ultimo_precio){
                 if (Math.abs(ultimo_precio.price - articulo?.price) > 1){
                     let nuevo_precio = await nuevo_reg_precio( trx, articulo, producto_db, fecha_registro )
@@ -184,7 +158,7 @@ async function procesar_articulo(articulo, fecha_registro ){
             return resolve({stat:false, text: 'No se especifica categoria!'})
         }
 
-        let trx = await knex.transaction()
+        let trx = await global.knex.transaction()
 
         try {
             let res = { stat: true, text: '' }
@@ -195,7 +169,7 @@ async function procesar_articulo(articulo, fecha_registro ){
             
             //Si no hay relacion entre producto y categoria se la crea
             if (producto && categoria){
-                let hay_cat = await knex('product_category').select()
+                let hay_cat = await global.knex('product_category').select()
                     .where({ "product_id": producto.id, "category_id": categoria.id }).first()
                 if (!hay_cat)
                     proms_arr.push(
@@ -260,31 +234,3 @@ async function procesar_variacion( trx, variacion, fecha_registro){
     return
 }
 exports.procesar_variacion = procesar_variacion
-
-async function generar_estadisticas_variacion_diaria(trx, variaciones){
-    let proms = []
-    await trx("estadistica_aumento_diario").delete()
-    for (let i=0; i < variaciones.length; i++){
-        proms.push( procesar_variacion(trx, variaciones[i]) )
-    }
-    await Promise.all( proms )
-}
-
-let diccio = {}
-
-setTimeout( async ()=>{
-
-    let enterprises = await knex("enterprice").select()
-    let branchs     = await knex("branch").select()
-
-    if (/*array_importacion && */ enterprises && branchs){
-        const proms_procesar = []
-
-        for (let i =0; i < enterprises.length; i++)
-            diccio_enterprise[enterprises[i].id ] = enterprises[i]
-        for (let i=0; i < branchs.length; i++)
-            diccio_branch[branchs[i].id ] = branchs[i]
-
-    }
-}, 100)
-
