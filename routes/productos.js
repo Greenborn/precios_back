@@ -82,9 +82,9 @@ router.put('/cargar_nuevo_precio', async function (req, res) {
     }    
 })
 
-async function procesa_item(trx, item, HOY){
+async function procesa_item( item, HOY){
     return new Promise(async (resolve, reject) => {
-        let res_procesa = await cargador_precios.procesar_articulo( trx, item, HOY )
+        let res_procesa = await cargador_precios.procesar_articulo( item, HOY )
         if (res_procesa.stat){
             let cant_reg = await global.knex("price").count("id").first()
             await global.knex("incremental_stats").update({ "value": cant_reg['count(`id`)'] }).where("key", "cant_price")
