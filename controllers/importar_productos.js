@@ -1,7 +1,5 @@
 require("dotenv").config({ path: '../.env' })
-const { text } = require("express");
 const fs = require('fs');
-const { resolve } = require("path");
 const uuid = require("uuid")
 const utils = require("../helpers/utils")
 
@@ -180,13 +178,15 @@ async function procesa_precio( trx, producto_db, articulo, fecha_registro ){
     })
 }
 
-async function procesar_articulo(trx, articulo, fecha_registro ){
+async function procesar_articulo(articulo, fecha_registro ){
     return new Promise( async (resolve, reject) => {
-        try {
-            if (!articulo?.category_name){
-                return resolve({stat:false, text: 'No se especifica categoria!'})
-            }
+        if (!articulo?.category_name){
+            return resolve({stat:false, text: 'No se especifica categoria!'})
+        }
 
+        let trx = await knex.transaction()
+
+        try {
             let res = { stat: true, text: '' }
             let proms_arr = []
 
@@ -211,22 +211,26 @@ async function procesar_articulo(trx, articulo, fecha_registro ){
 
                 let res_proms = await Promise.all( proms_arr )
                 if (res_proms){
+                    await trx.commit()
                     console.log(res_proms)
                     resolve(res)
                     return
                 } else {
+                    trx.rollback()
                     res.stat = false
                     resolve(res)
                     return
                 }
             } else {
+                trx.rollback()
                 return resolve({ stat: false, text: "no hay producto y/o categoria"})
             }
-                
-        } catch( error ){
+        } catch (error) {
+            trx.rollback()
             console.log(error)
-            return resolve({ stat: false, text: error})
+            return resolve({ stat: false, text: ''})
         }
+             
     })
 }
 
@@ -275,7 +279,6 @@ setTimeout( async ()=>{
 
     if (/*array_importacion && */ enterprises && branchs){
         const proms_procesar = []
-        let trx = await knex.transaction()
 
         for (let i =0; i < enterprises.length; i++)
             diccio_enterprise[enterprises[i].id ] = enterprises[i]
