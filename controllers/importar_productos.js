@@ -5,8 +5,6 @@ const utils = require("../helpers/utils")
 let precios_reafirmados = []
 let precios_actualizados = []
 let nuevos_precios_creados = []
-let diccio_enterprise = {}
-let diccio_branch = {}
 
 async function nuevo_reg_precio( trx, articulo, producto_db, fecha_registro ){
 
@@ -39,7 +37,7 @@ exports.procesar_articulo = procesar_articulo
 
 async function get_categoria( trx, articulo ){
     return new Promise( async (resolve, reject) => {
-        const NOMBRE_CAT = utils.limpiarTexto(articulo.category_name)
+        const NOMBRE_CAT = articulo.category_name
         let categoria = (global.diccio_name_category[NOMBRE_CAT])  
                             ? global.diccio_name_category[NOMBRE_CAT]
                             : await global.knex('category').select().where('name', NOMBRE_CAT).first()
@@ -60,7 +58,7 @@ async function get_categoria( trx, articulo ){
 async function get_producto( trx, articulo ){
     return new Promise( async (resolve, reject) => {
         try {
-            const NAME = utils.limpiarTexto(articulo.name)
+            const NAME = articulo.name
             //console.log('products_diccio', global.products_diccio[name] )
             let producto  = (global.products_diccio[NAME]) 
                             ? global.products_diccio[NAME]
@@ -158,6 +156,12 @@ async function procesar_articulo(articulo, fecha_registro ){
         try {
             let res = { stat: true, text: '' }
             let proms_arr = []
+
+            articulo.name          = utils.limpiarTexto(articulo.name)
+            articulo.category_name = utils.limpiarTexto(articulo.category_name)
+
+            if (articulo.name.length > 500)
+                articulo.name = articulo.name.substring(0, 500)
 
             let producto  = await get_producto( trx, articulo )
             let categoria = await get_categoria( trx, articulo )
