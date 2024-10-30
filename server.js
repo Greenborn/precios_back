@@ -41,40 +41,6 @@ setTimeout(async () => {
   await base_de_datos_iniciada()
 }, 2000)
 
-async function asignar_precio( product ){
-  let precios_aux = {}
-
-  let precios = await global.knex('price')
-                  .where({ product_id: product.id })
-                  .orderBy('date_time', 'desc')
-  if (precios){
-    for (let i=0; i < precios.length; i++){
-      let branch_id = precios[i].branch_id
-      if (!precios_aux[branch_id]){
-        precios_aux[branch_id] = precios[i]
-      }
-    }
-
-    product['precios'] = []
-    let _keys = Object.keys(precios_aux)
-    for (let i=0; i < _keys.length; i++){
-      const branch_ = global.branchs_diccio[ Number(precios_aux[_keys[i]].branch_id ) ]
-      const precio_reg = {... 
-        precios_aux[_keys[i]],
-        branch: {...
-            branch_,
-            "enterprise":{
-              ... global.enterprice_diccio[ Number(branch_.enterprise_id ) ]
-            }
-        }
-      }
-      product['precios'].push( precio_reg )
-    }
-    return true
-  } else
-    return false
-}
-
 async function generar_diccio_precios(precios_hoy){
   for (let i=0; i < precios_hoy.length; i++){
     if (global.precios_diccio[precios_hoy[i].product_id] == undefined){
