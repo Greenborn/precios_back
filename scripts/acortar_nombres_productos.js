@@ -1,5 +1,6 @@
 require("dotenv").config({ path: '../.env' })
 const fs = require('fs');
+const utils = require("../helpers/utils")
 
 const NOMBRE_ARCHIVO = "updates_prod_acorta_nombre.sql"
 
@@ -34,14 +35,14 @@ setTimeout(async () => {
     
     if (productos){
         for (let i=0; i < productos.length; i++)
-            diccio_productos[productos[i].name] = productos[i]
+            diccio_productos[utils.limpiarTexto(productos[i].name)] = productos[i]
         
         let sql = ""
 
         for (let i=0; i < productos.length; i++){
-            const NOMBRE_ = productos[i].name
+            const NOMBRE_ = utils.limpiarTexto(productos[i].name)
             let split_ = NOMBRE_.split(" - ")
-            if (NOMBRE_.length > 500){
+            if (NOMBRE_.length > 255){
                 console.log(split_[0])
                 if (diccio_productos[split_[0]]){
                     sql += 'delete from products where id = "'+productos[i].id+'";\n'

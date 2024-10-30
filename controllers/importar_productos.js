@@ -66,11 +66,19 @@ async function get_producto( trx, articulo ){
                                 .join('products', 'products.id', 'alias_productos.product_id')
                                 .where('alias_productos.alias', NAME).first()
             if (producto){
+                let upd = {}
+                let ac = false
                 if (articulo?.barcode){
-                    await trx('products').update( {
-                        "barcode": articulo.barcode
-                    } ).where('id','=',producto.id)
+                    upd['barcode'] =  articulo.barcode 
+                    ac = true
                 }
+                if (articulo?.description){
+                    upd['description'] =  articulo.description
+                    ac = true
+                }
+                if (ac)
+                    await trx('products').update( upd ).where('id','=',producto.id)
+
                 resolve(producto)
                 return
             } else {
