@@ -74,7 +74,7 @@ async function hacer_busqueda( termino, metodo ){
         let proms_precios = []
         for (let i=0; i < productos.length; i++){
           proms_precios.push(buscar_precios_producto(productos[i].id))
-          diccio_productos[Number(productos[i].id)] = productos[i]
+          diccio_productos[productos[i].id] = productos[i]
         }
 
         let res_precios = await Promise.all(proms_precios)
@@ -82,10 +82,10 @@ async function hacer_busqueda( termino, metodo ){
           for (let i=0; i < res_precios.length; i++){
             for (let j=0; j < res_precios[i].length; j++){
               let result_precio = res_precios[i][j]
-              if (diccio_precios[Number(result_precio["id"])] != undefined) //si ya existe no seagre a la salida
+              if (diccio_precios[result_precio["id"]] != undefined) //si ya existe no seagre a la salida
                 continue
 
-              diccio_precios[Number(result_precio["id"])] = result_precio
+              diccio_precios[result_precio["id"]] = result_precio
               result_precio["empresa"]  = global.enterprice_diccio[global.branchs_diccio[result_precio["branch_id"]].enterprise_id]
               result_precio["locales"]  = global.branch_enterprice_diccio[global.branchs_diccio[result_precio["branch_id"]].enterprise_id]
               result_precio["products"] = diccio_productos[result_precio["product_id"]]

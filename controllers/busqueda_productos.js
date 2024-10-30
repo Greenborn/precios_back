@@ -20,7 +20,7 @@ exports.inicializa_buscador = async function() {
         const nombre = global.alias_productos[i].name
         
         let props = obtener_propiedades(nombre)
-        let aux = { dsc: props, name: nombre, id: global.alias_productos[i].id}
+        let aux = { 'dsc': props, 'name': nombre, 'id': global.alias_productos[i].id}
 
         let o_k = Object.keys(props)
         for (let j = 0; j < o_k.length; j++) {
@@ -59,15 +59,15 @@ exports.busqueda = async function( termino, limit = -1 ) {
 
             const posiciones_letras = e_actual.dsc[primera_letra]
 
-            for (let j = 0; j < posiciones_letras.length; j++) {
-                let l = 0
-                for (let k = posiciones_letras[j]; k < e_actual.name.length; k++) {
-                    const letra_db = e_actual.name[k]
-                    if (letra_db != palabra[l])
+            for (let NUM_APARICION = 0; NUM_APARICION < posiciones_letras.length; NUM_APARICION++) {
+                let POS_T = 0
+                for (let POS_LETRA = posiciones_letras[NUM_APARICION]; POS_LETRA < e_actual.name.length; POS_LETRA++) {
+                    const letra_db = e_actual.name[POS_LETRA]
+                    if (letra_db != palabra[POS_T])
                         break
-                    l++
-                    if (l == palabra.length) {
-                        encontrados_k.push({id:e_actual.id, name:e_actual.name})
+                    POS_T++
+                    if (POS_T == palabra.length) {
+                        encontrados_k.push({'id':e_actual.id, 'name':e_actual.name})
                         encontrados.push(e_actual)
                         break
                     }
