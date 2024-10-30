@@ -1,11 +1,5 @@
 let lst_letras = {}
 
-function normalize( str ){
-    return String(str).normalize('NFD')
-            .replace(/([^n\u0300-\u036f]|n(?!\u0303(?![\u0300-\u036f])))[\u0300-\u036f]+/gi,"$1")
-            .normalize().toLowerCase()
-}
-
 function obtener_propiedades(name) {
     let letras = {}
 
@@ -23,16 +17,17 @@ exports.inicializa_buscador = async function() {
     console.log('Generando estructura de busqueda')
 
     for (let i = 0; i < global.alias_productos.length; i++) {
-        const nombre = normalize(global.alias_productos[i].name)
+        const nombre = global.alias_productos[i].name
         
         let props = obtener_propiedades(nombre)
-        let aux = { dsc: props, name: nombre, id: global.alias_productos[i].id}
+        let aux = { 'dsc': props, 'name': nombre, 'id': global.alias_productos[i].id}
 
         let o_k = Object.keys(props)
         for (let j = 0; j < o_k.length; j++) {
-            if(!lst_letras[o_k[j]])
-                lst_letras[o_k[j]] = []
-            lst_letras[o_k[j]].push(aux)
+            const LETRA_NOMBRE = o_k[j]
+            if(!lst_letras[ LETRA_NOMBRE ])
+                lst_letras[ LETRA_NOMBRE ] = []
+            lst_letras[ LETRA_NOMBRE ].push(aux)
         }
         
     }
@@ -41,13 +36,15 @@ exports.inicializa_buscador = async function() {
 
 
 exports.busqueda = async function( termino, limit = -1 ) {
-    termino = normalize(termino)
     let palabras = termino.split(" ")
     
     let encontrados = []
     let encontrados_k = []
     const p_letra = termino[0]
-    let listado = [...lst_letras[p_letra] ? lst_letras[p_letra] : []]
+    if (!lst_letras[p_letra])
+        return []
+    
+    let listado = [ ...lst_letras[p_letra] ]
 
     for (let c = 0; c < palabras.length; c++) {
         const palabra = palabras[c]
@@ -60,17 +57,17 @@ exports.busqueda = async function( termino, limit = -1 ) {
             if (!e_actual.dsc[primera_letra])
                 continue
 
-            let pos_ = e_actual.dsc[primera_letra]
+            const posiciones_letras = e_actual.dsc[primera_letra]
 
-            for (let j = 1; j < pos_.length; j++) {
-                let l = 0
-                for (let k = pos_[j]; k < e_actual.name.length; k++) {
-                    const letra_db = e_actual.name[k]
-                    if (letra_db != palabra[l])
+            for (let NUM_APARICION = 0; NUM_APARICION < posiciones_letras.length; NUM_APARICION++) {
+                let POS_T = 0
+                for (let POS_LETRA = posiciones_letras[NUM_APARICION]; POS_LETRA < e_actual.name.length; POS_LETRA++) {
+                    const letra_db = e_actual.name[POS_LETRA]
+                    if (letra_db != palabra[POS_T])
                         break
-                    l++
-                    if (l == palabra.length) {
-                        encontrados_k.push({id:e_actual.id, name:e_actual.name})
+                    POS_T++
+                    if (POS_T == palabra.length) {
+                        encontrados_k.push({'id':e_actual.id, 'name':e_actual.name})
                         encontrados.push(e_actual)
                         break
                     }

@@ -4,6 +4,7 @@ module.exports = router
 const bcrypt = require('bcrypt')
 const fs = require("fs")
 const busqueda_productos = require("../controllers/busqueda_productos")
+const utils = require("../helpers/utils")
 
 async function buscar_precios_producto( id_producto ){
   return new Promise(async (resolve, reject) => {
@@ -73,7 +74,7 @@ async function hacer_busqueda( termino, metodo ){
         let proms_precios = []
         for (let i=0; i < productos.length; i++){
           proms_precios.push(buscar_precios_producto(productos[i].id))
-          diccio_productos[Number(productos[i].id)] = productos[i]
+          diccio_productos[productos[i].id] = productos[i]
         }
 
         let res_precios = await Promise.all(proms_precios)
@@ -81,10 +82,10 @@ async function hacer_busqueda( termino, metodo ){
           for (let i=0; i < res_precios.length; i++){
             for (let j=0; j < res_precios[i].length; j++){
               let result_precio = res_precios[i][j]
-              if (diccio_precios[Number(result_precio["id"])] != undefined) //si ya existe no seagre a la salida
+              if (diccio_precios[result_precio["id"]] != undefined) //si ya existe no seagre a la salida
                 continue
 
-              diccio_precios[Number(result_precio["id"])] = result_precio
+              diccio_precios[result_precio["id"]] = result_precio
               result_precio["empresa"]  = global.enterprice_diccio[global.branchs_diccio[result_precio["branch_id"]].enterprise_id]
               result_precio["locales"]  = global.branch_enterprice_diccio[global.branchs_diccio[result_precio["branch_id"]].enterprise_id]
               result_precio["products"] = diccio_productos[result_precio["product_id"]]
@@ -212,7 +213,7 @@ router.get('/precios', async function (req, res) {
   console.log("query ", req.query)
 
   try {
-    let product_name = req?.query?.product_name
+    let product_name = utils.limpiarTexto(req?.query?.product_name)
 
     if (product_name.length < LIMITE_MIN_CARACTERES)
       return res.status(200).send({ stat: false, items: [], error: true })
@@ -231,7 +232,6 @@ router.get('/precios', async function (req, res) {
         res.status(200).send({ stat: true, items: res_busqueda })
       }
     } else {
-      product_name = nombre_producto_filtrado( product_name)
       let res_busqueda = await hacer_busqueda( product_name, 'AND' ) 
       if (res_busqueda){
         await global.knex('search_query_history')

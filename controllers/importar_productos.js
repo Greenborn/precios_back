@@ -2,11 +2,8 @@ require("dotenv").config({ path: '../.env' })
 const uuid = require("uuid")
 const utils = require("../helpers/utils")
 
-let precios_reafirmados = []
 let precios_actualizados = []
 let nuevos_precios_creados = []
-let diccio_enterprise = {}
-let diccio_branch = {}
 
 async function nuevo_reg_precio( trx, articulo, producto_db, fecha_registro ){
 
@@ -39,7 +36,7 @@ exports.procesar_articulo = procesar_articulo
 
 async function get_categoria( trx, articulo ){
     return new Promise( async (resolve, reject) => {
-        const NOMBRE_CAT = utils.limpiarTexto(articulo.category_name)
+        const NOMBRE_CAT = articulo.category_name
         let categoria = (global.diccio_name_category[NOMBRE_CAT])  
                             ? global.diccio_name_category[NOMBRE_CAT]
                             : await global.knex('category').select().where('name', NOMBRE_CAT).first()
@@ -60,7 +57,7 @@ async function get_categoria( trx, articulo ){
 async function get_producto( trx, articulo ){
     return new Promise( async (resolve, reject) => {
         try {
-            const NAME = utils.limpiarTexto(articulo.name)
+            const NAME = articulo.name
             //console.log('products_diccio', global.products_diccio[name] )
             let producto  = (global.products_diccio[NAME]) 
                             ? global.products_diccio[NAME]
@@ -68,11 +65,19 @@ async function get_producto( trx, articulo ){
                                 .join('products', 'products.id', 'alias_productos.product_id')
                                 .where('alias_productos.alias', NAME).first()
             if (producto){
+                let upd = {}
+                let ac = false
                 if (articulo?.barcode){
-                    await trx('products').update( {
-                        "barcode": articulo.barcode
-                    } ).where('id','=',producto.id)
+                    upd['barcode'] =  articulo.barcode 
+                    ac = true
                 }
+                if (articulo?.description){
+                    upd['description'] =  articulo.description
+                    ac = true
+                }
+                if (ac)
+                    await trx('products').update( upd ).where('id','=',producto.id)
+
                 resolve(producto)
                 return
             } else {
@@ -124,9 +129,14 @@ async function procesa_precio( trx, producto_db, articulo, fecha_registro ){
                     ...ultimo_precio,
                     "date_time": new Date(fecha_registro), "time": new Date(), "url": ( articulo.url ) ? articulo.url : null
                 }
-                precio_hoy['id'] = uuid.v4()
-                await trx('price_today').insert( precio_hoy )
-                precios_reafirmados.push(ultimo_precio)
+                precio_hoy['id']           = uuid.v7()
+                precio_hoy['product_name'] = articulo.name
+                precio_hoy['price_id']     = ultimo_precio.id
+                let repetido = await global.knex('price_today').where({
+                    'price_id': ultimo_precio.id,
+                }).first()
+                if (!repetido)
+                    await trx('price_today').insert( precio_hoy )
                 return resolve(true)
             } else  if (!ultimo_precio) {
                 let nuevo_precio = await nuevo_reg_precio( trx, articulo, producto_db, fecha_registro )
@@ -158,6 +168,12 @@ async function procesar_articulo(articulo, fecha_registro ){
         try {
             let res = { stat: true, text: '' }
             let proms_arr = []
+
+            articulo.name          = utils.limpiarTexto(articulo.name)
+            articulo.category_name = utils.limpiarTexto(articulo.category_name)
+
+            if (articulo.name.length > 500)
+                articulo.name = articulo.name.substring(0, 500)
 
             let producto  = await get_producto( trx, articulo )
             let categoria = await get_categoria( trx, articulo )
