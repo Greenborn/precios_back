@@ -2,7 +2,6 @@ require("dotenv").config({ path: '../.env' })
 const uuid = require("uuid")
 const utils = require("../helpers/utils")
 
-let precios_reafirmados = []
 let precios_actualizados = []
 let nuevos_precios_creados = []
 
@@ -132,8 +131,13 @@ async function procesa_precio( trx, producto_db, articulo, fecha_registro ){
                 }
                 precio_hoy['id'] = uuid.v4()
                 precio_hoy['product_name'] = articulo.name
-                await trx('price_today').insert( precio_hoy )
-                precios_reafirmados.push(ultimo_precio)
+
+                let repetido = await global.knex('price_today').where({
+                    'product_id': articulo.product_id,
+                    'branch_id': articulo.branch_id
+                }).first()
+                if (!repetido)
+                    await trx('price_today').insert( precio_hoy )
                 return resolve(true)
             } else  if (!ultimo_precio) {
                 let nuevo_precio = await nuevo_reg_precio( trx, articulo, producto_db, fecha_registro )
