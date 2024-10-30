@@ -129,12 +129,11 @@ async function procesa_precio( trx, producto_db, articulo, fecha_registro ){
                     ...ultimo_precio,
                     "date_time": new Date(fecha_registro), "time": new Date(), "url": ( articulo.url ) ? articulo.url : null
                 }
-                precio_hoy['id'] = uuid.v4()
+                precio_hoy['id']           = uuid.v7()
                 precio_hoy['product_name'] = articulo.name
-
+                precio_hoy['price_id']     = ultimo_precio.id
                 let repetido = await global.knex('price_today').where({
-                    'product_id': articulo.product_id,
-                    'branch_id': articulo.branch_id
+                    'price_id': ultimo_precio.id,
                 }).first()
                 if (!repetido)
                     await trx('price_today').insert( precio_hoy )
