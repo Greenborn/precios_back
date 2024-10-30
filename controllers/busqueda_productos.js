@@ -1,11 +1,5 @@
 let lst_letras = {}
 
-function normalize( str ){
-    return String(str).normalize('NFD')
-            .replace(/([^n\u0300-\u036f]|n(?!\u0303(?![\u0300-\u036f])))[\u0300-\u036f]+/gi,"$1")
-            .normalize().toLowerCase()
-}
-
 function obtener_propiedades(name) {
     let letras = {}
 
@@ -23,7 +17,7 @@ exports.inicializa_buscador = async function() {
     console.log('Generando estructura de busqueda')
 
     for (let i = 0; i < global.alias_productos.length; i++) {
-        const nombre = normalize(global.alias_productos[i].name)
+        const nombre = global.alias_productos[i].name
         
         let props = obtener_propiedades(nombre)
         let aux = { dsc: props, name: nombre, id: global.alias_productos[i].id}
@@ -41,7 +35,6 @@ exports.inicializa_buscador = async function() {
 
 
 exports.busqueda = async function( termino, limit = -1 ) {
-    termino = normalize(termino)
     let palabras = termino.split(" ")
     
     let encontrados = []

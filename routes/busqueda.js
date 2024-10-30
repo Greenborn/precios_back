@@ -4,6 +4,7 @@ module.exports = router
 const bcrypt = require('bcrypt')
 const fs = require("fs")
 const busqueda_productos = require("../controllers/busqueda_productos")
+const utils = require("../helpers/utils")
 
 async function buscar_precios_producto( id_producto ){
   return new Promise(async (resolve, reject) => {
@@ -212,7 +213,7 @@ router.get('/precios', async function (req, res) {
   console.log("query ", req.query)
 
   try {
-    let product_name = req?.query?.product_name
+    let product_name = utils.limpiarTexto(req?.query?.product_name)
 
     if (product_name.length < LIMITE_MIN_CARACTERES)
       return res.status(200).send({ stat: false, items: [], error: true })
