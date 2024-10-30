@@ -115,9 +115,11 @@ router.post('/importar', async function (req, res) {
         HOY.setHours(0,0,0,1)
         const ARR_IMPORTA = req.body?.lst_importa
 
-        let AYER = new Date()
-        AYER.setDate( AYER.getDate() - 1 )
-        AYER.setUTCHours(23,59,59)
+        let SEMANA_PREV = new Date()
+        SEMANA_PREV.setDate( SEMANA_PREV.getDate() - 7 )
+        SEMANA_PREV.setUTCHours(23,59,59)
+
+        await global.knex('price_today').delete().where('date_time' , '<', SEMANA_PREV)
         
         for (let index = 0; index < ARR_IMPORTA.length; index++) 
             await procesa_item( ARR_IMPORTA[index], HOY) 

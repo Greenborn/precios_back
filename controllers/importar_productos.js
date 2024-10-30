@@ -131,6 +131,7 @@ async function procesa_precio( trx, producto_db, articulo, fecha_registro ){
                     "date_time": new Date(fecha_registro), "time": new Date(), "url": ( articulo.url ) ? articulo.url : null
                 }
                 precio_hoy['id'] = uuid.v4()
+                precio_hoy['product_name'] = articulo.name
                 await trx('price_today').insert( precio_hoy )
                 precios_reafirmados.push(ultimo_precio)
                 return resolve(true)
