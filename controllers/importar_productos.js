@@ -207,7 +207,6 @@ async function procesar_articulo(articulo, fecha_registro ){
 
                 if (proc_precio_){
                     await trx.commit()
-                    console.log(res_proms)
                     resolve(res)
                     return
                 } else {
