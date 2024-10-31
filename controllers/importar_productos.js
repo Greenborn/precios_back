@@ -32,8 +32,7 @@ async function nuevo_reg_precio( trx, articulo, producto_db, fecha_registro ){
         }
     } catch (error) {
         console.log(error, 'error al registrar producto')
-        resolve(null)
-        return
+        return null
     }
     
 }
