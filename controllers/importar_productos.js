@@ -6,29 +6,37 @@ let precios_actualizados = []
 let nuevos_precios_creados = []
 
 async function nuevo_reg_precio( trx, articulo, producto_db, fecha_registro ){
+    try {
+        const insert = {
+            "id": uuid.v7(),
+            "product_id": producto_db.id,
+            "price": articulo.price,
+            "date_time": new Date(fecha_registro),
+            "branch_id": articulo.branch_id,
+            "es_oferta": 0,
+            "confiabilidad": 100,
+            "notas": (articulo?.nota) ? articulo.nota : null,
+            "url": ( articulo.url ) ? articulo.url : null,
+            "time": new Date(),
+        }
+        let insert_1 = await trx('price').insert( insert )
+        precio_hoy = {...insert}
+        precio_hoy['id'] = uuid.v7()
+        precio_hoy['product_name'] = articulo.name
+        precio_hoy['price_id']     = insert.id
 
-    const insert = {
-        "id": uuid.v7(),
-        "product_id": producto_db.id,
-        "price": articulo.price,
-        "date_time": new Date(fecha_registro),
-        "branch_id": articulo.branch_id,
-        "es_oferta": 0,
-        "confiabilidad": 100,
-        "notas": (articulo?.nota) ? articulo.nota : null,
-        "url": ( articulo.url ) ? articulo.url : null,
-        "time": new Date(),
+        let insert_2 = await trx('price_today').insert( precio_hoy )
+        if (insert_1 && insert_2){
+            nuevos_precios_creados.push( insert )
+            return insert
+        } else {
+            return false
+        }
+    } catch (error) {
+        console.log(error, 'error al registrar producto')
+        return null
     }
-    let insert_1 = await trx('price').insert( insert )
-    precio_hoy = {...insert}
-    precio_hoy['id'] = uuid.v7()
-    let insert_2 = await trx('price_today').insert( precio_hoy )
-    if (insert_1 && insert_2){
-        nuevos_precios_creados.push( insert )
-        return insert
-    } else {
-        return false
-    }
+    
 }
 
 
@@ -167,7 +175,6 @@ async function procesar_articulo(articulo, fecha_registro ){
 
         try {
             let res = { stat: true, text: '' }
-            let proms_arr = []
 
             articulo.name          = utils.limpiarTexto(articulo.name)
             articulo.category_name = utils.limpiarTexto(articulo.category_name)
@@ -190,21 +197,17 @@ async function procesar_articulo(articulo, fecha_registro ){
                 let hay_cat = await global.knex('product_category').select()
                     .where({ "product_id": producto.id, "category_id": categoria.id }).first()
                 if (!hay_cat)
-                    proms_arr.push(
+                    await
                         trx('product_category').insert( {
                             "id": uuid.v7(),
                             "product_id":  producto.id,
                             "category_id": categoria.id
-                        } ))
+                        } )
 
-                proms_arr.push( 
-                    procesa_precio( trx, producto, articulo, fecha_registro )
-                )
+                let proc_precio_ = await procesa_precio( trx, producto, articulo, fecha_registro )
 
-                let res_proms = await Promise.all( proms_arr )
-                if (res_proms){
+                if (proc_precio_){
                     await trx.commit()
-                    console.log(res_proms)
                     resolve(res)
                     return
                 } else {
