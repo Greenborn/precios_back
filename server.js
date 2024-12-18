@@ -68,7 +68,7 @@ async function base_de_datos_iniciada(){
 
   //FORMATEO
   let bodyParser = require("body-parser")
-  app_API.use(bodyParser.json())
+  app_API.use(bodyParser.json({limit: '50mb'}))
 
   //MIDLEWARE
   app_API.use("/publico", require("./middleware/Publico"))

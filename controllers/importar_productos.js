@@ -237,6 +237,7 @@ async function procesar_variacion( trx, variacion, fecha_registro){
     const porcentage = (reg_nuevo.price - reg_anterior.price) / ( reg_anterior.price / 100 )
     if (porcentage > 50 || porcentage < -50){
         console.log(variacion)
+        return
     }
     if (reg_anterior.price != reg_nuevo.price && reg_nuevo.branch_id == reg_anterior.branch_id 
         && reg_anterior.price != 0 && reg_nuevo.price != 0){
