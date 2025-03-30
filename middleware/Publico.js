@@ -30,4 +30,5 @@ var paths = [
   { path: "/productos/importar" },
   { path: "/productos/importar_alquiler" },
   { path: "/productos/importar_oferta" },
+  { path: "/productos/importar_articulo_plataforma" },
 ]
