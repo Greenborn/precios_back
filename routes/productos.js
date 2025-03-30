@@ -157,6 +157,24 @@ router.post('/importar_articulo_plataforma', async function (req, res) {
                 categoria: DATA.category_name,
                 fecha_actualizacion: HOY
             }).where('url', DATA.url)
+
+            let ultimo_precio = await global.knex('precios_articulos_mercado_libre').select()
+                                    .where('id_articulo', existe.id)
+                                    .orderBy('id', 'desc').first()
+            if (!ultimo_precio){
+                await global.knex('precios_articulos_mercado_libre').insert({
+                    id_articulo: existe.id,
+                    precio: DATA.price,
+                    fecha: HOY
+                })
+            } else {
+                if (ultimo_precio.precio != DATA.price)
+                    await global.knex('precios_articulos_mercado_libre').insert({
+                        id_articulo: existe.id,
+                        precio: DATA.price,
+                        fecha: HOY
+                    })
+            }
         } else {
             await global.knex('articulos_mercado_libre').insert({
                 nombre: DATA.name,
