@@ -176,7 +176,7 @@ router.post('/importar_articulo_plataforma', async function (req, res) {
                     })
             }
         } else {
-            await global.knex('articulos_mercado_libre').insert({
+            let id_nuevo =await global.knex('articulos_mercado_libre').insert({
                 nombre: DATA.name,
                 precio: DATA.price,
                 categoria: DATA.category_name,
@@ -184,6 +184,15 @@ router.post('/importar_articulo_plataforma', async function (req, res) {
                 fecha_creacion: HOY,
                 url: DATA.url
             }).where('url', DATA.url)
+            .then(async function (id_nuevo) {
+                console.log('id_nuevo',id_nuevo)
+                await global.knex('precios_articulos_mercado_libre').insert({
+                    id_articulo: id_nuevo,
+                    precio: DATA.price,
+                    fecha: HOY
+                })
+            })
+            
         }
         console.log(DATA)
         
