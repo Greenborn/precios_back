@@ -133,6 +133,80 @@ router.post('/importar', async function (req, res) {
     }    
 })
 
+const TABLAS = {
+    "ml": {
+        "articulos": "articulos_mercado_libre",
+        "precios": "precios_articulos_mercado_libre"
+    },
+    "region20": {
+        "articulos": "articulos_region_20",
+        "precios": "precios_articulos_region_20"
+    }
+}
+
+async function procesa_art_plataforma(DATA){
+    let HOY = new Date()
+    HOY.setHours(0,0,0,1)
+    
+    let existe = await global.knex(TABLAS[DATA.plataforma].articulos).select()
+                    .where('url', DATA.url).first()
+
+    if (existe){
+        await global.knex(TABLAS[DATA.plataforma].articulos).update({
+            nombre: DATA.name,
+            precio: DATA?.currency === 'pesos' ? DATA.price : null,
+            precio_dolares: DATA?.currency === 'dolares' ? DATA.price : null,
+            categoria: DATA.category_name,
+            fecha_actualizacion: HOY
+        }).where('url', DATA.url)
+
+        let ultimo_precio = await global.knex(TABLAS[DATA.plataforma].precios).select()
+                                .where('id_articulo', existe.id)
+                                .orderBy('id', 'desc').first()
+        if (!ultimo_precio){
+            await global.knex(TABLAS[DATA.plataforma].precios).insert({
+                id_articulo: existe.id,
+                precio: DATA?.currency === 'pesos' ? DATA.price : null,
+                precio_dolares: DATA?.currency === 'dolares' ? DATA.price : null,
+                fecha: HOY
+            })
+            console.log("precio registrado")
+        } else {
+            if ((ultimo_precio.precio != DATA.price && ultimo_precio.precio !== null )
+                || (ultimo_precio.precio_dolares != DATA.price && ultimo_precio.precio_dolares !== null)){
+                await global.knex(TABLAS[DATA.plataforma].precios).insert({
+                    id_articulo: existe.id,
+                    precio: DATA?.currency === 'pesos' ? DATA.price : null,
+                    precio_dolares: DATA?.currency === 'dolares' ? DATA.price : null,
+                    fecha: HOY
+                })
+                console.log("precio actualizado")
+            }
+        }
+    } else {
+        await global.knex(TABLAS[DATA.plataforma].articulos).insert({
+            nombre: DATA.name,
+            precio: DATA?.currency === 'pesos' ? DATA.price : null,
+            precio_dolares: DATA?.currency === 'dolares' ? DATA.price : null,
+            categoria: DATA.category_name,
+            fecha_actualizacion: HOY,
+            fecha_creacion: HOY,
+            url: DATA.url
+        }).where('url', DATA.url)
+        .then(async function (id_nuevo) {
+            console.log('id_nuevo',id_nuevo)
+            await global.knex(TABLAS[DATA.plataforma].precios).insert({
+                id_articulo: id_nuevo,
+                precio: DATA?.currency === 'pesos' ? DATA.price : null,
+                precio_dolares: DATA?.currency === 'dolares' ? DATA.price : null,
+                fecha: HOY
+            })
+        })
+        
+    }
+    return
+}
+
 router.post('/importar_articulo_plataforma', async function (req, res) {
     //console.log("data ", req.body)
     const KEY = req.body?.key
@@ -143,58 +217,14 @@ router.post('/importar_articulo_plataforma', async function (req, res) {
             res.status(200).send({ stat: false,  error: "Error interno, reintente luego_" })
             return
         }*/
-
-        let HOY = new Date()
-        HOY.setHours(0,0,0,1)
         
-        let existe = await global.knex('articulos_mercado_libre')
-                        .where('url', DATA.url).first()
-
-        if (existe){
-            await global.knex('articulos_mercado_libre').update({
-                nombre: DATA.name,
-                precio: DATA.price,
-                categoria: DATA.category_name,
-                fecha_actualizacion: HOY
-            }).where('url', DATA.url)
-
-            let ultimo_precio = await global.knex('precios_articulos_mercado_libre').select()
-                                    .where('id_articulo', existe.id)
-                                    .orderBy('id', 'desc').first()
-            if (!ultimo_precio){
-                await global.knex('precios_articulos_mercado_libre').insert({
-                    id_articulo: existe.id,
-                    precio: DATA.price,
-                    fecha: HOY
-                })
-            } else {
-                if (ultimo_precio.precio != DATA.price)
-                    await global.knex('precios_articulos_mercado_libre').insert({
-                        id_articulo: existe.id,
-                        precio: DATA.price,
-                        fecha: HOY
-                    })
-            }
-        } else {
-            let id_nuevo =await global.knex('articulos_mercado_libre').insert({
-                nombre: DATA.name,
-                precio: DATA.price,
-                categoria: DATA.category_name,
-                fecha_actualizacion: HOY,
-                fecha_creacion: HOY,
-                url: DATA.url
-            }).where('url', DATA.url)
-            .then(async function (id_nuevo) {
-                console.log('id_nuevo',id_nuevo)
-                await global.knex('precios_articulos_mercado_libre').insert({
-                    id_articulo: id_nuevo,
-                    precio: DATA.price,
-                    fecha: HOY
-                })
-            })
-            
-        }
-        console.log(DATA)
+        let proms_arr = []
+        for (let i=0; i < DATA.length; i++)
+            proms_arr.push(procesa_art_plataforma(DATA[i]))
+        
+        let res_procesa = await Promise.all(proms_arr)
+        if (res_procesa)
+            console.log("res_procesa", res_procesa)
         
         res.status(200).send({ stat: true })
         return
