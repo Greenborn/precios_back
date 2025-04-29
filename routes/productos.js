@@ -108,6 +108,8 @@ router.post('/importar', async function (req, res) {
     
     try {
         const KEY_VALID = process.env.KEY_INT
+        const ARR_IMPORTA = req.body?.lst_importa
+        
         if (KEY != KEY_VALID){
             res.status(200).send({ stat: false,  error: "Error interno, reintente luego_" })
             return
