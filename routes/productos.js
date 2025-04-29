@@ -140,16 +140,17 @@ async function procesarCola() {
     HOY.setHours(0,0,0,1)
 
     while (colaDeProcesamiento.length > 0) {
-      const item = colaDeProcesamiento.shift();
-      try {
-        await procesa_item(item, HOY);
-      } catch (error) {
-        console.log("error", error);
-      }
+        console.log('procesando item')
+        const item = colaDeProcesamiento.shift();
+        try {
+            await procesa_item(item, HOY);
+        } catch (error) {
+            console.log("error", error);
+        }
     }
 }
 
-setInterval(procesarCola, 10000);
+setInterval(procesarCola, 2000);
 
 const TABLAS = {
     "ml": {
