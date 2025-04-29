@@ -100,6 +100,8 @@ async function procesa_item( item, HOY){
     })
 }
 
+const colaDeProcesamiento = [];
+
 router.post('/importar', async function (req, res) {
     //console.log("data ", req.body)
     const KEY = req.body?.key
@@ -111,18 +113,15 @@ router.post('/importar', async function (req, res) {
             return
         }
 
-        let HOY = new Date()
-        HOY.setHours(0,0,0,1)
-        const ARR_IMPORTA = req.body?.lst_importa
-
         let SEMANA_PREV = new Date()
         SEMANA_PREV.setDate( SEMANA_PREV.getDate() - 7 )
         SEMANA_PREV.setUTCHours(23,59,59)
 
         await global.knex('price_today').delete().where('date_time' , '<', SEMANA_PREV)
         
-        for (let index = 0; index < ARR_IMPORTA.length; index++) 
-            await procesa_item( ARR_IMPORTA[index], HOY) 
+        ARR_IMPORTA.forEach((item) => {
+            colaDeProcesamiento.push( item );
+        })
         
         res.status(200).send({ stat: true })
         return
@@ -132,6 +131,23 @@ router.post('/importar', async function (req, res) {
         res.status(200).send({ stat: false,  error: "Error interno, reintente luego" })
     }    
 })
+
+// Worker que se encarga de procesar los items de la cola
+async function procesarCola() {
+    let HOY = new Date()
+    HOY.setHours(0,0,0,1)
+
+    while (colaDeProcesamiento.length > 0) {
+      const item = colaDeProcesamiento.shift();
+      try {
+        await procesa_item(item, HOY);
+      } catch (error) {
+        console.log("error", error);
+      }
+    }
+}
+
+procesarCola();
 
 const TABLAS = {
     "ml": {
