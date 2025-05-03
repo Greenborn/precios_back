@@ -134,13 +134,19 @@ router.post('/importar', async function (req, res) {
     }    
 })
 
+const MAX_ITEMS_PERIODO = 50
+
 // Worker que se encarga de procesar los items de la cola
 async function procesarCola() {
     let HOY = new Date()
     HOY.setHours(0,0,0,1)
-
+    let c = 0
     while (colaDeProcesamiento.length > 0) {
         console.log('procesando item')
+        c++
+        if (c > MAX_ITEMS_PERIODO)
+            break
+        
         const item = colaDeProcesamiento.shift();
         try {
             await procesa_item(item, HOY);
