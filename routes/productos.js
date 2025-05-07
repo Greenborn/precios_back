@@ -151,6 +151,7 @@ async function procesarCola() {
         try {
             await procesa_item(item, HOY);
         } catch (error) {
+            colaDeProcesamiento.push( item );
             console.log("error", error);
         }
     }
