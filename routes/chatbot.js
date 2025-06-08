@@ -9,7 +9,7 @@ router.get('/chat_bot_rsp', async function (req, res) {
 
   try {
 
-    res.status(200).send({ stat: true, msg: '' })
+    res.status(200).send({ stat: true, msg: 'test' })
       
   } catch (error) {
     console.log(error)
