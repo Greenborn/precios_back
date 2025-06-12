@@ -1,6 +1,7 @@
 
 const express = require('express')
-var router = express.Router()
+const router = express.Router()
+const chat_bot = require("../controllers/chat_bot")
 module.exports = router
 
 
@@ -9,7 +10,7 @@ router.get('/chat_bot_rsp', async function (req, res) {
 
   try {
 
-    res.status(200).send({ stat: true, msg: 'test' })
+    res.status(200).send({ stat: true, msg: chat_bot.get_respuesta(req.query?.msg) })
       
   } catch (error) {
     console.log(error)
