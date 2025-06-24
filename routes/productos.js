@@ -5,6 +5,7 @@ module.exports = router
 const bcrypt = require('bcrypt')
 const fs = require("fs")
 const cargador_precios = require("../controllers/importar_productos")
+const processing = require("../helpers/processing")
 
 router.get('/all', async function (req, res) {
     console.log("query ", req.query)
@@ -137,27 +138,8 @@ router.post('/importar', async function (req, res) {
 const MAX_ITEMS_PERIODO = 50
 
 // Worker que se encarga de procesar los items de la cola
-async function procesarColaProc( cola, callback ) {
-    
-    let c = 0
-    while (cola.length > 0) {
-        console.log('procesando item')
-        c++
-        if (c > MAX_ITEMS_PERIODO)
-            break
-        
-        const item = cola.shift();
-        try {
-            await callback(item);
-        } catch (error) {
-            cola.push( item );
-            console.log("error", error);
-        }
-    }
-}
-
 setInterval(async()=>{
-    await procesarColaProc( colaProcProductos, async (item) => {
+    await processing.procesarColaProc( colaProcProductos, async (item) => {
         let HOY = new Date()
         HOY.setHours(0,0,0,1)
         return await procesa_item(item, HOY);
