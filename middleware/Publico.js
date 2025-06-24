@@ -16,10 +16,12 @@ router.use("/busqueda", require("../routes/busqueda"))
 router.use("/estadistica", require("../routes/estadistica"))
 router.use("/categorias", require("../routes/categorias"))
 router.use("/productos", require("../routes/productos"))
+router.use("/chatbot", require("../routes/chatbot"))
 
 var paths = [
   { path: "/busqueda/precios" },
   { path: "/busqueda/promociones" },
+  { path: "/chatbot/chat_bot_rsp" },
   { path: "/busqueda/comercios_promociones" },
   { path: "/estadistica/data" },
   { path: "/estadistica/precios_usuarios" },
