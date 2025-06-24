@@ -1,16 +1,23 @@
 
 const express = require('express')
 const router = express.Router()
-const chat_bot = require("../controllers/chat_bot")
+const axios = require("axios")
+
 module.exports = router
 
 
-router.get('/chat_bot_rsp', async function (req, res) {
-  console.log("query ", req.query)
+router.post('/chat_bot_rsp', async function (req, res) {
+  console.log("body ", req.body)
 
   try {
-
-    res.status(200).send({ stat: true, msg: chat_bot.get_respuesta(req.query?.msg) })
+    if (!req.body?.texto)   return res.status(200).send({ stat: false, items: [], error: true })
+    if (!req.body?.user_id) return res.status(200).send({ stat: false, items: [], error: true })
+    
+    const response = await axios.post('http://localhost:6789/api/chat', {
+      userId: req.body.user_id,
+      message: req.body.texto
+    })
+    res.status(200).send({ stat: true, msg: response.data.response })
       
   } catch (error) {
     console.log(error)
