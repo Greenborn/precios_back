@@ -5,6 +5,7 @@ module.exports = router
 const bcrypt = require('bcrypt')
 const fs = require("fs")
 const cargador_precios = require("../controllers/importar_productos")
+const processing = require("../helpers/processing")
 
 router.get('/all', async function (req, res) {
     console.log("query ", req.query)
@@ -100,7 +101,7 @@ async function procesa_item( item, HOY){
     })
 }
 
-const colaDeProcesamiento = [];
+const colaProcProductos = [];
 
 router.post('/importar', async function (req, res) {
     //console.log("data ", req.body)
@@ -122,7 +123,7 @@ router.post('/importar', async function (req, res) {
         await global.knex('price_today').delete().where('date_time' , '<', SEMANA_PREV)
         
         ARR_IMPORTA.forEach((item) => {
-            colaDeProcesamiento.push( item );
+            colaProcProductos.push( item );
         })
         
         res.status(200).send({ stat: true })
@@ -134,30 +135,14 @@ router.post('/importar', async function (req, res) {
     }    
 })
 
-const MAX_ITEMS_PERIODO = 50
-
 // Worker que se encarga de procesar los items de la cola
-async function procesarCola() {
-    let HOY = new Date()
-    HOY.setHours(0,0,0,1)
-    let c = 0
-    while (colaDeProcesamiento.length > 0) {
-        console.log('procesando item')
-        c++
-        if (c > MAX_ITEMS_PERIODO)
-            break
-        
-        const item = colaDeProcesamiento.shift();
-        try {
-            await procesa_item(item, HOY);
-        } catch (error) {
-            colaDeProcesamiento.push( item );
-            console.log("error", error);
-        }
-    }
-}
-
-setInterval(procesarCola, 2000);
+setInterval(async()=>{
+    await processing.procesarColaProc( colaProcProductos, async (item) => {
+        let HOY = new Date()
+        HOY.setHours(0,0,0,1)
+        return await procesa_item(item, HOY);
+    })
+}, 2000);
 
 const TABLAS = {
     "ml": {
@@ -310,6 +295,21 @@ async function procesar_oferta(trx, item, HOY, AYER){
     })
 }
 
+let colaProcOfertas = []
+
+// Worker que se encarga de procesar los items de la cola
+setInterval(async()=>{
+    await processing.procesarColaProc( colaProcOfertas, async (item) => {
+        let HOY = new Date()
+        HOY.setHours(0,0,0,1)
+
+        let AYER = new Date()
+        AYER.setUTCDate(AYER.getDate() - 1)
+        AYER.setUTCHours(23,59,59)
+        return await procesar_oferta(global.knex, item, HOY, AYER)
+    })
+}, 2000);
+
 router.post('/importar_oferta', async function (req, res) {
     //console.log("data ", req.body)
     const KEY = req.body?.key
@@ -321,29 +321,13 @@ router.post('/importar_oferta', async function (req, res) {
             res.status(200).send({ stat: false,  error: "Error interno, reintente luego_" })
             return
         }
-        let HOY = new Date()
-        HOY.setUTCHours(0,0,0,1)
 
-        let AYER = new Date()
-        AYER.setUTCDate(AYER.getDate() - 1)
-        AYER.setUTCHours(23,59,59)
-
-        let proms_res = []
-        let trx = await knex.transaction()
         for (let index = 0; index < ARR_IMPORTA.length; index++) {
-            const item = ARR_IMPORTA[index];
-            proms_res.push( procesar_oferta(trx, item, HOY, AYER) )
+            const item = ARR_IMPORTA[index]
+            colaProcOfertas.push( item )
         }
-        let res_proms = await Promise.all(proms_res)
-        if (res_proms){
-            await trx.commit()
-            res.status(200).send({ stat: true, res: res_proms })
-            return
-        } else {
-            trx.rollback()
-            res.status(200).send({ stat: false,  error: "Error interno, reintente luego" })
-            return
-        }
+        
+        return res.status(200).send({ stat: true, res: res_proms })
     } catch (error) {
         console.log("error", error)
         res.status(200).send({ stat: false,  error: "Error interno, reintente luego" })
