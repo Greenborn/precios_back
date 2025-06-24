@@ -1,4 +1,4 @@
-
+const MAX_ITEMS_PERIODO = 50
 exports.procesarColaProc = async function ( cola, callback ) {
     let c = 0
     while (cola.length > 0) {
