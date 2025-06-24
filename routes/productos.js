@@ -5,6 +5,7 @@ module.exports = router
 const bcrypt = require('bcrypt')
 const fs = require("fs")
 const cargador_precios = require("../controllers/importar_productos")
+const processing = require("../helpers/processing")
 
 router.get('/all', async function (req, res) {
     console.log("query ", req.query)
@@ -100,7 +101,7 @@ async function procesa_item( item, HOY){
     })
 }
 
-const colaDeProcesamiento = [];
+const colaProcProductos = [];
 
 router.post('/importar', async function (req, res) {
     //console.log("data ", req.body)
@@ -122,7 +123,7 @@ router.post('/importar', async function (req, res) {
         await global.knex('price_today').delete().where('date_time' , '<', SEMANA_PREV)
         
         ARR_IMPORTA.forEach((item) => {
-            colaDeProcesamiento.push( item );
+            colaProcProductos.push( item );
         })
         
         res.status(200).send({ stat: true })
@@ -137,27 +138,13 @@ router.post('/importar', async function (req, res) {
 const MAX_ITEMS_PERIODO = 50
 
 // Worker que se encarga de procesar los items de la cola
-async function procesarCola() {
-    let HOY = new Date()
-    HOY.setHours(0,0,0,1)
-    let c = 0
-    while (colaDeProcesamiento.length > 0) {
-        console.log('procesando item')
-        c++
-        if (c > MAX_ITEMS_PERIODO)
-            break
-        
-        const item = colaDeProcesamiento.shift();
-        try {
-            await procesa_item(item, HOY);
-        } catch (error) {
-            colaDeProcesamiento.push( item );
-            console.log("error", error);
-        }
-    }
-}
-
-setInterval(procesarCola, 2000);
+setInterval(async()=>{
+    await processing.procesarColaProc( colaProcProductos, async (item) => {
+        let HOY = new Date()
+        HOY.setHours(0,0,0,1)
+        return await procesa_item(item, HOY);
+    })
+}, 2000);
 
 const TABLAS = {
     "ml": {
