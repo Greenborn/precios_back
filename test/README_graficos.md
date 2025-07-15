@@ -2,6 +2,26 @@
 
 Este conjunto de scripts permite analizar la evolución de los precios de productos, generando gráficos claros y útiles para organizaciones que buscan transparencia y medir el impacto de los precios en el poder adquisitivo.
 
+## Metodología de cálculo
+
+**Serie diaria por producto:**
+- Para cada producto, se construye una serie diaria desde su primer registro de 2024 hasta su último registro.
+- Los días intermedios se rellenan con el último precio conocido (forward fill).
+- No se extiende el precio más allá de la última fecha registrada para ese producto.
+
+**Cálculo de incrementos:**
+- El incremento acumulado se calcula respecto al primer precio registrado de cada producto.
+- El incremento interdiario se calcula como el cambio porcentual entre días consecutivos.
+- El incremento intermensual se calcula como el cambio porcentual entre el último precio de cada mes y el del mes anterior.
+
+**Cálculo de medias y medianas:**
+- Para cada día/mes, la media y mediana se calculan solo con los productos que tienen precio válido ese día/mes (es decir, que tienen datos hasta esa fecha).
+
+**Cobertura de datos:**
+- En fechas recientes, si hay pocos productos con datos, la media/mediana puede ser menos representativa. Se recomienda analizar junto al gráfico de cantidad de precios por día.
+
+---
+
 ## Ejecución
 
 Para generar todos los gráficos de una vez, ejecuta:
@@ -15,7 +35,7 @@ Ejemplo:
 python ejecutar_todos_los_graficos.py 100
 ```
 
-Esto borra todos los SVG anteriores y genera los nuevos para la cantidad de productos indicada.
+Esto borra todos los SVG anteriores y genera los nuevos para la cantidad de productos indicada. Los gráficos se guardan en `test/graficos/`.
 
 ---
 
@@ -90,6 +110,6 @@ Estos gráficos están pensados para organizaciones y movimientos sociales que b
 - Identificar productos problemáticos o aumentos desmedidos.
 
 ## Notas
-- Todos los gráficos se guardan en formato SVG en la carpeta `test/`.
+- Todos los gráficos se guardan en formato SVG en la carpeta `test/graficos/`.
 - El parámetro `<N>` en los nombres de archivo corresponde a la cantidad de productos procesados.
 - Los scripts descartan productos que no tengan datos desde 2024. 

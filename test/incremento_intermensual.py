@@ -1,6 +1,14 @@
 """
 Script: incremento_intermensual.py
 Genera gráficos de la media y mediana mensual del incremento intermensual porcentual de los productos.
+
+Metodología:
+- Para cada producto, se construye una serie diaria desde su primer registro de 2024 hasta su último registro.
+- Los días intermedios se rellenan con el último precio conocido (forward fill).
+- No se extiende el precio más allá de la última fecha registrada para ese producto.
+- El incremento intermensual se calcula como el cambio porcentual entre el último precio de cada mes y el del mes anterior.
+- Para cada mes, la media y mediana se calculan solo con los productos que tienen precio válido ese mes.
+
 Uso: python incremento_intermensual.py <cantidad_productos>
 """
 import sys
@@ -20,7 +28,6 @@ if len(sys.argv) != 2:
 
 n_productos = int(sys.argv[1])
 
-# Borrar SVGs anteriores relacionados
 graficos_dir = os.path.join(os.path.dirname(__file__), 'graficos')
 os.makedirs(graficos_dir, exist_ok=True)
 for f in glob.glob(os.path.join(graficos_dir, "grafico_*incremento_intermensual*_*.svg")):
@@ -49,8 +56,8 @@ id_a_nombre = cargar_nombres_productos(products_path)
 primeros_n_ids = list(precios_por_producto.keys())[:n_productos]
 fecha_inicio = datetime(2024, 1, 1)
 
-# --- Incremento intermensual ---
-incrementos_intermensuales_por_mes = defaultdict(list)
+# --- Construir series diarias completas por producto ---
+series_diarias = {}
 for prod_id in primeros_n_ids:
     precios = precios_por_producto[prod_id]
     df = pd.DataFrame(precios)
@@ -60,20 +67,29 @@ for prod_id in primeros_n_ids:
     df = df[df['date_time'] >= fecha_inicio]
     df = df.sort_values(by='date_time')
     if not df.empty:
-        df['mes'] = df['date_time'].dt.to_period('M')
+        # Eliminar duplicados por fecha, quedando el último precio del día
+        df = df.groupby('date_time', as_index=False).last()
+        primer_fecha = df['date_time'].iloc[0].date()
+        ultima_fecha = df['date_time'].iloc[-1].date()
+        idx = pd.date_range(primer_fecha, ultima_fecha, freq='D')
+        df = df.set_index('date_time').reindex(idx)
+        df['price'] = df['price'].ffill()
+        df = df.loc[:ultima_fecha]
+        # Calcular precio mensual (último de cada mes)
+        df['mes'] = df.index.to_period('M')
         precios_mensuales = df.groupby('mes')['price'].last()
         incremento_intermensual = precios_mensuales.pct_change() * 100
-        incremento_intermensual = incremento_intermensual.dropna()
-        for mes, inc in zip(incremento_intermensual.index, incremento_intermensual.values):
-            incrementos_intermensuales_por_mes[mes].append(inc)
+        series_diarias[prod_id] = incremento_intermensual
 
-if incrementos_intermensuales_por_mes:
-    meses_ordenados = sorted(incrementos_intermensuales_por_mes.keys())
-    medias = [np.mean(incrementos_intermensuales_por_mes[m]) for m in meses_ordenados]
-    medianas = [np.median(incrementos_intermensuales_por_mes[m]) for m in meses_ordenados]
+# --- Calcular media y mediana mensual ---
+if series_diarias:
+    df_all = pd.DataFrame(series_diarias)
+    medias = df_all.mean(axis=1, skipna=True)
+    medianas = df_all.median(axis=1, skipna=True)
+    meses_ordenados = df_all.index.to_timestamp()
     # Media mensual
     plt.figure(figsize=(18, 8))
-    plt.plot([m.to_timestamp() for m in meses_ordenados], medias, label='Media intermensual', color='blue', linewidth=2)
+    plt.plot(meses_ordenados, medias, label='Media intermensual', color='blue', linewidth=2)
     plt.xlabel('Mes', fontsize=12, fontweight='bold')
     plt.ylabel('Media del incremento intermensual (%)', fontsize=12, fontweight='bold')
     plt.title(f'Media intermensual del incremento porcentual ({n_productos} productos, desde 2024)', fontsize=16, fontweight='bold')
@@ -88,7 +104,7 @@ if incrementos_intermensuales_por_mes:
     print(f'Gráfico guardado: {output_media}')
     # Mediana mensual
     plt.figure(figsize=(18, 8))
-    plt.plot([m.to_timestamp() for m in meses_ordenados], medianas, label='Mediana intermensual', color='green', linewidth=2)
+    plt.plot(meses_ordenados, medianas, label='Mediana intermensual', color='green', linewidth=2)
     plt.xlabel('Mes', fontsize=12, fontweight='bold')
     plt.ylabel('Mediana del incremento intermensual (%)', fontsize=12, fontweight='bold')
     plt.title(f'Mediana intermensual del incremento porcentual ({n_productos} productos, desde 2024)', fontsize=16, fontweight='bold')

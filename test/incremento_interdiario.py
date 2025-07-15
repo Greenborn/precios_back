@@ -1,6 +1,14 @@
 """
 Script: incremento_interdiario.py
 Genera gráficos de la media y mediana diaria del incremento interdiario porcentual de los productos.
+
+Metodología:
+- Para cada producto, se construye una serie diaria desde su primer registro de 2024 hasta su último registro.
+- Los días intermedios se rellenan con el último precio conocido (forward fill).
+- No se extiende el precio más allá de la última fecha registrada para ese producto.
+- El incremento interdiario se calcula como el cambio porcentual entre días consecutivos.
+- Para cada día, la media y mediana se calculan solo con los productos que tienen precio válido ese día.
+
 Uso: python incremento_interdiario.py <cantidad_productos>
 """
 import sys
@@ -20,7 +28,6 @@ if len(sys.argv) != 2:
 
 n_productos = int(sys.argv[1])
 
-# Borrar SVGs anteriores relacionados
 graficos_dir = os.path.join(os.path.dirname(__file__), 'graficos')
 os.makedirs(graficos_dir, exist_ok=True)
 for f in glob.glob(os.path.join(graficos_dir, "grafico_*incremento_interdiario*_*.svg")):
@@ -49,8 +56,8 @@ id_a_nombre = cargar_nombres_productos(products_path)
 primeros_n_ids = list(precios_por_producto.keys())[:n_productos]
 fecha_inicio = datetime(2024, 1, 1)
 
-# --- Incremento interdiario ---
-incrementos_interdiarios_por_dia = defaultdict(list)
+# --- Construir series diarias completas por producto ---
+series_diarias = {}
 for prod_id in primeros_n_ids:
     precios = precios_por_producto[prod_id]
     df = pd.DataFrame(precios)
@@ -60,16 +67,24 @@ for prod_id in primeros_n_ids:
     df = df[df['date_time'] >= fecha_inicio]
     df = df.sort_values(by='date_time')
     if not df.empty:
-        precios_diarios = df.groupby('date_time')['price'].last()
-        incremento_interdiario = precios_diarios.pct_change() * 100
-        incremento_interdiario = incremento_interdiario.dropna()
-        for dia, inc in zip(incremento_interdiario.index, incremento_interdiario.values):
-            incrementos_interdiarios_por_dia[dia].append(inc)
+        # Eliminar duplicados por fecha, quedando el último precio del día
+        df = df.groupby('date_time', as_index=False).last()
+        primer_fecha = df['date_time'].iloc[0].date()
+        ultima_fecha = df['date_time'].iloc[-1].date()
+        idx = pd.date_range(primer_fecha, ultima_fecha, freq='D')
+        df = df.set_index('date_time').reindex(idx)
+        df['price'] = df['price'].ffill()
+        df = df.loc[:ultima_fecha]
+        # Calcular incremento interdiario
+        df['incremento_interdiario'] = df['price'].pct_change() * 100
+        series_diarias[prod_id] = df['incremento_interdiario']
 
-if incrementos_interdiarios_por_dia:
-    dias_ordenados = sorted(incrementos_interdiarios_por_dia.keys())
-    medias = [np.mean(incrementos_interdiarios_por_dia[d]) for d in dias_ordenados]
-    medianas = [np.median(incrementos_interdiarios_por_dia[d]) for d in dias_ordenados]
+# --- Calcular media y mediana diaria ---
+if series_diarias:
+    df_all = pd.DataFrame(series_diarias)
+    medias = df_all.mean(axis=1, skipna=True)
+    medianas = df_all.median(axis=1, skipna=True)
+    dias_ordenados = df_all.index
     # Media diaria
     plt.figure(figsize=(18, 8))
     plt.plot(dias_ordenados, medias, label='Media interdiaria', color='blue', linewidth=2)
