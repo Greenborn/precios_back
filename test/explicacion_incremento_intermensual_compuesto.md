@@ -1,7 +1,7 @@
-# Incremento porcentual intermensual compuesto
+# Incremento porcentual intermensual compuesto (precios vs. dólar)
 
 **Descripción resumida:**
-Este gráfico muestra el aumento total de precios mes a mes, calculado de forma compuesta (teniendo en cuenta el efecto acumulativo real). Incluye barras de error para mostrar la variabilidad diaria dentro de cada mes.
+Este gráfico muestra el aumento total de precios y del dólar mes a mes, calculado de forma compuesta (teniendo en cuenta el efecto acumulativo real). Incluye barras de error para los precios y permite comparar ambas curvas.
 
 ![Ver gráfico](graficos/incremento_intermensual_compuesto.svg)
 
@@ -9,28 +9,27 @@ Este gráfico muestra el aumento total de precios mes a mes, calculado de forma 
 
 ## Detalle metodológico
 
-1. **Obtención de precios:**
-   Los precios se recolectan automáticamente mediante bots que consultan fuentes públicas y privadas. Los datos se exportan en archivos `.csv` para su posterior análisis.
+1. **Obtención de precios y dólar:**
+   - Los precios se recolectan automáticamente mediante bots y se exportan en archivos `.csv`.
+   - El precio del dólar se obtuvo de [Investing.com](https://www.investing.com/currencies/usd-ars-historical-data) y se importó como CSV histórico.
 
 2. **Procesamiento de datos:**
    - Limpieza y validación de los `.csv`.
-   - Agrupación de precios por producto y día, usando la mediana si hay varios valores.
-   - Generación de series diarias completas por producto (relleno forward fill).
+   - Agrupación de precios por producto y día (mediana), generación de series diarias completas (forward fill).
+   - El dólar se ordena y se calcula su variación diaria.
 
-3. **Cálculo de incrementos diarios y mensuales:**
-   - Se calcula el incremento porcentual entre días consecutivos para cada producto.
-   - Se obtiene la media diaria de estos incrementos, aplicando filtros de calidad (≥1000 registros, sin extremos).
-   - Para cada mes, se compone el incremento mensual de manera multiplicativa, reflejando el efecto real acumulado.
-   - Se calcula la desviación estándar diaria como barra de error.
+3. **Cálculo de incrementos mensuales compuestos:**
+   - Para ambos, se calcula el incremento porcentual diario y luego se compone multiplicativamente para cada mes.
+   - Para los precios, se calcula además la desviación estándar diaria como barra de error.
 
 4. **Construcción del gráfico:**
-   - Se grafica el incremento mensual compuesto y sus barras de error para cada mes.
+   - Se grafican ambas curvas mensuales compuestas: precios (naranja, con barras de error) y dólar (azul), permitiendo la comparación directa.
 
 ---
 
 ## Justificación y utilidad
 
-Este gráfico es útil para analizar la inflación mensual real, considerando el efecto compuesto de los incrementos diarios. Permite comparar meses y detectar períodos de mayor o menor variabilidad en los precios.
+Comparar la evolución mensual compuesta de precios y dólar permite analizar si la inflación sigue, supera o queda por debajo de la devaluación. Es fundamental para entender la dinámica de precios y su relación con el tipo de cambio en períodos de alta volatilidad.
 
 ---
 
