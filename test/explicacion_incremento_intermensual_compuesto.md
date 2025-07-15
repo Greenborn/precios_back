@@ -11,7 +11,7 @@ Este gráfico muestra el aumento total de precios y del dólar mes a mes, calcul
 
 1. **Obtención de precios y dólar:**
    - Los precios se recolectan automáticamente mediante bots y se exportan en archivos `.csv`.
-   - El precio del dólar se obtuvo de [Investing.com](https://www.investing.com/currencies/usd-ars-historical-data) y se importó como CSV histórico.
+   - El precio del dólar oficial se obtuvo de [Investing.com](https://www.investing.com/currencies/usd-ars-historical-data) y se importó como CSV histórico.
 
 2. **Procesamiento de datos:**
    - Limpieza y validación de los `.csv`.
