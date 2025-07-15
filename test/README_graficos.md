@@ -28,21 +28,43 @@ Este conjunto de scripts permite analizar la evolución de los precios de produc
 ### 5. Gráficos generados a partir de la serie compilada
 
 - **Media diaria de incrementos interdiarios:**
-  - Archivo: `serie_compilada.svg`
+  - Script: `graficar_media_incremento_interdiario.py`
+  - Archivo: `media_incremento_interdiario.svg`
   - Eje X: Fecha
   - Eje Y: Media diaria de incrementos interdiarios (%)
   - Solo días con ≥1000 registros y sin extremos >200%
+  - Uso:
+    ```bash
+    python graficar_media_incremento_interdiario.py [json_entrada] [svg_salida]
+    ```
+
+- **Incremento interdiario acumulado:**
+  - Script: `graficar_incremento_acumulado_interdiario.py`
+  - Archivo: `incremento_acumulado_interdiario.svg`
+  - Eje X: Fecha
+  - Eje Y: Suma acumulada de la media diaria de incrementos interdiarios (%)
+  - Solo días con ≥1000 registros y sin extremos >200%
+  - Uso:
+    ```bash
+    python graficar_incremento_acumulado_interdiario.py [json_entrada] [svg_salida]
+    ```
+
+- **Gráfico combinado (media diaria y acumulado):**
+  - Script: `graficar_incrementos_combinados.py`
+  - Archivo: `incrementos_combinados.svg`
+  - Eje X: Fecha
+  - Eje Y: Porcentaje (%)
+  - Dos líneas: media diaria de incrementos interdiarios (%) y acumulado (%)
+  - Solo días con ≥1000 registros y sin extremos >200%
+  - Uso:
+    ```bash
+    python graficar_incrementos_combinados.py [json_entrada] [svg_salida]
+    ```
 
 - **Cantidad de registros por día:**
   - Archivo: `cantidad_registros.svg`
   - Eje X: Fecha
   - Eje Y: Cantidad de productos con dato ese día
-  - Solo días con ≥1000 registros y sin extremos >200%
-
-- **Incremento interdiario acumulado:**
-  - Archivo: `incremento_acumulado.svg`
-  - Eje X: Fecha
-  - Eje Y: Suma acumulada de la media diaria de incrementos interdiarios (%)
   - Solo días con ≥1000 registros y sin extremos >200%
 
 - **Aumento intermensual:**
@@ -59,6 +81,8 @@ Este conjunto de scripts permite analizar la evolución de los precios de produc
   - Permite ver la tendencia general de variación de precios día a día.
 - **Incremento acumulado:**
   - Muestra el efecto compuesto de los incrementos diarios a lo largo del tiempo.
+- **Gráfico combinado:**
+  - Permite comparar visualmente la variación diaria y el efecto acumulado.
 - **Aumento intermensual:**
   - Permite comparar la inflación mensual y detectar meses con aumentos o caídas inusuales.
 - **Cantidad de registros:**
