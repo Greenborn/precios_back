@@ -1,5 +1,8 @@
 # Análisis y Visualización de Incrementos de Precios
 
+> **Nota metodológica:**
+> La justificación estadística y el análisis crítico de la metodología utilizada para estos gráficos se encuentra en el archivo [`ANALISIS_METODOLOGICO.md`](./ANALISIS_METODOLOGICO.md). Se recomienda consultarlo para comprender los fundamentos, alcances y limitaciones de los indicadores y visualizaciones presentados aquí.
+
 Este conjunto de scripts permite analizar la evolución de los precios de productos, generando gráficos claros y útiles para organizaciones que buscan transparencia y medir el impacto de los precios en el poder adquisitivo.
 
 ## Metodología de cálculo (actualizada)
