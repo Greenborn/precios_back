@@ -39,14 +39,69 @@ async function main() {
             }
             preciosPorProducto[id].push(precio);
         }
-        console.log('Diccionario de precios por producto creado. Ejemplo:');
-        const primerId = Object.keys(preciosPorProducto)[0];
-        console.log(`Producto: ${primerId}`);
-        console.log(preciosPorProducto[primerId]);
-
-        // Guardar en JSON
-        fs.writeFileSync(salidaJson, JSON.stringify(preciosPorProducto, null, 2));
-        console.log(`Diccionario guardado en: ${salidaJson}`);
+        
+        // Generar series diarias con mediana y rellenar días intermedios
+        const preciosDiariosPorProducto = {};
+        const parseDate = (str) => new Date(str);
+        const formatDate = (date) => date.toISOString().slice(0, 10);
+        const getMediana = (arr) => {
+            const nums = arr.map(Number).sort((a, b) => a - b);
+            const mid = Math.floor(nums.length / 2);
+            return nums.length % 2 !== 0 ? nums[mid] : (nums[mid - 1] + nums[mid]) / 2;
+        };
+        for (const [id, preciosArr] of Object.entries(preciosPorProducto)) {
+            // Agrupar por fecha y calcular mediana
+            const preciosPorFecha = {};
+            for (const p of preciosArr) {
+                let fecha = p.date_time || p.date || p.fecha || p.Date || p.Fecha; // soporta varios nombres
+                const precio = p.price || p.precio || p.Price || p.Precio;
+                if (!fecha || !precio) continue;
+                // Si la fecha tiene formato con hora, extraer solo YYYY-MM-DD
+                if (fecha.length > 10) fecha = fecha.slice(0, 10);
+                if (!preciosPorFecha[fecha]) preciosPorFecha[fecha] = [];
+                preciosPorFecha[fecha].push(Number(precio));
+            }
+            // Fechas ordenadas
+            const fechas = Object.keys(preciosPorFecha).sort();
+            if (fechas.length === 0) continue;
+            const primera = parseDate(fechas[0]);
+            const ultima = parseDate(fechas[fechas.length - 1]);
+            // Generar serie diaria
+            let actual = new Date(primera);
+            let ultimoPrecio = null;
+            const serie = [];
+            while (actual <= ultima) {
+                const fechaStr = formatDate(actual);
+                if (preciosPorFecha[fechaStr]) {
+                    ultimoPrecio = getMediana(preciosPorFecha[fechaStr]);
+                }
+                if (ultimoPrecio !== null) {
+                    serie.push({ date: fechaStr, price: ultimoPrecio });
+                }
+                actual.setDate(actual.getDate() + 1);
+            }
+            preciosDiariosPorProducto[id] = serie;
+        }
+        // Guardar en JSON por partes agrupando hasta 2000 series por archivo
+        const seriesDir = path.join(__dirname, 'series');
+        if (!fs.existsSync(seriesDir)) {
+            fs.mkdirSync(seriesDir);
+        }
+        const ids = Object.keys(preciosDiariosPorProducto);
+        const chunkSize = 2000;
+        let archivo = 1;
+        for (let i = 0; i < ids.length; i += chunkSize) {
+            const chunk = ids.slice(i, i + chunkSize);
+            const outObj = {};
+            for (const id of chunk) {
+                outObj[id] = preciosDiariosPorProducto[id];
+            }
+            const outPath = path.join(seriesDir, `series_${archivo}.json`);
+            fs.writeFileSync(outPath, JSON.stringify(outObj, null, 2));
+            console.log(`Guardado: ${outPath}`);
+            archivo++;
+        }
+        console.log(`Series diarias guardadas en archivos agrupados dentro de: ${seriesDir}`);
     } catch (err) {
         console.error('Error al cargar los CSV:', err);
     }
