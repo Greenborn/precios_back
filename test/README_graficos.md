@@ -45,15 +45,16 @@ Este conjunto de scripts permite analizar la evolución de los precios de produc
     python graficar_media_incremento_interdiario.py [json_entrada] [svg_salida]
     ```
 
-- **Incremento interdiario acumulado:**
+- **Incremento interdiario acumulado (precios vs. dólar):**
   - Script: `graficar_incremento_acumulado_interdiario.py`
   - Archivo: `incremento_acumulado_interdiario.svg`
   - Eje X: Fecha
   - Eje Y: Suma acumulada de la media diaria de incrementos interdiarios (%)
-  - Solo días con ≥1000 registros y sin extremos >200%
+  - Metodología: composición multiplicativa para precios y dólar.
+  - Se grafican ambas curvas acumuladas: precios (verde) y dólar (azul), permitiendo la comparación directa.
   - Uso:
     ```bash
-    python graficar_incremento_acumulado_interdiario.py [json_entrada] [svg_salida]
+    python graficar_incremento_acumulado_interdiario.py [json_entrada] [svg_salida] [csv_dolar]
     ```
 
 - **Gráfico combinado (media diaria y acumulado):**

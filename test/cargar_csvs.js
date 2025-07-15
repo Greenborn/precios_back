@@ -81,11 +81,17 @@ async function main() {
                 }
                 if (ultimoPrecio !== null) {
                     let inc = null;
+                    let agregar = true;
                     if (prevPrecio !== null && prevPrecio !== 0) {
                         inc = ((ultimoPrecio / prevPrecio) - 1) * 100;
+                        if (Math.abs(inc) > 50) {
+                            agregar = false; // Excluir variaciones mayores al 50%
+                        }
                     }
-                    serie.push({ date: fechaStr, price: ultimoPrecio, inc });
-                    prevPrecio = ultimoPrecio;
+                    if (agregar) {
+                        serie.push({ date: fechaStr, price: ultimoPrecio, inc });
+                        prevPrecio = ultimoPrecio;
+                    }
                 }
                 actual.setDate(actual.getDate() + 1);
             }
