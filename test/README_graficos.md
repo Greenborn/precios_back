@@ -2,105 +2,67 @@
 
 Este conjunto de scripts permite analizar la evolución de los precios de productos, generando gráficos claros y útiles para organizaciones que buscan transparencia y medir el impacto de los precios en el poder adquisitivo.
 
-## Metodología de cálculo
+## Metodología de cálculo (actualizada)
 
-**Serie diaria por producto:**
+### 1. Generación de series diarias por producto
 - Para cada producto, se construye una serie diaria desde su primer registro de 2024 hasta su último registro.
 - Los días intermedios se rellenan con el último precio conocido (forward fill).
+- Si hay varios precios para un producto en un mismo día, se utiliza la mediana de esos precios.
 - No se extiende el precio más allá de la última fecha registrada para ese producto.
 
-**Cálculo de incrementos:**
-- El incremento acumulado se calcula respecto al primer precio registrado de cada producto.
-- El incremento interdiario se calcula como el cambio porcentual entre días consecutivos.
-- El incremento intermensual se calcula como el cambio porcentual entre el último precio de cada mes y el del mes anterior.
+### 2. Cálculo de incrementos interdiarios
+- Para cada producto, el incremento interdiario se calcula como el cambio porcentual entre días consecutivos:
+  
+  `(precio_dia_actual / precio_dia_anterior - 1) * 100`
 
-**Cálculo de medias y medianas:**
-- Para cada día/mes, la media y mediana se calculan solo con los productos que tienen precio válido ese día/mes (es decir, que tienen datos hasta esa fecha).
+### 3. Compilación de la serie media diaria de incrementos
+- Se genera una serie única llamada `media_incremento_diario.json`:
+  - Para cada día, se calcula la media de los incrementos interdiarios de todos los productos que tienen dato ese día.
+  - Se almacena también la cantidad de productos (registros) que aportaron dato ese día (`count`).
+  - La serie compilada abarca desde el 1 de enero de 2024 hasta la última fecha con datos.
 
-**Cobertura de datos:**
-- En fechas recientes, si hay pocos productos con datos, la media/mediana puede ser menos representativa. Se recomienda analizar junto al gráfico de cantidad de precios por día.
+### 4. Filtros aplicados para los gráficos
+- Solo se consideran los días donde la cantidad de registros es mayor o igual a 1000 (`count >= 1000`).
+- Se excluyen los días donde la media de incremento interdiario supera el 200% en valor absoluto (`abs(mean_inc) <= 200`).
 
----
+### 5. Gráficos generados a partir de la serie compilada
 
-## Ejecución
+- **Media diaria de incrementos interdiarios:**
+  - Archivo: `serie_compilada.svg`
+  - Eje X: Fecha
+  - Eje Y: Media diaria de incrementos interdiarios (%)
+  - Solo días con ≥1000 registros y sin extremos >200%
 
-Para generar todos los gráficos de una vez, ejecuta:
+- **Cantidad de registros por día:**
+  - Archivo: `cantidad_registros.svg`
+  - Eje X: Fecha
+  - Eje Y: Cantidad de productos con dato ese día
+  - Solo días con ≥1000 registros y sin extremos >200%
 
-```bash
-python ejecutar_todos_los_graficos.py <cantidad_productos>
-```
+- **Incremento interdiario acumulado:**
+  - Archivo: `incremento_acumulado.svg`
+  - Eje X: Fecha
+  - Eje Y: Suma acumulada de la media diaria de incrementos interdiarios (%)
+  - Solo días con ≥1000 registros y sin extremos >200%
 
-Ejemplo:
-```bash
-python ejecutar_todos_los_graficos.py 100
-```
-
-Esto borra todos los SVG anteriores y genera los nuevos para la cantidad de productos indicada. Los gráficos se guardan en `test/graficos/`.
-
----
-
-## Scripts y gráficos generados
-
-### 1. incremento_acumulado.py
-- **Media y mediana diaria del incremento acumulado**
-  - `grafico_media_incremento_acumulado_diario_<N>_productos_2024.svg`
-  - `grafico_mediana_incremento_acumulado_diario_<N>_productos_2024.svg`
-- **Media y mediana mensual del incremento acumulado**
-  - `grafico_media_incremento_acumulado_mensual_<N>_productos_2024.svg`
-  - `grafico_mediana_incremento_acumulado_mensual_<N>_productos_2024.svg`
-
-**¿Qué significa?**
-> Muestra cómo progresa el precio de todos los productos en porcentaje respecto al primer precio registrado. Es útil para ver la tendencia general y el impacto acumulado de la inflación o aumentos sostenidos.
-
----
-
-### 2. incremento_interdiario.py
-- **Media y mediana diaria del incremento interdiario**
-  - `grafico_media_incremento_interdiario_<N>_productos_2024.svg`
-  - `grafico_mediana_incremento_interdiario_<N>_productos_2024.svg`
-
-**¿Qué significa?**
-> Refleja la variación porcentual de precios de un día a otro. Permite detectar picos, caídas o estabilidad en la variación diaria de los precios.
-
----
-
-### 3. incremento_intermensual.py
-- **Media y mediana mensual del incremento intermensual**
-  - `grafico_media_incremento_intermensual_<N>_productos_2024.svg`
-  - `grafico_mediana_incremento_intermensual_<N>_productos_2024.svg`
-
-**¿Qué significa?**
-> Refleja la variación porcentual de precios de un mes a otro. Es útil para comparar la inflación mensual y detectar meses con aumentos o caídas inusuales.
-
----
-
-### 4. cantidad_precios_por_dia.py
-- **Cantidad de precios registrados por día**
-  - `grafico_cantidad_precios_por_dia_<N>_productos_2024.svg`
-
-**¿Qué significa?**
-> Permite ver la cobertura de datos: cuántos productos tienen precio registrado cada día. Es importante para evaluar la robustez de las estadísticas y detectar días con poca información.
-
----
-
-### 5. boxplot_incremento_acumulado_mensual.py
-- **Boxplot de incremento acumulado mensual**
-  - `boxplot_incremento_acumulado_mensual_<N>_productos_2024.svg`
-
-**¿Qué significa?**
-> Muestra la dispersión (variabilidad) de los incrementos acumulados por mes. Permite identificar si la mayoría de los productos suben de precio de manera similar o si hay productos con aumentos mucho mayores (o menores) que la media. Es clave para detectar desigualdades y productos fuera de control.
+- **Aumento intermensual:**
+  - Archivo: `aumento_intermensual.svg`
+  - Eje X: Mes
+  - Eje Y: Suma de la media diaria de incrementos interdiarios de cada mes (%)
+  - Solo días con ≥1000 registros y sin extremos >200%
 
 ---
 
 ## Interpretación social y utilidad
 
-- **Media vs. Mediana:**
-  - Si la media es mucho mayor que la mediana, hay productos con aumentos extremos que afectan el promedio.
-  - Si ambas son similares, la mayoría de los productos se comportan de manera parecida.
-- **Boxplot:**
-  - Un boxplot con bigotes largos o muchos outliers indica desigualdad en los aumentos.
-- **Cobertura de datos:**
-  - Días con pocos datos pueden sesgar las estadísticas. Es importante tener buena cobertura para conclusiones sólidas.
+- **Media diaria de incrementos:**
+  - Permite ver la tendencia general de variación de precios día a día.
+- **Incremento acumulado:**
+  - Muestra el efecto compuesto de los incrementos diarios a lo largo del tiempo.
+- **Aumento intermensual:**
+  - Permite comparar la inflación mensual y detectar meses con aumentos o caídas inusuales.
+- **Cantidad de registros:**
+  - Es fundamental para evaluar la robustez de las estadísticas y detectar días con poca información.
 
 ## Objetivo
 
@@ -111,5 +73,4 @@ Estos gráficos están pensados para organizaciones y movimientos sociales que b
 
 ## Notas
 - Todos los gráficos se guardan en formato SVG en la carpeta `test/graficos/`.
-- El parámetro `<N>` en los nombres de archivo corresponde a la cantidad de productos procesados.
-- Los scripts descartan productos que no tengan datos desde 2024. 
+- La serie compilada y los gráficos aplican los filtros de cobertura y exclusión de valores extremos para asegurar la calidad de la información. 
