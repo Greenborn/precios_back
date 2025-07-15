@@ -1,0 +1,4 @@
+# Reglas para scripts y generación de gráficos en este proyecto
+#
+# - Siempre que se genere un gráfico desde cualquier script, el formato de salida por defecto debe ser SVG (.svg), salvo que no sea técnicamente posible.
+# - Si se requiere otro formato, debe justificarse en el script o documentación correspondiente. 
