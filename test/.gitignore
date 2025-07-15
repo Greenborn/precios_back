@@ -1,0 +1,5 @@
+*.csv
+venv_graficos
+node_modules/
+*.svg
+precios_por_producto.json
