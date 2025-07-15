@@ -64,17 +64,40 @@ Este conjunto de scripts permite analizar la evolución de los precios de produc
     python graficar_incrementos_combinados.py [json_entrada] [svg_salida]
     ```
 
+- **Incremento porcentual intermensual compuesto:**
+  - Script: `graficar_incremento_intermensual_compuesto.py`
+  - Archivo: `incremento_intermensual_compuesto.svg`
+  - Eje X: Mes (YYYY-MM)
+  - Eje Y: Incremento porcentual mensual compuesto (%)
+  - Metodología: composición multiplicativa de los incrementos diarios del mes:
+    \[
+    (\prod_{d \in mes} (1 + mean\_inc_d/100)) - 1
+    \]
+  - Barras de error: desviación estándar de los incrementos diarios del mes.
+  - Uso:
+    ```bash
+    python graficar_incremento_intermensual_compuesto.py [json_entrada] [svg_salida]
+    ```
+
 - **Cantidad de registros por día:**
   - Archivo: `cantidad_registros.svg`
   - Eje X: Fecha
   - Eje Y: Cantidad de productos con dato ese día
   - Solo días con ≥1000 registros y sin extremos >200%
 
-- **Aumento intermensual:**
+- **Aumento intermensual (suma simple):**
   - Archivo: `aumento_intermensual.svg`
   - Eje X: Mes
   - Eje Y: Suma de la media diaria de incrementos interdiarios de cada mes (%)
   - Solo días con ≥1000 registros y sin extremos >200%
+
+- **Ejecución automática de todos los gráficos:**
+  - Script: `graficar_todos_los_graficos.py`
+  - Ejecuta todos los scripts de graficado relevantes y genera todos los SVGs automáticamente.
+  - Uso:
+    ```bash
+    python graficar_todos_los_graficos.py
+    ```
 
 ---
 
@@ -86,8 +109,10 @@ Este conjunto de scripts permite analizar la evolución de los precios de produc
   - Muestra el efecto compuesto de los incrementos diarios a lo largo del tiempo.
 - **Gráfico combinado:**
   - Permite comparar visualmente la variación diaria y el efecto acumulado.
-- **Aumento intermensual:**
-  - Permite comparar la inflación mensual y detectar meses con aumentos o caídas inusuales.
+- **Incremento mensual compuesto:**
+  - Refleja el efecto real de la inflación mensual, considerando la composición multiplicativa.
+- **Aumento intermensual (suma simple):**
+  - Permite comparar la inflación mensual de manera agregada, aunque no compuesta.
 - **Cantidad de registros:**
   - Es fundamental para evaluar la robustez de las estadísticas y detectar días con poca información.
 
