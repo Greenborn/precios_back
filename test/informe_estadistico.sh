@@ -5,11 +5,12 @@
 # Fecha: 2024
 # 
 # Este script automatiza todo el proceso de generación del informe:
-# 1. Instalación de dependencias
-# 2. Carga de datos CSV
-# 3. Compilación de series
-# 4. Generación de gráficos
-# 5. Creación del informe final
+# 1. Descarga y descompresión de datos del Drive
+# 2. Instalación de dependencias
+# 3. Carga de datos CSV
+# 4. Compilación de series
+# 5. Generación de gráficos
+# 6. Creación del informe final
 
 set -e  # Salir si hay algún error
 
@@ -19,6 +20,10 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
+
+# URL del archivo en Google Drive
+DRIVE_URL="https://drive.google.com/file/d/1w5xGHJHUMhzh8emskconj1vYGm0ZiqEa/view?usp=drive_link"
+FILE_ID="1w5xGHJHUMhzh8emskconj1vYGm0ZiqEa"
 
 # Función para imprimir mensajes con colores
 print_status() {
@@ -40,6 +45,135 @@ print_error() {
 # Función para verificar si un comando existe
 command_exists() {
     command -v "$1" >/dev/null 2>&1
+}
+
+# Función para descargar y descomprimir datos del Drive
+descargar_datos_drive() {
+    print_status "Descargando datos del Google Drive..."
+    
+    # Verificar si wget está disponible
+    if ! command_exists wget; then
+        print_status "Instalando wget..."
+        sudo apt update && sudo apt install -y wget
+    fi
+    
+    # Crear directorio temporal si no existe
+    mkdir -p temp_download
+    
+    # Intentar diferentes métodos de descarga
+    print_status "Intentando descargar archivo del Drive..."
+    
+    # Método 1: Intentar con curl y cookies
+    if command_exists curl; then
+        print_status "Intentando con curl..."
+        
+        # Crear archivo de cookies temporal
+        COOKIE_FILE="temp_download/cookies.txt"
+        
+        # Obtener la página de confirmación
+        curl -c "$COOKIE_FILE" -L "https://drive.google.com/uc?export=download&id=$FILE_ID" > temp_download/confirm.html
+        
+        # Extraer el token de confirmación
+        CONFIRM_TOKEN=$(grep -o 'name="confirm" value="[^"]*"' temp_download/confirm.html | sed 's/.*value="\([^"]*\)".*/\1/')
+        
+        if [ ! -z "$CONFIRM_TOKEN" ]; then
+            print_status "Token de confirmación encontrado, descargando archivo..."
+            curl -Lb "$COOKIE_FILE" "https://drive.google.com/uc?export=download&confirm=$CONFIRM_TOKEN&id=$FILE_ID" -o temp_download/datos_completos.zip
+        else
+            print_warning "No se encontró token de confirmación, intentando descarga directa..."
+            curl -L "https://drive.google.com/uc?export=download&id=$FILE_ID" -o temp_download/datos_completos.zip
+        fi
+        
+        # Limpiar archivos temporales
+        rm -f temp_download/confirm.html temp_download/cookies.txt
+    else
+        print_status "Instalando curl..."
+        sudo apt install -y curl
+        
+        # Crear archivo de cookies temporal
+        COOKIE_FILE="temp_download/cookies.txt"
+        
+        # Obtener la página de confirmación
+        curl -c "$COOKIE_FILE" -L "https://drive.google.com/uc?export=download&id=$FILE_ID" > temp_download/confirm.html
+        
+        # Extraer el token de confirmación
+        CONFIRM_TOKEN=$(grep -o 'name="confirm" value="[^"]*"' temp_download/confirm.html | sed 's/.*value="\([^"]*\)".*/\1/')
+        
+        if [ ! -z "$CONFIRM_TOKEN" ]; then
+            print_status "Token de confirmación encontrado, descargando archivo..."
+            curl -Lb "$COOKIE_FILE" "https://drive.google.com/uc?export=download&confirm=$CONFIRM_TOKEN&id=$FILE_ID" -o temp_download/datos_completos.zip
+        else
+            print_warning "No se encontró token de confirmación, intentando descarga directa..."
+            curl -L "https://drive.google.com/uc?export=download&id=$FILE_ID" -o temp_download/datos_completos.zip
+        fi
+        
+        # Limpiar archivos temporales
+        rm -f temp_download/confirm.html temp_download/cookies.txt
+    fi
+    
+    # Verificar que el archivo se descargó correctamente
+    if [ ! -f "temp_download/datos_completos.zip" ] || [ ! -s "temp_download/datos_completos.zip" ]; then
+        print_error "No se pudo descargar el archivo del Drive"
+        print_status "Verificando si los archivos CSV ya existen localmente..."
+        
+        # Verificar si los archivos CSV ya existen
+        if [ -f "products.csv" ] && [ -f "USD_ARS Historical Data.csv" ]; then
+            print_success "Archivos CSV encontrados localmente, continuando..."
+            return 0
+        else
+            print_error "No se encontraron archivos CSV. Por favor, descarga manualmente el archivo del Drive y colócalo en este directorio."
+            print_status "URL del archivo: $DRIVE_URL"
+            exit 1
+        fi
+    fi
+    
+    # Verificar si el archivo descargado es realmente un ZIP
+    if file temp_download/datos_completos.zip | grep -q "HTML"; then
+        print_warning "El archivo descargado parece ser HTML (página de Google Drive)"
+        print_status "Verificando si los archivos CSV ya existen localmente..."
+        
+        # Verificar si los archivos CSV ya existen
+        if [ -f "products.csv" ] && [ -f "USD_ARS Historical Data.csv" ]; then
+            print_success "Archivos CSV encontrados localmente, continuando..."
+            rm -rf temp_download
+            return 0
+        else
+            print_error "No se encontraron archivos CSV. Por favor, descarga manualmente el archivo del Drive y colócalo en este directorio."
+            print_status "URL del archivo: $DRIVE_URL"
+            exit 1
+        fi
+    fi
+    
+    print_success "Archivo descargado exitosamente"
+    
+    # Descomprimir archivo
+    print_status "Descomprimiendo archivo..."
+    
+    if command_exists unzip; then
+        unzip -o temp_download/datos_completos.zip -d .
+        print_success "Archivo descomprimido exitosamente"
+    else
+        print_status "Instalando unzip..."
+        sudo apt install -y unzip
+        unzip -o temp_download/datos_completos.zip -d .
+        print_success "Archivo descomprimido exitosamente"
+    fi
+    
+    # Limpiar archivo temporal
+    rm -rf temp_download
+    
+    # Verificar que los archivos CSV están presentes
+    if [ -f "products.csv" ]; then
+        print_success "Archivo products.csv encontrado"
+    else
+        print_warning "Archivo products.csv no encontrado después de la descompresión"
+    fi
+    
+    if [ -f "USD_ARS Historical Data.csv" ]; then
+        print_success "Archivo USD_ARS Historical Data.csv encontrado"
+    else
+        print_warning "Archivo USD_ARS Historical Data.csv no encontrado después de la descompresión"
+    fi
 }
 
 # Función para instalar dependencias
@@ -226,6 +360,7 @@ main() {
     fi
     
     # Ejecutar pasos en orden
+    descargar_datos_drive
     instalar_dependencias
     cargar_datos_csv
     compilar_series
