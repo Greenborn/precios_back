@@ -13,6 +13,11 @@ Cada subdirectorio contiene:
 - `definicion_tecnica.md`: Especificación técnica
 - `endpoints.md`: Documentación de endpoints (solo backend/API)
 
+## Configuración de entorno
+
+- El archivo [`env.example`](../env.example) contiene todas las variables de entorno necesarias y su documentación para configurar el backend.
+- Renombra este archivo a `.env` y completa los valores según tu entorno local o de producción.
+
 ## Navegación
 
 - [Backend](./back/README.md)

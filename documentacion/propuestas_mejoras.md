@@ -31,7 +31,6 @@ Este documento recopila sugerencias de mejora detectadas en la revisión del có
 - Revisar accesibilidad de los componentes principales (roles, ARIA, contraste, etc.).
 
 ## 6. DevOps y Mantenimiento
-- Documentar todas las variables de entorno necesarias en un `.env.example`.
 - Incluir scripts o instrucciones claras para despliegue y actualización.
 - Implementar monitoreo básico (logs, alertas de error, métricas de uso).
 
