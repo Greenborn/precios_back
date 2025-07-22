@@ -88,7 +88,8 @@
                                             </b>
                                         </div>
                                         <div class="col-12 col-sm product-name-cont">
-                                            {{ resultado?.products?.name }}
+                                            <span v-html="resaltarBusqueda(resultado?.products?.name, termino_busqueda)"></span>
+                                            &nbsp;
                                             <small v-if="resultado?.url"><a :href="resultado?.url" target="_blank">IR A WEB</a></small>
                                             &nbsp;
                                             <small v-if="resultado?.tipo != 'ALQUILER' && resultado?.tipo != 'PROMO'" class="btn-corregir" @click="corregir_precio(resultado)">CLICK para CORREGIR</small>
@@ -380,6 +381,11 @@ function corregir_precio(resultado){
     )
 }
 
+function resaltarBusqueda(texto, termino) {
+  if (!termino || typeof texto !== 'string') return texto;
+  const regex = new RegExp(`(${termino})`, 'ig');
+  return texto.replace(regex, '<mark>$1</mark>');
+}
 
 onMounted(async ()=>{
     await cargar_estadisticas()
