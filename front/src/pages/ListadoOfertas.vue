@@ -24,43 +24,41 @@
                     <div class="accordion-item" v-for="(comercio, index) in comercios_filtrados" :key="comercio">
                         <h2 class="accordion-header">
                             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
-                                    :data-bs-target="'#collapse'+index" aria-expanded="false" :aria-controls="'collapse' + index"
-                                    >
+                                    :data-bs-target="'#collapse'+index" aria-expanded="false" :aria-controls="'collapse' + index">
                                 <b>{{ comercio?.empresa?.name }} - 
                                     {{ ofertas_filtradas[comercio.id].ofertas?.length == 0 ? 'Sin Resultados' : ofertas_filtradas[comercio.id].ofertas?.length }}</b>
                             </button>
                         </h2>
-                        <div :id="'collapse' + index" class="accordion-collapse collapse" :data-bs-parent="'#collapse'+index">
-                            <div class="accordion-body">
-
-                                <ul class="list-group">
-                                    <li class="list-group-item oferta-item" 
-                                        v-for="(oferta) in ofertas_filtradas[comercio.id].ofertas" :key="oferta">
-                                        <div class="row align-items-center justify-content-center">
-                                            <div class="col-12 col-sm-4 text-center">
-                                                <p class="price-cont mb-0" v-if="oferta?.price != -1">
-                                                    $ {{ formatMoney(oferta?.price) }}
-                                                </p>
-                                                <p class="price-cont mb-0" 
-                                                    v-if="oferta?.caracteristicas?.promo_cnt 
-                                                            && oferta?.price == -1">
-                                                    {{ oferta?.caracteristicas?.promo_cnt }}
-                                                </p>
+                        <transition name="accordion-fade">
+                            <div v-show="true" :id="'collapse' + index" class="accordion-collapse collapse" :data-bs-parent="'#collapse'+index">
+                                <div class="accordion-body">
+                                    <ul class="list-group">
+                                        <li class="list-group-item oferta-item" 
+                                            v-for="(oferta) in ofertas_filtradas[comercio.id].ofertas" :key="oferta">
+                                            <div class="row align-items-center justify-content-center">
+                                                <div class="col-12 col-sm-4 text-center">
+                                                    <p class="price-cont mb-0" v-if="oferta?.price != -1">
+                                                        $ {{ formatMoney(oferta?.price) }}
+                                                    </p>
+                                                    <p class="price-cont mb-0" 
+                                                        v-if="oferta?.caracteristicas?.promo_cnt 
+                                                                && oferta?.price == -1">
+                                                        {{ oferta?.caracteristicas?.promo_cnt }}
+                                                    </p>
+                                                </div>
+                                                <div class="col-12 col-sm product-name-cont">
+                                                    <span v-html="resaltarBusqueda(oferta?.products?.name, params_filtro.nombre_prod)"></span>
+                                                    <small v-if="oferta?.url"><a :href="oferta?.url" target="_blank">IR A WEB</a></small>
+                                                </div>
                                             </div>
-                                            <div class="col-12 col-sm product-name-cont">
-                                                <span v-html="resaltarBusqueda(oferta?.products?.name, params_filtro.nombre_prod)"></span>
-                                                <small v-if="oferta?.url"><a :href="oferta?.url" target="_blank">IR A WEB</a></small>
-                                            </div>
-                                        </div>
-                                        
-                                    </li>
-                                    <li v-if="ofertas_filtradas[comercio.id].ofertas.length === 0" class="list-group-item text-center text-muted">
-                                        <em>Sin ofertas para este comercio</em>
-                                    </li>
-                                </ul>
-
+                                        </li>
+                                        <li v-if="ofertas_filtradas[comercio.id].ofertas.length === 0" class="list-group-item text-center text-muted">
+                                            <em>Sin ofertas para este comercio</em>
+                                        </li>
+                                    </ul>
+                                </div>
                             </div>
-                        </div>
+                        </transition>
                     </div>
                     
                 </div>
@@ -249,5 +247,17 @@
 .oferta-item:hover {
   background-color: #f8f9fa;
   transition: background-color 0.2s;
+}
+.accordion-fade-enter-active, .accordion-fade-leave-active {
+  transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s;
+  overflow: hidden;
+}
+.accordion-fade-enter-from, .accordion-fade-leave-to {
+  max-height: 0;
+  opacity: 0;
+}
+.accordion-fade-enter-to, .accordion-fade-leave-from {
+  max-height: 1000px;
+  opacity: 1;
 }
 </style>
