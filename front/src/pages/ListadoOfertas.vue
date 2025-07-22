@@ -34,7 +34,7 @@
                             <div class="accordion-body">
 
                                 <ul class="list-group">
-                                    <li class="list-group-item" 
+                                    <li class="list-group-item oferta-item" 
                                         v-for="(oferta) in ofertas_filtradas[comercio.id].ofertas" :key="oferta">
                                         <div class="row align-items-center justify-content-center">
                                             <div class="col-12 col-sm-4 text-center">
@@ -48,11 +48,14 @@
                                                 </p>
                                             </div>
                                             <div class="col-12 col-sm product-name-cont">
-                                                {{ oferta?.products?.name }} 
+                                                <span v-html="resaltarBusqueda(oferta?.products?.name, params_filtro.nombre_prod)"></span>
                                                 <small v-if="oferta?.url"><a :href="oferta?.url" target="_blank">IR A WEB</a></small>
                                             </div>
                                         </div>
                                         
+                                    </li>
+                                    <li v-if="ofertas_filtradas[comercio.id].ofertas.length === 0" class="list-group-item text-center text-muted">
+                                        <em>Sin ofertas para este comercio</em>
                                     </li>
                                 </ul>
 
@@ -166,6 +169,12 @@
         return false
     }
 
+    function resaltarBusqueda(texto, termino) {
+        if (!termino || typeof texto !== 'string') return texto;
+        const regex = new RegExp(`(${termino})`, 'ig');
+        return texto.replace(regex, '<mark>$1</mark>');
+    }
+
     onMounted(async ()=>{
         storeApp.loading = true
         let res_comercios = await comercios_promociones()
@@ -231,5 +240,14 @@
   font-weight: bolder;
   font-size: 1rem;
   color: #1e3c82;
+}
+.accordion-button:focus, .oferta-item:focus {
+  outline: 2px solid #20c997;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 0.2rem rgba(32, 201, 151, 0.25);
+}
+.oferta-item:hover {
+  background-color: #f8f9fa;
+  transition: background-color 0.2s;
 }
 </style>
