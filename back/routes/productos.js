@@ -396,3 +396,31 @@ router.post('/importar_alquiler', async function (req, res) {
         res.status(200).send({ stat: false,  error: "Error interno, reintente luego" })
     }
 })
+
+// Endpoint para importar productos y llenar la cola de procesamiento
+router.post('/importar', async function (req, res) {
+    const KEY = req.body?.key;
+    try {
+        const KEY_VALID = process.env.KEY_INT;
+        const ARR_IMPORTA = req.body?.lst_importa;
+
+        if (KEY != KEY_VALID) {
+            res.status(200).send({ stat: false, error: "Error interno, reintente luego_" });
+            return;
+        }
+        if (!Array.isArray(ARR_IMPORTA) || ARR_IMPORTA.length === 0) {
+            res.status(200).send({ stat: false, error: "No hay items para importar" });
+            return;
+        }
+
+        ARR_IMPORTA.forEach((item) => {
+            colaProcProductos.push(item);
+        });
+        console.log(`[importar] Se agregaron ${ARR_IMPORTA.length} items a la cola. Tamaño actual:`, colaProcProductos.length);
+        res.status(200).send({ stat: true, count: ARR_IMPORTA.length });
+        return;
+    } catch (error) {
+        console.log("[importar] error", error);
+        res.status(200).send({ stat: false, error: "Error interno, reintente luego" });
+    }
+});

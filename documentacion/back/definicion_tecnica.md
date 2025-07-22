@@ -180,6 +180,28 @@ Esto actualiza la tabla `serie_compilada_media_interdiaria` solo para los días 
 - **Ventaja:** Permite mantener la serie compilada siempre al día con los precios más recientes, sin perder el historial de días anteriores.
 - **Uso recomendado:** Este proceso es automático y no requiere intervención manual, pero puede ejecutarse manualmente si es necesario.
 
+### Mecanismo de limpieza automática de `price_today`
+
+La tabla `price_today` está diseñada para contener únicamente los precios correspondientes al día actual. Para garantizar esto, el sistema implementa la siguiente lógica:
+
+- **Limpieza automática al registrar un nuevo precio:**
+  - Cada vez que se registra un nuevo precio (ya sea por importación masiva, carga manual o actualización), el controlador ejecuta una limpieza previa de la tabla `price_today`.
+  - Se eliminan todos los registros cuya columna `date_time` sea anterior al día actual (es decir, menor a las 00:00:00 del día en curso).
+  - Solo después de esta limpieza se inserta el nuevo precio correspondiente.
+
+**Ventajas de este enfoque:**
+- La limpieza es centralizada y automática, sin depender del endpoint específico que realice la operación.
+- Se evita la acumulación de precios antiguos y se garantiza que los análisis y reportes sobre `price_today` reflejen únicamente los datos vigentes.
+
+**Referencia de implementación:**
+- Ver función `nuevo_reg_precio` en `back/controllers/importar_productos.js`:
+  ```js
+  // Limpiar price_today para dejar solo los precios del día actual
+  const HOY = new Date(fecha_registro)
+  HOY.setHours(0,0,0,0)
+  await trx('price_today').where('date_time', '<', HOY).del();
+  ```
+
 ---
 
 - [Volver al README del backend](./README.md)
