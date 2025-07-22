@@ -34,7 +34,7 @@ exports.procesarColaProc = async function (idCola, cola, callback, onEmpty) {
             console.log(`[${idCola}] Error en callback onEmpty:`, err);
         }
     } else if (cola.length === 0) {
-        console.log(`[${idCola}] Cola vacía. No se ejecuta onEmpty (ya ejecutado previamente).`);
+        //console.log(`[${idCola}] Cola vacía. No se ejecuta onEmpty (ya ejecutado previamente).`);
     } else {
         console.log(`[${idCola}] Fin de ciclo. Items restantes en cola: ${cola.length}`);
     }
