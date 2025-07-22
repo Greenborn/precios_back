@@ -52,7 +52,7 @@
                     </div>
                 </div>
 
-                <div class="card-body p-4">
+                <div class="card-body p-4" aria-live="polite">
                     <div class="row align-items-center justify-content-center d-sm-none">
                         <div class="col-12">
                             <div class="form-check">
@@ -440,5 +440,11 @@ onMounted(async ()=>{
 }
 .fade-item {
   /* Para asegurar que la transición se aplique a cada tarjeta */
+}
+
+.form-control:focus, .btn:focus {
+  outline: 2px solid #20c997;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 0.2rem rgba(32, 201, 151, 0.25);
 }
 </style>
