@@ -7,6 +7,7 @@ function esNumeroValido(n) {
 }
 
 const TMP_DIR = path.join(__dirname, 'tmp_inc_por_fecha');
+const FECHA_PARTIDA = '2024-01-01';
 
 (async () => {
   try {
@@ -30,12 +31,16 @@ const TMP_DIR = path.join(__dirname, 'tmp_inc_por_fecha');
       if (i % 1000 === 0) console.log(`Procesando producto ${i+1}/${productos.length}`);
       const serie = await knex('price').select('date_time', 'price').where('product_id', prodId).orderBy('date_time');
       if (!serie.length) continue;
-      // Generar serie diaria forward-fill
+      // Generar serie diaria forward-fill desde FECHA_PARTIDA
       let daily = [];
       let idx = 0;
       let currPrice = serie[0].price;
-      let currDate = new Date(serie[0].date_time);
+      let currDate = new Date(FECHA_PARTIDA);
       const endDate = new Date(serie[serie.length-1].date_time);
+      // Si el primer registro es posterior a FECHA_PARTIDA, usar ese como primer precio
+      if (currDate < new Date(serie[0].date_time)) {
+        currDate = new Date(serie[0].date_time);
+      }
       while (currDate <= endDate) {
         if (idx < serie.length && sameDay(currDate, new Date(serie[idx].date_time))) {
           currPrice = serie[idx].price;
@@ -50,6 +55,7 @@ const TMP_DIR = path.join(__dirname, 'tmp_inc_por_fecha');
         const curr = daily[j];
         const inc = ((curr.price / prev.price) - 1) * 100;
         const fecha = curr.date.toISOString().slice(0, 10);
+        if (fecha < FECHA_PARTIDA) continue;
         const file = path.join(TMP_DIR, `${fecha}.jsonl`);
         fs.appendFileSync(file, JSON.stringify(inc) + '\n');
       }
@@ -59,9 +65,12 @@ const TMP_DIR = path.join(__dirname, 'tmp_inc_por_fecha');
     // Calcular estadísticas por fecha y guardar en la base de datos
     const files = fs.readdirSync(TMP_DIR).filter(f => f.endsWith('.jsonl'));
     let totalFechas = 0;
-    for (const file of files) {
-      const fecha = file.replace('.jsonl', '');
-      const incs = fs.readFileSync(path.join(TMP_DIR, file), 'utf8')
+    let incAcumulado = 0;
+    const fechas = files.map(f => f.replace('.jsonl', ''));
+    fechas.sort();
+    for (const fecha of fechas) {
+      if (fecha < FECHA_PARTIDA) continue;
+      const incs = fs.readFileSync(path.join(TMP_DIR, `${fecha}.jsonl`), 'utf8')
         .split('\n').filter(Boolean).map(Number).filter(esNumeroValido);
       if (!incs.length) continue;
       let mean = incs.reduce((a, b) => a + b, 0) / incs.length;
@@ -71,12 +80,15 @@ const TMP_DIR = path.join(__dirname, 'tmp_inc_por_fecha');
       if (!esNumeroValido(mean)) mean = 0;
       if (!esNumeroValido(median)) median = 0;
       if (!esNumeroValido(std)) std = 0;
+      // Calcular incremento acumulado (composición multiplicativa)
+      incAcumulado = ((1 + incAcumulado/100) * (1 + mean/100) - 1) * 100;
       await knex('serie_compilada_media_interdiaria').insert({
         date: fecha,
         mean_inc: mean,
         median_inc: median,
         std_inc: std,
-        count
+        count,
+        inc_acumulado: incAcumulado
       });
       totalFechas++;
       if (totalFechas % 50 === 0) {
