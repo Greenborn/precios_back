@@ -111,6 +111,34 @@ El proceso de actualización de precios en el backend está diseñado para mante
 
 El proceso es robusto y flexible, adecuado para sistemas que requieren historial y trazabilidad. Las mejoras sugeridas apuntan a escalar, validar y automatizar aún más el flujo de actualización de precios.
 
+## Cola de Procesamiento de Productos (`colaProcProductos`)
+
+### ¿Qué es?
+
+La cola `colaProcProductos` es una estructura en memoria utilizada para procesar de manera asíncrona y por lotes la importación y actualización masiva de productos y precios.
+
+### Funcionamiento
+- Los productos a importar se agregan a la cola mediante el endpoint `/importar` u otros flujos batch.
+- Un worker (ciclo con `setInterval`) cada 2 segundos toma hasta 50 items de la cola y los procesa uno a uno.
+- Por cada item, se ejecuta un callback asíncrono que realiza la inserción/actualización de precios y estadísticas en la base de datos, usando transacciones.
+- Si ocurre un error al procesar un item, este se re-agrega al final de la cola para reintentar más tarde.
+- El procesamiento es secuencial (o por lotes pequeños), lo que evita saturar el servidor.
+
+### Manejo de errores y reintentos
+- Los items que fallan se reintentan automáticamente.
+- No hay backoff exponencial ni límite de reintentos: un item defectuoso puede quedarse en la cola indefinidamente.
+
+### Limitaciones
+- **Persistencia:** La cola solo existe en memoria. Si el proceso se reinicia, se pierden los items pendientes.
+- **Paralelismo:** El procesamiento es secuencial; no hay procesamiento paralelo salvo que se modifique el worker.
+- **Monitoreo:** No hay métricas ni alertas automáticas sobre el tamaño de la cola o errores recurrentes.
+
+### Recomendaciones
+- Para entornos de producción críticos, considerar persistir la cola en una tabla temporal o sistema de colas externo (ej: Redis, RabbitMQ).
+- Agregar métricas y alertas para monitorear el tamaño de la cola y los errores.
+- Implementar backoff exponencial o límite de reintentos para evitar loops infinitos con items defectuosos.
+- Documentar claramente el flujo para el equipo de desarrollo y operaciones.
+
 ---
 
 - [Volver al README del backend](./README.md)
