@@ -1,6 +1,6 @@
-@import "./_variables";
-@import "./sass/_layout";
-@import "./_overrides";
+@use "./_variables" as variables;
+@use "./sass/_layout" as *;
+@use "./_overrides" as *;
 
 html{
   font-size: 1rem;
@@ -11,15 +11,10 @@ html{
   top: 7rem;
 }
 
-$bg: #2d3a4b;
-$light_gray: #fff;
-$cursor: #fff;
-$dark_gray: #889aa4;
-
 .login-container {
   height: 100vh;
   width: 100vw;
-  background-color: $bg;
+  background-color: variables.$bg;
   color: #FFF;
 
   .form-cont{

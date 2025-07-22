@@ -14,9 +14,11 @@
                             <div class="input-group">
                                 <input v-model="termino_busqueda" type="text" class="form-control"
                                     placeholder="Nombre del producto" @keyup.enter="hacer_busqueda">
-                                <div class="input-group-append">
-                                    <button @click="buscar" class="btn btn-primary" type="button">Buscar</button>
-                                </div>
+                                <button @click="buscar" class="btn btn-primary" type="button" aria-label="Buscar">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
+                                        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zm-5.442 1.398a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z"/>
+                                    </svg>
+                                </button>
                             </div>
                         </div>
 
@@ -50,7 +52,7 @@
                     </div>
                 </div>
 
-                <div class="card-body p-4">
+                <div class="card-body p-4" aria-live="polite">
                     <div class="row align-items-center justify-content-center d-sm-none">
                         <div class="col-12">
                             <div class="form-check">
@@ -67,92 +69,94 @@
                             No hay resultados, pruebe con otro término de búsqueda.
                         </div>
                     </template>
-                    <template v-if="resultados.length != 0">
-                        
-                        <div v-for="resultado in resultados" :key="resultado.producto" class="card mb-1 p-0">
-                            <div class="card-header p-4 pt-0 pb-0">
-                                <div class="row align-items-center justify-content-center">
-                                    <div class="col-12 col-sm-4">
-                                        <p class="price-cont mb-0" v-if="resultado?.price != -1">
-                                            {{ resultado?.tipo == "ALQUILER" ? resultado.moneda : "$" }} {{ formatMoney(resultado?.price) }}
-                                        </p>
-                                        <p class="price-cont mb-0" 
-                                            v-if="resultado?.caracteristicas?.promo_cnt 
-                                                    && resultado?.price == -1">
-                                            {{ resultado?.caracteristicas?.promo_cnt }}
-                                        </p>
-                                        <b v-if='resultado?.tipo != "PROMO"'>
-                                            <small>{{ formateaFecha(resultado?.date_time, resultado?.time) }}</small>
-                                        </b>
-                                    </div>
-                                    <div class="col-12 col-sm product-name-cont">
-                                        {{ resultado?.products?.name }}
-                                        <small v-if="resultado?.url"><a :href="resultado?.url" target="_blank">IR A WEB</a></small>
-                                        &nbsp;
-                                        <small v-if="resultado?.tipo != 'ALQUILER' && resultado?.tipo != 'PROMO'" class="btn-corregir" @click="corregir_precio(resultado)">CLICK para CORREGIR</small>
-                                    </div>
-                                </div>
-                                
-                            </div>
-                            <div class="card-body pl-4 pr-4">
-                                <div class="row align-items-center justify-content-center">
-
-                                    <div class="col">
-                                        <div class="row" 
-                                            v-if="resultado?.notas != '' && resultado?.notas != null
-                                                    || resultado?.caracteristicas?.desde || resultado?.caracteristicas?.hasta">
-                                            <div class="col">
-                                                <span class="text-success">
-                                                    <b>{{ resultado?.notas }}</b>
-                                                    <b v-if="resultado?.caracteristicas?.desde">Desde: {{ resultado?.caracteristicas?.desde }}</b>
-                                                    <b v-if="resultado?.caracteristicas?.hasta"> - Hasta: {{ resultado?.caracteristicas?.hasta }}</b>
-                                                </span>
-                                            </div>
+                    <transition name="fade">
+                        <div v-if="resultados.length != 0">
+                            <div v-for="resultado in resultados" :key="resultado.producto" class="card mb-1 p-0 fade-item">
+                                <div class="card-header p-4 pt-0 pb-0">
+                                    <div class="row align-items-center justify-content-center">
+                                        <div class="col-12 col-sm-4">
+                                            <p class="price-cont mb-0" v-if="resultado?.price != -1">
+                                                {{ resultado?.tipo == "ALQUILER" ? resultado.moneda : "$" }} {{ formatMoney(resultado?.price) }}
+                                            </p>
+                                            <p class="price-cont mb-0" 
+                                                v-if="resultado?.caracteristicas?.promo_cnt 
+                                                        && resultado?.price == -1">
+                                                {{ resultado?.caracteristicas?.promo_cnt }}
+                                            </p>
+                                            <b v-if='resultado?.tipo != "PROMO"'>
+                                                <small>{{ formateaFecha(resultado?.date_time, resultado?.time) }}</small>
+                                            </b>
                                         </div>
-
-                                        <div class="row">
-                                            <div class="col cnt-negocios">
-                                                <div v-if="resultado?.tipo != 'ALQUILER'">
-                                                    <b>Comercio: &nbsp;</b> {{ resultado?.empresa?.name }} &nbsp; -
-                                                    <span v-for="comercio in resultado?.locales" :key="comercio">
-                                                        {{ comercio?.address_road }} &nbsp;
-                                                        {{ comercio?.address_number }}  &nbsp; |
-                                                    </span>
-                                                </div>
-                                                <div v-if="resultado?.tipo == 'ALQUILER'">
-                                                    <b>Locador: &nbsp;</b> {{ resultado?.empresa?.name }} &nbsp; -
-                                                    <span v-for="_data in get_especificaciones(resultado?.caracteristicas)" :key="_data">
-                                                        {{ _data?.name }} &nbsp;
-                                                        {{ _data?.value }}  &nbsp; |
-                                                    </span>
-                                                </div>
-                                            </div>
+                                        <div class="col-12 col-sm product-name-cont">
+                                            <span v-html="resaltarBusqueda(resultado?.products?.name, termino_busqueda)"></span>
+                                            &nbsp;
+                                            <small v-if="resultado?.url"><a :href="resultado?.url" target="_blank">IR A WEB</a></small>
+                                            &nbsp;
+                                            <small v-if="resultado?.tipo != 'ALQUILER' && resultado?.tipo != 'PROMO'" class="btn-corregir" @click="corregir_precio(resultado)">CLICK para CORREGIR</small>
                                         </div>
                                     </div>
                                     
-                                    <div class="col-auto">
-                                        <button v-if="resultado?.tipo != 'ALQUILER' && resultado?.tipo != 'PROMO'" type="button" class="btn btn-primary" @click="mostrar_estadisticas(resultado)">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-graph-up" viewBox="0 0 16 16">
-                                                <path fill-rule="evenodd" d="M0 0h1v15h15v1H0zm14.817 3.113a.5.5 0 0 1 .07.704l-4.5 5.5a.5.5 0 0 1-.74.037L7.06 6.767l-3.656 5.027a.5.5 0 0 1-.808-.588l4-5.5a.5.5 0 0 1 .758-.06l2.609 2.61 4.15-5.073a.5.5 0 0 1 .704-.07"/>
-                                            </svg>
-                                        </button>
-                                    </div>
-
                                 </div>
-                                
+                                <div class="card-body pl-4 pr-4">
+                                    <div class="row align-items-center justify-content-center">
+
+                                        <div class="col">
+                                            <div class="row" 
+                                                v-if="resultado?.notas != '' && resultado?.notas != null
+                                                        || resultado?.caracteristicas?.desde || resultado?.caracteristicas?.hasta">
+                                                <div class="col">
+                                                    <span class="text-success">
+                                                        <b>{{ resultado?.notas }}</b>
+                                                        <b v-if="resultado?.caracteristicas?.desde">Desde: {{ resultado?.caracteristicas?.desde }}</b>
+                                                        <b v-if="resultado?.caracteristicas?.hasta"> - Hasta: {{ resultado?.caracteristicas?.hasta }}</b>
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div class="row">
+                                                <div class="col cnt-negocios">
+                                                    <div v-if="resultado?.tipo != 'ALQUILER'">
+                                                        <b>Comercio: &nbsp;</b> {{ resultado?.empresa?.name }} &nbsp; -
+                                                        <span v-for="comercio in resultado?.locales" :key="comercio">
+                                                            {{ comercio?.address_road }} &nbsp;
+                                                            {{ comercio?.address_number }}  &nbsp; |
+                                                        </span>
+                                                    </div>
+                                                    <div v-if="resultado?.tipo == 'ALQUILER'">
+                                                        <b>Locador: &nbsp;</b> {{ resultado?.empresa?.name }} &nbsp; -
+                                                        <span v-for="_data in get_especificaciones(resultado?.caracteristicas)" :key="_data">
+                                                            {{ _data?.name }} &nbsp;
+                                                            {{ _data?.value }}  &nbsp; |
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-auto">
+                                            <button v-if="resultado?.tipo != 'ALQUILER' && resultado?.tipo != 'PROMO'" type="button" class="btn btn-primary" @click="mostrar_estadisticas(resultado)">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-graph-up" viewBox="0 0 16 16">
+                                                    <path fill-rule="evenodd" d="M0 0h1v15h15v1H0zm14.817 3.113a.5.5 0 0 1 .07.704l-4.5 5.5a.5.5 0 0 1-.74.037L7.06 6.767l-3.656 5.027a.5.5 0 0 1-.808-.588l4-5.5a.5.5 0 0 1 .758-.06l2.609 2.61 4.15-5.073a.5.5 0 0 1 .704-.07"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+
+                                    </div>
+                                    
+                                </div>
                             </div>
                         </div>
-                    </template>
+                    </transition>
                 </div>
             </div>
 
         </div>
     </div>
 
-    <div class="row align-items-center justify-content-center">
+    <div class="row align-items-center justify-content-center" v-if="mostrarDisclaimer">
         <div class="col-12 col-md-10 col-lg-8">
-
-            <div class="alert alert-success">
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <button type="button" class="btn-close" aria-label="Cerrar" @click="mostrarDisclaimer = false"></button>
                 <p><b>Disclaimer:</b></p>
                 <p>
                     Si <b>NO</b> queres que tu negocio figure en el listado escribí por MP a 
@@ -165,7 +169,6 @@
                     idea general de los valores.
                 </p>
             </div>
-
         </div>
     </div>
 
@@ -222,6 +225,7 @@ const solo_ofertas = ref(false)
 const resultados = ref([]);
 const estadisticas_inc = ref([])
 const MODAL_STYLE = { width: '100vw', 'min-height': "100vh" }
+const mostrarDisclaimer = ref(true)
 
 async function ofertas_check_change(){
     if (termino_busqueda.value != '' && termino_busqueda.value?.length >= 3){
@@ -377,6 +381,11 @@ function corregir_precio(resultado){
     )
 }
 
+function resaltarBusqueda(texto, termino) {
+  if (!termino || typeof texto !== 'string') return texto;
+  const regex = new RegExp(`(${termino})`, 'ig');
+  return texto.replace(regex, '<mark>$1</mark>');
+}
 
 onMounted(async ()=>{
     await cargar_estadisticas()
@@ -412,5 +421,30 @@ onMounted(async ()=>{
 
 #buscador-cnt{
     margin-top: 5rem;
+}
+
+.input-group .form-control {
+    border-bottom: 2px solid #ced4da;
+    transition: box-shadow 0.2s, border-color 0.2s;
+}
+.input-group .form-control:focus {
+    box-shadow: 0 0 0 0.2rem rgba(32, 201, 151, 0.25);
+    border-color: #20c997;
+}
+
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.5s;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+.fade-item {
+  /* Para asegurar que la transición se aplique a cada tarjeta */
+}
+
+.form-control:focus, .btn:focus {
+  outline: 2px solid #20c997;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 0.2rem rgba(32, 201, 151, 0.25);
 }
 </style>
