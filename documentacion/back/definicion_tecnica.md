@@ -139,6 +139,21 @@ La cola `colaProcProductos` es una estructura en memoria utilizada para procesar
 - Implementar backoff exponencial o límite de reintentos para evitar loops infinitos con items defectuosos.
 - Documentar claramente el flujo para el equipo de desarrollo y operaciones.
 
+### Advertencia sobre el procesamiento secuencial de la cola
+
+Actualmente, la función que procesa la cola (`procesarColaProc`) utiliza un ciclo `while` con `await` para procesar los items uno a uno de forma estrictamente secuencial. Esto implica:
+- Solo se procesa un item a la vez, sin paralelismo.
+- Si un item es lento o queda colgado, la cola se detiene hasta que termine o falle.
+- Un item defectuoso puede provocar loops rápidos de reintentos y bloquear la cola.
+- No se aprovecha el hardware para procesamiento concurrente.
+
+**Para cargas bajas o moderadas esto es suficiente, pero para cargas altas o producción crítica se recomienda:**
+- Implementar procesamiento en paralelo controlado (pool de workers, Promise.all por lotes, etc.).
+- Agregar timeouts y backoff para reintentos.
+- Persistir la cola para evitar pérdida de datos ante caídas.
+
+Esta limitación está documentada para futuras mejoras del sistema.
+
 ---
 
 - [Volver al README del backend](./README.md)
