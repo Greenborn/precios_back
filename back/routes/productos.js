@@ -111,20 +111,20 @@ setInterval(async () => {
         HOY.setHours(0,0,0,1)
         return await procesa_item(item, HOY)
     }, async () => {
-        console.log("Cola de productos vacía, actualizando serie_compilada_media_interdiaria...")
-        exec('node scripts/resetear_serie_compilada_media_interdiaria.js price_today', (error, stdout, stderr) => {
+        console.log("Cola de productos vacía, actualizando serie_compilada_media_interdiaria...");
+        exec('node scripts/resetear_serie_compilada_media_interdiaria.js price_today --no-truncate', (error, stdout, stderr) => {
             if (error) {
-                console.error(`Error al actualizar serie compilada: ${error.message}`)
-                return
+                console.error(`Error al actualizar serie compilada: ${error.message}`);
+                return;
             }
             if (stderr) {
-                console.error(`stderr: ${stderr}`)
-                return
+                console.error(`stderr: ${stderr}`);
+                return;
             }
-            console.log(`stdout: ${stdout}`)
-        })
-    })
-}, 2000)
+            console.log(`stdout: ${stdout}`);
+        });
+    });
+}, 2000);
 
 const TABLAS = {
     "ml": {

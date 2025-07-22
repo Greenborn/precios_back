@@ -1,3 +1,10 @@
+/**
+ * Uso:
+ *   node scripts/resetear_serie_compilada_media_interdiaria.js [tablaFuente] [--no-truncate]
+ *   - tablaFuente: price (default) o price_today
+ *   - --no-truncate: si se pasa, NO se limpia la tabla antes de recalcular
+ */
+
 const fs = require('fs');
 const path = require('path');
 const knex = require('knex')(require('../knexfile'));
@@ -9,14 +16,18 @@ function esNumeroValido(n) {
 const TMP_DIR = path.join(__dirname, 'tmp_inc_por_fecha');
 const FECHA_PARTIDA = '2024-01-01';
 
-// Permitir pasar la tabla fuente como argumento (por defecto 'price')
 const tablaFuente = process.argv[2] || 'price';
+const doTruncate = !process.argv.includes('--no-truncate');
 
 (async () => {
   try {
     console.log(`Iniciando reseteo de serie_compilada_media_interdiaria usando datos de ${tablaFuente}...`);
-    await knex('serie_compilada_media_interdiaria').truncate();
-    console.log('Tabla serie_compilada_media_interdiaria vaciada.');
+    if (doTruncate) {
+      await knex('serie_compilada_media_interdiaria').truncate();
+      console.log('Tabla serie_compilada_media_interdiaria vaciada.');
+    } else {
+      console.log('No se vacía la tabla serie_compilada_media_interdiaria (--no-truncate activado).');
+    }
 
     // Limpiar/crear directorio temporal
     if (fs.existsSync(TMP_DIR)) {
@@ -40,7 +51,6 @@ const tablaFuente = process.argv[2] || 'price';
       let currPrice = serie[0].price;
       let currDate = new Date(FECHA_PARTIDA);
       const endDate = new Date(serie[serie.length-1].date_time);
-      // Si el primer registro es posterior a FECHA_PARTIDA, usar ese como primer precio
       if (currDate < new Date(serie[0].date_time)) {
         currDate = new Date(serie[0].date_time);
       }
@@ -85,14 +95,38 @@ const tablaFuente = process.argv[2] || 'price';
       if (!esNumeroValido(std)) std = 0;
       // Calcular incremento acumulado (composición multiplicativa)
       incAcumulado = ((1 + incAcumulado/100) * (1 + mean/100) - 1) * 100;
-      await knex('serie_compilada_media_interdiaria').insert({
-        date: fecha,
-        mean_inc: mean,
-        median_inc: median,
-        std_inc: std,
-        count,
-        inc_acumulado: incAcumulado
-      });
+      // Si no se trunca, hacer upsert (update o insert)
+      if (doTruncate) {
+        await knex('serie_compilada_media_interdiaria').insert({
+          date: fecha,
+          mean_inc: mean,
+          median_inc: median,
+          std_inc: std,
+          count,
+          inc_acumulado: incAcumulado
+        });
+      } else {
+        // Actualizar si existe, insertar si no
+        const existe = await knex('serie_compilada_media_interdiaria').where({ date: fecha }).first();
+        if (existe) {
+          await knex('serie_compilada_media_interdiaria').where({ date: fecha }).update({
+            mean_inc: mean,
+            median_inc: median,
+            std_inc: std,
+            count,
+            inc_acumulado: incAcumulado
+          });
+        } else {
+          await knex('serie_compilada_media_interdiaria').insert({
+            date: fecha,
+            mean_inc: mean,
+            median_inc: median,
+            std_inc: std,
+            count,
+            inc_acumulado: incAcumulado
+          });
+        }
+      }
       totalFechas++;
       if (totalFechas % 50 === 0) {
         console.log(`Fechas procesadas: ${totalFechas}/${files.length}`);
