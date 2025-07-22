@@ -80,6 +80,37 @@ El backend utiliza **Knex** para gestionar migraciones de base de datos de forma
 - Uso de variables de entorno para configuración
 - Documentación exhaustiva de endpoints y modelos
 
+## Proceso de Actualización de Precios
+
+### Descripción general
+
+El proceso de actualización de precios en el backend está diseñado para mantener un historial completo de cambios, asegurar la integridad de los datos y permitir análisis avanzados. Incluye:
+- Ingreso manual o masivo de precios (endpoints y scripts)
+- Validaciones y límites por IP, producto y sucursal
+- Registro de cada cambio en la tabla `price` (histórico) y actualización de `price_today` (último valor)
+- Cálculo y registro de variaciones porcentuales en `estadistica_aumento_diario`
+- Actualización de estadísticas agregadas
+- Uso de colas y workers para procesamiento batch
+
+### Puntos fuertes
+- **Historial completo:** Permite trazabilidad y análisis temporal.
+- **Control de abusos:** Rate limiting y controles por IP/producto/negocio.
+- **Registro de variaciones:** Facilita análisis de incrementos y alertas.
+- **Procesamiento batch:** Escalable para grandes volúmenes.
+
+### Oportunidades de mejora
+1. **Atomicidad y transacciones:** Garantizar que todos los cambios relacionados estén siempre en la misma transacción.
+2. **Validación de datos:** Usar librerías robustas para evitar errores de tipo o valores atípicos.
+3. **Optimización de queries:** Mantener índices adecuados en tablas grandes.
+4. **Manejo de precios negativos o nulos:** Prevenir registros inválidos.
+5. **Auditoría y logs:** Agregar logs de auditoría para cambios críticos.
+6. **Documentación y ejemplos:** Explicar claramente los flujos y campos clave.
+7. **Pruebas automatizadas:** Incorporar tests unitarios y de integración.
+
+### Opinión general
+
+El proceso es robusto y flexible, adecuado para sistemas que requieren historial y trazabilidad. Las mejoras sugeridas apuntan a escalar, validar y automatizar aún más el flujo de actualización de precios.
+
 ---
 
 - [Volver al README del backend](./README.md)
