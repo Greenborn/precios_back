@@ -20,12 +20,12 @@
                 <div class="card h-100 shadow-sm card-ofertas">
                     <div class="card-header bg-primary text-white">
                         <b>{{ comercio?.empresa?.name }}</b>
-                        <span class="badge bg-light text-dark ms-2">{{ ofertas_filtradas[comercio.id].ofertas?.length }} ofertas</span>
+                        <span class="badge bg-light text-dark ms-2">{{ ofertas_filtradas[String(comercio.id)] && ofertas_filtradas[String(comercio.id)].ofertas?.length }} ofertas</span>
                     </div>
                     <div class="card-body">
                         <ul class="list-group list-group-flush position-relative">
                             <li class="list-group-item oferta-item" 
-                                v-for="(oferta, idx) in ofertas_filtradas[comercio.id].ofertas.slice(0,5)" :key="oferta">
+                                v-for="(oferta, idx) in (ofertas_filtradas[String(comercio.id)] && ofertas_filtradas[String(comercio.id)].ofertas ? ofertas_filtradas[String(comercio.id)].ofertas.slice(0,5) : [])" :key="oferta">
                                 <div class="row align-items-center justify-content-center">
                                     <div class="col-12 col-sm-4 text-center">
                                         <p class="price-cont mb-0" v-if="oferta?.price != -1">
@@ -39,19 +39,20 @@
                                     </div>
                                     <div class="col-12 col-sm product-name-cont">
                                         <span v-html="resaltarBusqueda(oferta?.products?.name, params_filtro.nombre_prod)"></span>
-                                        <small v-if="oferta?.url"><a :href="oferta?.url" target="_blank">IR A WEB</a></small>
+                                        <small v-if="oferta?.url"><a :href="oferta?.url" target="_blank">&nbsp;IR A WEB</a></small>
                                     </div>
                                 </div>
                             </li>
-                            <li v-if="ofertas_filtradas[comercio.id].ofertas.length > 5" class="list-group-item p-0 border-0 bg-transparent position-relative">
-                                <button class="btn btn-link w-100 text-center expand-btn" @click="mostrarModalOfertas(comercio, ofertas_filtradas[comercio.id].ofertas)">
-                                    Ver todas las ofertas <svg width="16" height="16" fill="currentColor" class="bi bi-chevron-right" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M6.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L12.293 8 6.646 2.354a.5.5 0 0 1 0-.708z"/></svg>
-                                </button>
-                            </li>
-                            <li v-if="ofertas_filtradas[comercio.id].ofertas.length === 0" class="list-group-item text-center text-muted">
+                            <li v-if="ofertas_filtradas[String(comercio.id)] && ofertas_filtradas[String(comercio.id)].ofertas && ofertas_filtradas[String(comercio.id)].ofertas.length === 0" class="list-group-item text-center text-muted">
                                 <em>Sin ofertas para este comercio</em>
                             </li>
                         </ul>
+                    </div>
+
+                    <div class="card-footer bg-transparent border-0 text-center mt-2">
+                        <button class="btn btn-link expand-btn" @click="mostrarModalOfertas(comercio, ofertas_filtradas[String(comercio.id)].ofertas)">
+                            Ver todas las ofertas <svg width="16" height="16" fill="currentColor" class="bi bi-chevron-right" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M6.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L12.293 8 6.646 2.354a.5.5 0 0 1 0-.708z"/></svg>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -79,7 +80,7 @@
                                 </div>
                                 <div class="col-12 col-sm product-name-cont">
                                     <span v-html="resaltarBusqueda(oferta?.products?.name, params_filtro.nombre_prod)"></span>
-                                    <small v-if="oferta?.url"><a :href="oferta?.url" target="_blank">IR A WEB</a></small>
+                                    <small v-if="oferta?.url"><a :href="oferta?.url" target="_blank">&nbsp;IR A WEB</a></small>
                                 </div>
                             </div>
                         </li>
@@ -343,8 +344,18 @@
   align-items: center;
   padding: 1rem 1.5rem 0.5rem 1.5rem;
   border-bottom: 1px solid #eee;
+  background: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 .modal-ofertas-body {
   padding: 1rem 1.5rem;
+}
+.card-footer {
+  background: transparent;
+  border: none;
+  text-align: center;
+  margin-top: 0.5rem;
 }
 </style>
