@@ -154,6 +154,19 @@ Actualmente, la función que procesa la cola (`procesarColaProc`) utiliza un cic
 
 Esta limitación está documentada para futuras mejoras del sistema.
 
+### Aclaración sobre el uso de `marcarColaNoVacia`
+
+- **Con worker periódico (setInterval):**
+  - No es obligatorio llamar a `marcarColaNoVacia` al agregar elementos a la cola, ya que el worker revisa periódicamente el estado real de la cola y ajusta el estado interno automáticamente.
+  - El callback `onEmpty` se ejecutará correctamente una sola vez por transición a vacía, aunque haya un pequeño retraso hasta el próximo ciclo del worker.
+
+- **Con procesamiento por evento (sin worker):**
+  - Si solo procesas la cola cuando agregas elementos (sin worker periódico), entonces sí debes llamar a `marcarColaNoVacia` cada vez que agregues un elemento, para que el callback `onEmpty` funcione correctamente.
+
+**Patrón recomendado:**
+- Para la mayoría de los casos con worker periódico, puedes omitir `marcarColaNoVacia` y el sistema funcionará bien.
+- Documenta el comportamiento esperado para el equipo y ajusta según el modelo de procesamiento que uses.
+
 ---
 
 - [Volver al README del backend](./README.md)
