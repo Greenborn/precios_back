@@ -9,9 +9,12 @@ function esNumeroValido(n) {
 const TMP_DIR = path.join(__dirname, 'tmp_inc_por_fecha');
 const FECHA_PARTIDA = '2024-01-01';
 
+// Permitir pasar la tabla fuente como argumento (por defecto 'price')
+const tablaFuente = process.argv[2] || 'price';
+
 (async () => {
   try {
-    console.log('Iniciando reseteo de serie_compilada_media_interdiaria...');
+    console.log(`Iniciando reseteo de serie_compilada_media_interdiaria usando datos de ${tablaFuente}...`);
     await knex('serie_compilada_media_interdiaria').truncate();
     console.log('Tabla serie_compilada_media_interdiaria vaciada.');
 
@@ -22,14 +25,14 @@ const FECHA_PARTIDA = '2024-01-01';
     fs.mkdirSync(TMP_DIR);
 
     // Leer todos los productos únicos
-    const productos = await knex('price').distinct('product_id');
+    const productos = await knex(tablaFuente).distinct('product_id');
     console.log(`Productos distintos encontrados: ${productos.length}`);
 
     // Procesar producto por producto
     for (let i = 0; i < productos.length; i++) {
       const prodId = productos[i].product_id;
       if (i % 1000 === 0) console.log(`Procesando producto ${i+1}/${productos.length}`);
-      const serie = await knex('price').select('date_time', 'price').where('product_id', prodId).orderBy('date_time');
+      const serie = await knex(tablaFuente).select('date_time', 'price').where('product_id', prodId).orderBy('date_time');
       if (!serie.length) continue;
       // Generar serie diaria forward-fill desde FECHA_PARTIDA
       let daily = [];
