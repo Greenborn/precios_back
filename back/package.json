@@ -1,10 +1,11 @@
 {
   "name": "precios_back",
-  "version": "1.4.8",
+  "version": "1.5.8",
   "description": "",
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "migrate": "knex migrate:latest",
     "start": "nodemon server.js --ignore ./db --ignore ./node_modules"
   },
   "repository": {
