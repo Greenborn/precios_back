@@ -151,10 +151,10 @@
         </div>
     </div>
 
-    <div class="row align-items-center justify-content-center">
+    <div class="row align-items-center justify-content-center" v-if="mostrarDisclaimer">
         <div class="col-12 col-md-10 col-lg-8">
-
-            <div class="alert alert-success">
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <button type="button" class="btn-close" aria-label="Cerrar" @click="mostrarDisclaimer = false"></button>
                 <p><b>Disclaimer:</b></p>
                 <p>
                     Si <b>NO</b> queres que tu negocio figure en el listado escribí por MP a 
@@ -167,7 +167,6 @@
                     idea general de los valores.
                 </p>
             </div>
-
         </div>
     </div>
 
@@ -224,6 +223,7 @@ const solo_ofertas = ref(false)
 const resultados = ref([]);
 const estadisticas_inc = ref([])
 const MODAL_STYLE = { width: '100vw', 'min-height': "100vh" }
+const mostrarDisclaimer = ref(true)
 
 async function ofertas_check_change(){
     if (termino_busqueda.value != '' && termino_busqueda.value?.length >= 3){
