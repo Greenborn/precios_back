@@ -167,6 +167,19 @@ Esta limitación está documentada para futuras mejoras del sistema.
 - Para la mayoría de los casos con worker periódico, puedes omitir `marcarColaNoVacia` y el sistema funcionará bien.
 - Documenta el comportamiento esperado para el equipo y ajusta según el modelo de procesamiento que uses.
 
+## Actualización automática de la serie compilada al vaciarse la cola de productos
+
+Cuando la cola de productos (`colaProcProductos`) queda vacía, el sistema ejecuta automáticamente el script:
+
+```bash
+node scripts/resetear_serie_compilada_media_interdiaria.js price_today --no-truncate
+```
+
+Esto actualiza la tabla `serie_compilada_media_interdiaria` solo para los días presentes en `price_today`, sin borrar el historial previo (gracias al argumento `--no-truncate`).
+
+- **Ventaja:** Permite mantener la serie compilada siempre al día con los precios más recientes, sin perder el historial de días anteriores.
+- **Uso recomendado:** Este proceso es automático y no requiere intervención manual, pero puede ejecutarse manualmente si es necesario.
+
 ---
 
 - [Volver al README del backend](./README.md)
