@@ -37,11 +37,15 @@
         <div class="w-100" id="cont_busca">
           <div class="row align-items-center justify-content-center">
             <div class="col-auto p-0 mr-1">
-              <input class="form-control me-2" v-model="termino_busqueda" type="text" placeholder="Por ej: Manzana" aria-label="Buscar" 
-              @keyup.enter="buscar" ref="caja_busqueda">
-            </div>
-            <div class="col-auto p-0">
-              <button class="btn btn-success" type="button" @click="buscar">Buscar</button>
+              <div class="input-group">
+                <input class="form-control" v-model="termino_busqueda" type="text" placeholder="Por ej: Manzana" aria-label="Buscar" 
+                  @keyup.enter="buscar" ref="caja_busqueda">
+                <button class="btn btn-success" type="button" @click="buscar" aria-label="Buscar">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
+                    <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zm-5.442 1.398a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z"/>
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
         </div>
