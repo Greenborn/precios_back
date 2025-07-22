@@ -2,7 +2,7 @@
   <router-view />
 
   <ModalsManager></ModalsManager>
-  <ChatBot></ChatBot>
+  <!--<ChatBot></ChatBot>-->
   <Spinner :loading="storeApp.loading"></Spinner>
   <ModalsManager></ModalsManager>
 </template>

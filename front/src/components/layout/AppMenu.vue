@@ -108,8 +108,6 @@
 </script>
 
 <style  lang="scss" scoped>
-@import "../../assets/styles/_variables";
-
 .menu-cont{
   width:      20rem;
   transition: .33s;
