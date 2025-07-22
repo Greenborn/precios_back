@@ -6,6 +6,7 @@ const bcrypt = require('bcrypt')
 const fs = require("fs")
 const cargador_precios = require("../controllers/importar_productos")
 const processing = require("../helpers/processing")
+const { exec } = require('child_process')
 
 router.get('/all', async function (req, res) {
     console.log("query ", req.query)
@@ -101,48 +102,29 @@ async function procesa_item( item, HOY){
     })
 }
 
-const colaProcProductos = [];
+const colaProcProductos = []
+const idCola = "productos"
 
-router.post('/importar', async function (req, res) {
-    //console.log("data ", req.body)
-    const KEY = req.body?.key
-    
-    try {
-        const KEY_VALID = process.env.KEY_INT
-        const ARR_IMPORTA = req.body?.lst_importa
-
-        if (KEY != KEY_VALID){
-            res.status(200).send({ stat: false,  error: "Error interno, reintente luego_" })
-            return
-        }
-
-        let SEMANA_PREV = new Date()
-        SEMANA_PREV.setDate( SEMANA_PREV.getDate() - 7 )
-        SEMANA_PREV.setUTCHours(23,59,59)
-
-        await global.knex('price_today').delete().where('date_time' , '<', SEMANA_PREV)
-        
-        ARR_IMPORTA.forEach((item) => {
-            colaProcProductos.push( item );
-        })
-        
-        res.status(200).send({ stat: true })
-        return
-        
-    } catch (error) {
-        console.log("error", error)
-        res.status(200).send({ stat: false,  error: "Error interno, reintente luego" })
-    }    
-})
-
-// Worker que se encarga de procesar los items de la cola
-setInterval(async()=>{
-    await processing.procesarColaProc( colaProcProductos, async (item) => {
+setInterval(async () => {
+    await processing.procesarColaProc(idCola, colaProcProductos, async (item) => {
         let HOY = new Date()
         HOY.setHours(0,0,0,1)
-        return await procesa_item(item, HOY);
+        return await procesa_item(item, HOY)
+    }, async () => {
+        console.log("Cola de productos vacía, actualizando serie_compilada_media_interdiaria...")
+        exec('node scripts/resetear_serie_compilada_media_interdiaria.js price_today', (error, stdout, stderr) => {
+            if (error) {
+                console.error(`Error al actualizar serie compilada: ${error.message}`)
+                return
+            }
+            if (stderr) {
+                console.error(`stderr: ${stderr}`)
+                return
+            }
+            console.log(`stdout: ${stdout}`)
+        })
     })
-}, 2000);
+}, 2000)
 
 const TABLAS = {
     "ml": {
