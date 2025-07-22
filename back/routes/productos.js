@@ -281,7 +281,7 @@ let colaProcOfertas = []
 
 // Worker que se encarga de procesar los items de la cola
 setInterval(async()=>{
-    await processing.procesarColaProc( colaProcOfertas, async (item) => {
+    await processing.procesarColaProc("ofertas", colaProcOfertas, async (item) => {
         let HOY = new Date()
         HOY.setHours(0,0,0,1)
 
@@ -290,7 +290,7 @@ setInterval(async()=>{
         AYER.setUTCHours(23,59,59)
         return await procesar_oferta(global.knex, item, HOY, AYER)
     })
-}, 2000);
+}, 2000)
 
 router.post('/importar_oferta', async function (req, res) {
     //console.log("data ", req.body)
