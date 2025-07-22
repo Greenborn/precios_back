@@ -7,6 +7,7 @@ Este documento especifica los detalles técnicos del backend de forma abstracta 
 - Express
 - ORM/ODM (especificar si aplica)
 - Base de datos (especificar tipo)
+- Knex (migraciones y query builder)
 
 ## Estructura de Carpetas
 - `controllers/`: Controladores de rutas
@@ -15,9 +16,37 @@ Este documento especifica los detalles técnicos del backend de forma abstracta 
 - `middleware/`: Lógica de autenticación y autorización
 - `helpers/`: Utilidades y funciones auxiliares
 - `scripts/`: Scripts de procesamiento y migración
+- `migrations/`: Migraciones de base de datos (Knex)
 
 ## Dependencias Clave
 Listar y describir las dependencias principales.
+
+## Migraciones de Base de Datos (Knex)
+
+El backend utiliza **Knex** para gestionar migraciones de base de datos de forma controlada.
+
+- **Configuración:**
+  - El archivo `knexfile.js` toma los datos de conexión desde el archivo `.env`.
+  - Las migraciones se almacenan en el directorio `back/migrations/`.
+
+- **Comandos principales:**
+  - Crear una nueva migración:
+    ```bash
+    npx knex migrate:make nombre_migracion
+    ```
+  - Ejecutar todas las migraciones pendientes:
+    ```bash
+    npx knex migrate:latest
+    ```
+  - Revertir la última migración:
+    ```bash
+    npx knex migrate:rollback
+    ```
+
+- **Buenas prácticas:**
+  - Versionar todas las migraciones en el repositorio.
+  - No modificar migraciones ya aplicadas en producción; crear nuevas para cambios.
+  - Mantener el esquema sincronizado entre entornos usando migraciones.
 
 ## Consideraciones de Portabilidad
 - Separación de lógica de negocio y acceso a datos
