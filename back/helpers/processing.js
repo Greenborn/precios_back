@@ -6,7 +6,9 @@ const estadosColas = {};
 exports.procesarColaProc = async function (idCola, cola, callback, onEmpty) {
     if (!estadosColas[idCola]) estadosColas[idCola] = { estabaVacia: true };
     let c = 0;
-    console.log(`[${idCola}] Iniciando procesamiento de la cola. Items en cola: ${cola.length}`);
+    if (cola.length !== 0) {
+        console.log(`[${idCola}] Iniciando procesamiento de la cola. Items en cola: ${cola.length}`);
+    }
     while (cola.length > 0) {
         estadosColas[idCola].estabaVacia = false;
         c++;
