@@ -1,7 +1,0 @@
-{
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon server.js --ignore ./db --ignore ./node_modules",
-    "migrate": "knex migrate:latest"
-  }
-} 
