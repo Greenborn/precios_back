@@ -202,6 +202,21 @@ La tabla `price_today` está diseñada para contener únicamente los precios cor
   await trx('price_today').where('date_time', '<', HOY).del();
   ```
 
+## Limpieza diaria automática de tablas temporales
+
+Para asegurar que los análisis y reportes reflejen únicamente los datos vigentes del día actual, el backend implementa una limpieza automática diaria en las siguientes tablas:
+
+- **estadistica_aumento_diario**: Solo contiene registros del día actual (campo `fecha_utlimo_precio`). Antes de procesar cada lote de importación de productos, se eliminan todos los registros cuya fecha sea anterior a las 00:00:00 del día en curso.
+- **promociones_hoy**: Solo contiene promociones vigentes del día actual (campo `fecha`). Antes de procesar cada lote de importación de ofertas, se eliminan todos los registros cuya fecha sea anterior a las 00:00:00 del día en curso.
+
+**Ventajas de este enfoque:**
+- Garantiza que los datos temporales estén siempre actualizados y no se acumulen registros antiguos.
+- Simplifica la lógica de consulta y análisis, ya que no es necesario filtrar por fecha en cada consulta.
+- El proceso es automático y transparente para el usuario y los sistemas integrados.
+
+**Referencia de implementación:**
+- Ver lógica en `back/routes/productos.js`, en los ciclos de procesamiento de productos y ofertas.
+
 ---
 
 - [Volver al README del backend](./README.md)

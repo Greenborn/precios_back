@@ -286,6 +286,10 @@ let colaProcOfertas = []
 
 // Worker que se encarga de procesar los items de la cola
 setInterval(async()=>{
+    // Limpiar la tabla promociones_hoy para dejar solo los registros del día actual
+    let HOY = new Date()
+    HOY.setHours(0,0,0,0)
+    await global.knex("promociones_hoy").where('fecha', '<', HOY).del()
     await processing.procesarColaProc("ofertas", colaProcOfertas, async (item) => {
         let HOY = new Date()
         HOY.setHours(0,0,0,1)

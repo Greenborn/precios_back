@@ -5,7 +5,7 @@ Este subdirectorio contiene la documentación del backend del proyecto Precios.
 ## Documentos principales
 
 - [Arquitectura](./arquitectura.md)
-- [Definición técnica](./definicion_tecnica.md)
+- [Definición técnica](./definicion_tecnica.md#limpieza-diaria-automatica-de-tablas-temporales)
 - [Endpoints](./endpoints.md)
 
 ## Propósito
