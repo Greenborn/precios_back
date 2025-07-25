@@ -318,7 +318,7 @@ router.post('/importar_oferta', async function (req, res) {
             colaProcOfertas.push( item )
         }
         
-        return res.status(200).send({ stat: true, res: res_proms })
+        return res.status(200).send({ stat: true })
     } catch (error) {
         console.log("error", error)
         res.status(200).send({ stat: false,  error: "Error interno, reintente luego" })
