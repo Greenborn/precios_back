@@ -5,6 +5,8 @@
 - **Autenticación:** Bearer Token (JWT) (algunos endpoints públicos)
 - **Formato:** JSON
 
+> **Nota:** Las tablas temporales `estadistica_aumento_diario` y `promociones_hoy` solo contienen registros del día actual. El sistema elimina automáticamente los registros antiguos al inicio de cada lote de procesamiento, garantizando que los endpoints relacionados siempre devuelvan datos vigentes.
+
 ## Navegación
 - [Volver al README del backend](./README.md)
 - [Arquitectura](./arquitectura.md)

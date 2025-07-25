@@ -86,6 +86,7 @@ router.put('/cargar_nuevo_precio', async function (req, res) {
 
 async function procesa_item( item, HOY){
     return new Promise(async (resolve, reject) => {
+        // (Limpieza de estadistica_aumento_diario eliminada, ahora se hace al inicio del lote)
         let res_procesa = await cargador_precios.procesar_articulo( item, HOY )
         if (res_procesa.stat){
             let cant_reg = await global.knex("price").count("id").first()
@@ -106,6 +107,10 @@ const colaProcProductos = []
 const idCola = "productos"
 
 setInterval(async () => {
+    // Limpiar la tabla estadistica_aumento_diario para dejar solo los registros del día actual
+    let HOY = new Date()
+    HOY.setHours(0,0,0,0)
+    await global.knex("estadistica_aumento_diario").where('fecha_utlimo_precio', '<', HOY).del()
     await processing.procesarColaProc(idCola, colaProcProductos, async (item) => {
         let HOY = new Date()
         HOY.setHours(0,0,0,1)
@@ -281,6 +286,10 @@ let colaProcOfertas = []
 
 // Worker que se encarga de procesar los items de la cola
 setInterval(async()=>{
+    // Limpiar la tabla promociones_hoy para dejar solo los registros del día actual
+    let HOY = new Date()
+    HOY.setHours(0,0,0,0)
+    await global.knex("promociones_hoy").where('fecha', '<', HOY).del()
     await processing.procesarColaProc("ofertas", colaProcOfertas, async (item) => {
         let HOY = new Date()
         HOY.setHours(0,0,0,1)
