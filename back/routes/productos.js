@@ -106,12 +106,6 @@ async function procesa_item( item, HOY){
 const colaProcProductos = []
 const idCola = "productos"
 
-// Función para convertir fecha local de Argentina a UTC
-function argentinaToUTC(dateString) {
-  // dateString debe ser 'YYYY-MM-DD HH:mm:ss' o similar en hora de Argentina
-  return new Date(dateString + ' -03:00');
-}
-
 setInterval(async () => {
     // Limpiar la tabla estadistica_aumento_diario para dejar solo los registros del día actual
     // let HOY = new Date()
@@ -119,8 +113,8 @@ setInterval(async () => {
     // await global.knex("estadistica_aumento_diario").where('fecha_utlimo_precio', '<', HOY).del()
     await processing.procesarColaProc(idCola, colaProcProductos, async (item) => {
         let HOY = new Date()
-        HOY.setUTCHours(0,0,0,1)
-        // HOY aquí es UTC, para inserts y updates usar argentinaToUTC si la fuente es local
+        HOY.setHours(0,0,0,1)
+        // HOY aquí es UTC, para inserts y updates usar new Date() directamente
         return await procesa_item(item, HOY)
     }, async () => {
         // Limpiar la tabla antes de actualizar la serie compilada (usando inicio de día Argentina)
@@ -155,8 +149,8 @@ const TABLAS = {
 
 async function procesa_art_plataforma(DATA){
     let HOY = new Date()
-    HOY.setUTCHours(0,0,0,1)
-    // HOY aquí es UTC, para inserts y updates usar argentinaToUTC si la fuente es local
+    HOY.setHours(0,0,0,1)
+    // HOY aquí es UTC, para inserts y updates usar new Date() directamente
     
     let existe = await global.knex(TABLAS[DATA.plataforma].articulos).select()
                     .where('url', DATA.url).first()
@@ -167,7 +161,7 @@ async function procesa_art_plataforma(DATA){
             precio: DATA?.currency === 'pesos' ? DATA.price : null,
             precio_dolares: DATA?.currency === 'dolares' ? DATA.price : null,
             categoria: DATA.category_name,
-            fecha_actualizacion: argentinaToUTC(DATA.fecha_actualizacion || HOY)
+            fecha_actualizacion: new Date()
         }).where('url', DATA.url)
 
         let ultimo_precio = await global.knex(TABLAS[DATA.plataforma].precios).select()
@@ -178,7 +172,7 @@ async function procesa_art_plataforma(DATA){
                 id_articulo: existe.id,
                 precio: DATA?.currency === 'pesos' ? DATA.price : null,
                 precio_dolares: DATA?.currency === 'dolares' ? DATA.price : null,
-                fecha: argentinaToUTC(DATA.fecha || HOY)
+                fecha: new Date()
             })
             console.log("precio registrado")
         } else {
@@ -188,7 +182,7 @@ async function procesa_art_plataforma(DATA){
                     id_articulo: existe.id,
                     precio: DATA?.currency === 'pesos' ? DATA.price : null,
                     precio_dolares: DATA?.currency === 'dolares' ? DATA.price : null,
-                    fecha: argentinaToUTC(DATA.fecha || HOY)
+                    fecha: new Date()
                 })
                 console.log("precio actualizado")
             }
@@ -199,8 +193,8 @@ async function procesa_art_plataforma(DATA){
             precio: DATA?.currency === 'pesos' ? DATA.price : null,
             precio_dolares: DATA?.currency === 'dolares' ? DATA.price : null,
             categoria: DATA.category_name,
-            fecha_actualizacion: argentinaToUTC(DATA.fecha_actualizacion || HOY),
-            fecha_creacion: argentinaToUTC(DATA.fecha_creacion || HOY),
+            fecha_actualizacion: new Date(),
+            fecha_creacion: new Date(),
             url: DATA.url
         }).where('url', DATA.url)
         .then(async function (id_nuevo) {
@@ -209,7 +203,7 @@ async function procesa_art_plataforma(DATA){
                 id_articulo: id_nuevo,
                 precio: DATA?.currency === 'pesos' ? DATA.price : null,
                 precio_dolares: DATA?.currency === 'dolares' ? DATA.price : null,
-                fecha: argentinaToUTC(DATA.fecha || HOY)
+                fecha: new Date()
             })
         })
         
@@ -304,11 +298,11 @@ setInterval(async()=>{
     await global.knex("promociones_hoy").where('fecha', '<', HOY).del()
     await processing.procesarColaProc("ofertas", colaProcOfertas, async (item) => {
         let HOY = new Date()
-        HOY.setUTCHours(0,0,0,1)
+        HOY.setHours(0,0,0,1)
 
         let AYER = new Date()
-        AYER.setUTCDate(AYER.getDate() - 1)
-        AYER.setUTCHours(23,59,59)
+        AYER.setDate(AYER.getDate() - 1)
+        AYER.setHours(23,59,59)
         return await procesar_oferta(global.knex, item, HOY, AYER)
     })
 }, 2000)
