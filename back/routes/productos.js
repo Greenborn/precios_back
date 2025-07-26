@@ -114,6 +114,7 @@ setInterval(async () => {
     await processing.procesarColaProc(idCola, colaProcProductos, async (item) => {
         let HOY = new Date()
         HOY.setUTCHours(0,0,0,1)
+        HOY = new Date(HOY.getTime() + 3*60*60*1000)
         return await procesa_item(item, HOY)
     }, async () => {
         // Limpiar la tabla antes de actualizar la serie compilada (usando UTC)
@@ -149,6 +150,7 @@ const TABLAS = {
 async function procesa_art_plataforma(DATA){
     let HOY = new Date()
     HOY.setUTCHours(0,0,0,1)
+    HOY = new Date(HOY.getTime() + 3*60*60*1000)
     
     let existe = await global.knex(TABLAS[DATA.plataforma].articulos).select()
                     .where('url', DATA.url).first()
