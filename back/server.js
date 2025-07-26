@@ -36,6 +36,9 @@ global.products_diccio = {}
 global.products_diccio_id = {}
 global.products_category_diccio = { by_product_id: {}, by_category_id: {} }
 
+// Configurar zona horaria del proceso para Argentina (UTC-3)
+process.env.TZ = 'America/Argentina/Buenos_Aires';
+
 //Es de esperar que en 3s ya tenemos conexion disponible
 setTimeout(async () => {
   await base_de_datos_iniciada()
