@@ -95,7 +95,7 @@ const enlaces = ref([
     //{ path: '/categorias', title: 'Navegar por Categorías' },
     { path: '/ofertas', title: 'Ofertas' },
     { path: '/carga_precio', title: 'Carga de Precios' },
-    { path: '/estadisticas', title: 'Estadísticas' },
+    // { path: '/estadisticas', title: 'Estadísticas' }, // <--- ENLACE COMENTADO TEMPORALMENTE
     { path: '/calcula_trueque', title: 'Calcula Trueque' },
     { path: '/aporta', url: "https://cafecito.app/tandil_precios", title: 'Quiero Aportar' }
 ])
