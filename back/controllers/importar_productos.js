@@ -8,8 +8,8 @@ let nuevos_precios_creados = []
 async function nuevo_reg_precio( trx, articulo, producto_db, fecha_registro ){
     try {
         // Limpiar price_today para dejar solo los precios del día actual
-        const HOY = new Date(fecha_registro)
-        HOY.setHours(0,0,0,0)
+        const HOY = new Date();
+        HOY.setHours(0,0,0,0);
         await trx('price_today').where('date_time', '<', HOY).del();
         const insert = {
             "id": uuid.v7(),
