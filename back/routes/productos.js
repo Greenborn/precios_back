@@ -106,6 +106,12 @@ async function procesa_item( item, HOY){
 const colaProcProductos = []
 const idCola = "productos"
 
+// Función para convertir fecha local de Argentina a UTC
+function argentinaToUTC(dateString) {
+  // dateString debe ser 'YYYY-MM-DD HH:mm:ss' o similar en hora de Argentina
+  return new Date(dateString + ' -03:00');
+}
+
 setInterval(async () => {
     // Limpiar la tabla estadistica_aumento_diario para dejar solo los registros del día actual
     // let HOY = new Date()
@@ -114,13 +120,13 @@ setInterval(async () => {
     await processing.procesarColaProc(idCola, colaProcProductos, async (item) => {
         let HOY = new Date()
         HOY.setUTCHours(0,0,0,1)
-        HOY = new Date(HOY.getTime() + 3*60*60*1000)
+        // HOY aquí es UTC, para inserts y updates usar argentinaToUTC si la fuente es local
         return await procesa_item(item, HOY)
     }, async () => {
-        // Limpiar la tabla antes de actualizar la serie compilada (usando UTC)
-        let HOY = new Date();
-        HOY.setUTCHours(0,0,0,0);
-        await global.knex("estadistica_aumento_diario").where('fecha_utlimo_precio', '<', HOY).del();
+        // Limpiar la tabla antes de actualizar la serie compilada (usando inicio de día Argentina)
+        let HOY_ARG = new Date();
+        HOY_ARG.setUTCHours(3,0,0,0);
+        await global.knex("estadistica_aumento_diario").where('fecha_utlimo_precio', '<', HOY_ARG).del();
         console.log("Cola de productos vacía, actualizando serie_compilada_media_interdiaria...");
         exec('node scripts/resetear_serie_compilada_media_interdiaria.js price_today --no-truncate', (error, stdout, stderr) => {
             if (error) {
@@ -150,7 +156,7 @@ const TABLAS = {
 async function procesa_art_plataforma(DATA){
     let HOY = new Date()
     HOY.setUTCHours(0,0,0,1)
-    HOY = new Date(HOY.getTime() + 3*60*60*1000)
+    // HOY aquí es UTC, para inserts y updates usar argentinaToUTC si la fuente es local
     
     let existe = await global.knex(TABLAS[DATA.plataforma].articulos).select()
                     .where('url', DATA.url).first()
@@ -161,7 +167,7 @@ async function procesa_art_plataforma(DATA){
             precio: DATA?.currency === 'pesos' ? DATA.price : null,
             precio_dolares: DATA?.currency === 'dolares' ? DATA.price : null,
             categoria: DATA.category_name,
-            fecha_actualizacion: HOY
+            fecha_actualizacion: argentinaToUTC(DATA.fecha_actualizacion || HOY)
         }).where('url', DATA.url)
 
         let ultimo_precio = await global.knex(TABLAS[DATA.plataforma].precios).select()
@@ -172,7 +178,7 @@ async function procesa_art_plataforma(DATA){
                 id_articulo: existe.id,
                 precio: DATA?.currency === 'pesos' ? DATA.price : null,
                 precio_dolares: DATA?.currency === 'dolares' ? DATA.price : null,
-                fecha: HOY
+                fecha: argentinaToUTC(DATA.fecha || HOY)
             })
             console.log("precio registrado")
         } else {
@@ -182,7 +188,7 @@ async function procesa_art_plataforma(DATA){
                     id_articulo: existe.id,
                     precio: DATA?.currency === 'pesos' ? DATA.price : null,
                     precio_dolares: DATA?.currency === 'dolares' ? DATA.price : null,
-                    fecha: HOY
+                    fecha: argentinaToUTC(DATA.fecha || HOY)
                 })
                 console.log("precio actualizado")
             }
@@ -193,8 +199,8 @@ async function procesa_art_plataforma(DATA){
             precio: DATA?.currency === 'pesos' ? DATA.price : null,
             precio_dolares: DATA?.currency === 'dolares' ? DATA.price : null,
             categoria: DATA.category_name,
-            fecha_actualizacion: HOY,
-            fecha_creacion: HOY,
+            fecha_actualizacion: argentinaToUTC(DATA.fecha_actualizacion || HOY),
+            fecha_creacion: argentinaToUTC(DATA.fecha_creacion || HOY),
             url: DATA.url
         }).where('url', DATA.url)
         .then(async function (id_nuevo) {
@@ -203,7 +209,7 @@ async function procesa_art_plataforma(DATA){
                 id_articulo: id_nuevo,
                 precio: DATA?.currency === 'pesos' ? DATA.price : null,
                 precio_dolares: DATA?.currency === 'dolares' ? DATA.price : null,
-                fecha: HOY
+                fecha: argentinaToUTC(DATA.fecha || HOY)
             })
         })
         

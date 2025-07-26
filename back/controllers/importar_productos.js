@@ -15,13 +15,13 @@ async function nuevo_reg_precio( trx, articulo, producto_db, fecha_registro ){
             "id": uuid.v7(),
             "product_id": producto_db.id,
             "price": articulo.price,
-            "date_time": new Date(new Date(fecha_registro).getTime() + 3*60*60*1000),
+            "date_time": argentinaToUTC(fecha_registro),
             "branch_id": articulo.branch_id,
             "es_oferta": 0,
             "confiabilidad": 100,
             "notas": (articulo?.nota) ? articulo.nota : null,
             "url": ( articulo.url ) ? articulo.url : null,
-            "time": new Date(Date.now() + 3*60*60*1000),
+            "time": new Date(new Date().getTime() + 3*60*60*1000), // Si quieres que el "ahora" sea en Argentina, usa esto
         }
         let insert_1 = await trx('price').insert( insert )
         precio_hoy = {...insert}
@@ -134,12 +134,12 @@ async function procesa_precio( trx, producto_db, articulo, fecha_registro ){
                     return resolve(false)
             } else if (ultimo_precio && Math.abs(ultimo_precio.price - articulo?.price) <= 1){
                 await trx('price').update( {
-                    "date_time": new Date(new Date(fecha_registro).getTime() + 3*60*60*1000), "time": new Date(Date.now() + 3*60*60*1000), "url": ( articulo.url ) ? articulo.url : null
+                    "date_time": argentinaToUTC(fecha_registro), "time": new Date(new Date().getTime() + 3*60*60*1000), "url": ( articulo.url ) ? articulo.url : null
                 } ).where("id", ultimo_precio.id)
                 
                 let precio_hoy = {
                     ...ultimo_precio,
-                    "date_time": new Date(new Date(fecha_registro).getTime() + 3*60*60*1000), "time": new Date(Date.now() + 3*60*60*1000), "url": ( articulo.url ) ? articulo.url : null
+                    "date_time": argentinaToUTC(fecha_registro), "time": new Date(new Date().getTime() + 3*60*60*1000), "url": ( articulo.url ) ? articulo.url : null
                 }
                 precio_hoy['id']           = uuid.v7()
                 precio_hoy['product_name'] = articulo.name
@@ -260,3 +260,9 @@ async function procesar_variacion( trx, variacion, fecha_registro){
     return
 }
 exports.procesar_variacion = procesar_variacion
+
+// Función para convertir fecha local de Argentina a UTC
+function argentinaToUTC(dateString) {
+  // dateString debe ser 'YYYY-MM-DD HH:mm:ss' o similar en hora de Argentina
+  return new Date(dateString + ' -03:00');
+}
