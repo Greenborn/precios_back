@@ -69,7 +69,7 @@ router.put('/cargar_nuevo_precio', async function (req, res) {
         const insert = {
             "product_id": PROD_ID,
             "price": PRICE,
-            "date_time": HOY,
+            "date_time": new Date(),
             "branch_id": BRANCH_ID,
             "es_oferta": 0,
             "confiabilidad": 50,

@@ -224,7 +224,7 @@ router.get('/precios', async function (req, res) {
         await global.knex('search_query_history')
                 .insert({ 
                   "query": product_name, 
-                  "date": new Date(), 
+                  "date": new Date().toISOString().replace('T', ' ').replace('Z', ''), 
                   "cant_results": res_busqueda.length,
                   "ipv4": req.header('x-forwarded-for')
                 })
@@ -237,7 +237,7 @@ router.get('/precios', async function (req, res) {
         await global.knex('search_query_history')
                 .insert({ 
                   "query": product_name, 
-                  "date": new Date(), 
+                  "date": new Date().toISOString().replace('T', ' ').replace('Z', ''), 
                   "cant_results": res_busqueda.length,
                   "ipv4": req.header('x-forwarded-for')
                 })
