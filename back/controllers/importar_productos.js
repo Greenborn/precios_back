@@ -9,7 +9,7 @@ async function nuevo_reg_precio( trx, articulo, producto_db, fecha_registro ){
     try {
         // Limpiar price_today para dejar solo los precios del día actual
         const HOY = new Date(fecha_registro)
-        HOY.setHours(0,0,0,0)
+        HOY.setUTCHours(0,0,0,0)
         await trx('price_today').where('date_time', '<', HOY).del();
         const insert = {
             "id": uuid.v7(),
@@ -120,7 +120,7 @@ async function procesa_precio( trx, producto_db, articulo, fecha_registro ){
     return new Promise( async (resolve, reject) => {
         
         let HOY = new Date()
-        HOY.setHours(0,0,0,1)
+        HOY.setUTCHours(0,0,0,1)
 
         let ultimo_precio = await global.knex('price').select().where('product_id', producto_db.id).orderBy('time', 'desc').first()
         if (ultimo_precio){
