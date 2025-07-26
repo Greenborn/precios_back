@@ -21,7 +21,7 @@ async function nuevo_reg_precio( trx, articulo, producto_db, fecha_registro ){
             "confiabilidad": 100,
             "notas": (articulo?.nota) ? articulo.nota : null,
             "url": ( articulo.url ) ? articulo.url : null,
-            "time": new Date(), // Guardar el timestamp actual en UTC
+            "time": nowArgentinaToUTC(), // Guardar el timestamp actual en hora local argentina convertida a UTC
         }
         let insert_1 = await trx('price').insert( insert )
         precio_hoy = {...insert}
@@ -134,12 +134,12 @@ async function procesa_precio( trx, producto_db, articulo, fecha_registro ){
                     return resolve(false)
             } else if (ultimo_precio && Math.abs(ultimo_precio.price - articulo?.price) <= 1){
                 await trx('price').update( {
-                    "date_time": argentinaToUTC(fecha_registro), "time": new Date(), "url": ( articulo.url ) ? articulo.url : null
+                    "date_time": argentinaToUTC(fecha_registro), "time": nowArgentinaToUTC(), "url": ( articulo.url ) ? articulo.url : null
                 } ).where("id", ultimo_precio.id)
                 
                 let precio_hoy = {
                     ...ultimo_precio,
-                    "date_time": argentinaToUTC(fecha_registro), "time": new Date(), "url": ( articulo.url ) ? articulo.url : null
+                    "date_time": argentinaToUTC(fecha_registro), "time": nowArgentinaToUTC(), "url": ( articulo.url ) ? articulo.url : null
                 }
                 precio_hoy['id']           = uuid.v7()
                 precio_hoy['product_name'] = articulo.name
@@ -254,7 +254,7 @@ async function procesar_variacion( trx, variacion, fecha_registro){
                 "precio_hoy":         reg_nuevo.price,
                 "nombre_producto":    reg_nuevo.name,
                 "nombre_comercio":     global.enterprice_diccio[ global.branchs_diccio[reg_nuevo.branch_id].enterprise_id ].name,
-                "fecha_utlimo_precio": fecha_registro
+                "fecha_utlimo_precio": argentinaToUTC(fecha_registro)
             })
     }
     return
@@ -265,4 +265,18 @@ exports.procesar_variacion = procesar_variacion
 function argentinaToUTC(dateString) {
   // dateString debe ser 'YYYY-MM-DD HH:mm:ss' o similar en hora de Argentina
   return new Date(dateString + ' -03:00');
+}
+
+// Función para obtener la hora actual en Argentina y convertirla a UTC
+function nowArgentinaToUTC() {
+  const now = new Date();
+  const pad = n => n.toString().padStart(2, '0');
+  const y = now.getFullYear();
+  const m = pad(now.getMonth() + 1);
+  const d = pad(now.getDate());
+  const h = pad(now.getHours());
+  const min = pad(now.getMinutes());
+  const s = pad(now.getSeconds());
+  const localString = `${y}-${m}-${d} ${h}:${min}:${s}`;
+  return argentinaToUTC(localString);
 }
