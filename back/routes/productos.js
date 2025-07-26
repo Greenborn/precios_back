@@ -125,7 +125,7 @@ setInterval(async () => {
     }, async () => {
         // Limpiar la tabla antes de actualizar la serie compilada (usando inicio de día Argentina)
         let HOY_ARG = new Date();
-        HOY_ARG.setUTCHours(3,0,0,0);
+        HOY_ARG.setHours(0,0,0,0);
         await global.knex("estadistica_aumento_diario").where('fecha_utlimo_precio', '<', HOY_ARG).del();
         console.log("Cola de productos vacía, actualizando serie_compilada_media_interdiaria...");
         exec('node scripts/resetear_serie_compilada_media_interdiaria.js price_today --no-truncate', (error, stdout, stderr) => {
@@ -300,7 +300,7 @@ let colaProcOfertas = []
 setInterval(async()=>{
     // Limpiar la tabla promociones_hoy para dejar solo los registros del día actual
     let HOY = new Date()
-    HOY.setUTCHours(0,0,0,0)
+    HOY.setHours(0,0,0,0)
     await global.knex("promociones_hoy").where('fecha', '<', HOY).del()
     await processing.procesarColaProc("ofertas", colaProcOfertas, async (item) => {
         let HOY = new Date()
