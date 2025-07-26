@@ -261,7 +261,7 @@ async function procesar_oferta(trx, item, HOY, AYER){
             
                 const insert_ = {
                     'orden': 0,
-                    'fecha': HOY,
+                    'fecha': argentinaToUTC(HOY),
                     'titulo': item.titulo,
                     'id_producto': -1,
                     'precio': item.precio,
