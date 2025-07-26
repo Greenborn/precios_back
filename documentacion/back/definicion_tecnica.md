@@ -9,6 +9,10 @@ Este documento especifica los detalles técnicos del backend de forma abstracta 
 - Base de datos (especificar tipo)
 - Knex (migraciones y query builder)
 
+## Estándar de Fechas: Uso de UTC en todo el backend
+
+> **Nota:** Todo el backend utiliza **UTC** para el manejo, almacenamiento y comparación de fechas. Todas las operaciones de limpieza, inserción y consulta de fechas usan métodos como `setUTCHours` y `toISOString`. Este es un estándar obligatorio en el proyecto para evitar inconsistencias por zona horaria y garantizar coherencia temporal en todos los procesos.
+
 ## Estructura de Carpetas
 - `controllers/`: Controladores de rutas
 - `models/`: Modelos de datos
@@ -201,6 +205,21 @@ La tabla `price_today` está diseñada para contener únicamente los precios cor
   HOY.setHours(0,0,0,0)
   await trx('price_today').where('date_time', '<', HOY).del();
   ```
+
+### Limpieza automática de la tabla `estadistica_aumento_diario` y manejo de zona horaria (UTC)
+
+Para evitar inconsistencias por diferencias de zona horaria, **toda la lógica de limpieza y comparación de fechas en la tabla `estadistica_aumento_diario` se realiza usando UTC**.
+
+- Al finalizar el procesamiento de la cola de productos (`colaProcProductos`), antes de actualizar la serie compilada, se eliminan todos los registros cuya columna `fecha_utlimo_precio` sea anterior al inicio del día actual en UTC.
+- El cálculo del inicio del día se realiza con:
+  ```js
+  let HOY = new Date();
+  HOY.setUTCHours(0,0,0,0);
+  await global.knex("estadistica_aumento_diario").where('fecha_utlimo_precio', '<', HOY).del();
+  ```
+- Todas las fechas insertadas y consultadas en la base de datos están en formato UTC (`toISOString()` o equivalente).
+
+**Ventaja:** Esto garantiza que la limpieza y los análisis sean coherentes, independientemente de la ubicación geográfica del servidor o de los clientes.
 
 ## Limpieza diaria automática de tablas temporales
 

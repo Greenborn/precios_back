@@ -108,14 +108,18 @@ const idCola = "productos"
 
 setInterval(async () => {
     // Limpiar la tabla estadistica_aumento_diario para dejar solo los registros del día actual
-    let HOY = new Date()
-    HOY.setHours(0,0,0,0)
-    await global.knex("estadistica_aumento_diario").where('fecha_utlimo_precio', '<', HOY).del()
+    // let HOY = new Date()
+    // HOY.setHours(0,0,0,0)
+    // await global.knex("estadistica_aumento_diario").where('fecha_utlimo_precio', '<', HOY).del()
     await processing.procesarColaProc(idCola, colaProcProductos, async (item) => {
         let HOY = new Date()
-        HOY.setHours(0,0,0,1)
+        HOY.setUTCHours(0,0,0,1)
         return await procesa_item(item, HOY)
     }, async () => {
+        // Limpiar la tabla antes de actualizar la serie compilada (usando UTC)
+        let HOY = new Date();
+        HOY.setUTCHours(0,0,0,0);
+        await global.knex("estadistica_aumento_diario").where('fecha_utlimo_precio', '<', HOY).del();
         console.log("Cola de productos vacía, actualizando serie_compilada_media_interdiaria...");
         exec('node scripts/resetear_serie_compilada_media_interdiaria.js price_today --no-truncate', (error, stdout, stderr) => {
             if (error) {
@@ -144,7 +148,7 @@ const TABLAS = {
 
 async function procesa_art_plataforma(DATA){
     let HOY = new Date()
-    HOY.setHours(0,0,0,1)
+    HOY.setUTCHours(0,0,0,1)
     
     let existe = await global.knex(TABLAS[DATA.plataforma].articulos).select()
                     .where('url', DATA.url).first()
@@ -288,11 +292,11 @@ let colaProcOfertas = []
 setInterval(async()=>{
     // Limpiar la tabla promociones_hoy para dejar solo los registros del día actual
     let HOY = new Date()
-    HOY.setHours(0,0,0,0)
+    HOY.setUTCHours(0,0,0,0)
     await global.knex("promociones_hoy").where('fecha', '<', HOY).del()
     await processing.procesarColaProc("ofertas", colaProcOfertas, async (item) => {
         let HOY = new Date()
-        HOY.setHours(0,0,0,1)
+        HOY.setUTCHours(0,0,0,1)
 
         let AYER = new Date()
         AYER.setUTCDate(AYER.getDate() - 1)
