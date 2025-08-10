@@ -35,7 +35,7 @@ async function main() {
 
   // 2. Obtener todos los precios en el periodo
   const preciosQuery = `
-    SELECT DATE_FORMAT(p.date_time, '%Y-%m-%d') AS fecha, pr.id AS product_id, pr.name AS nombre_producto, e.name AS comercio, p.url, '' AS notas, b.id AS branch_id
+    SELECT DATE_FORMAT(p.date_time, '%Y-%m-%d') AS fecha, p.price AS precio, pr.id AS product_id, pr.name AS nombre_producto, e.name AS comercio, p.url, '' AS notas, b.id AS branch_id
     FROM price p
     JOIN products pr ON p.product_id = pr.id
     JOIN branch b ON p.branch_id = b.id
@@ -65,8 +65,9 @@ async function main() {
       if (ultimos.length > 0) {
         const u = ultimos[0];
         preciosPrimerDia.push({
-          fecha: fechaInicio,
           nombre_producto: u.nombre_producto,
+          fecha: fechaInicio,
+          precio: u.price,
           comercio: u.comercio,
           url: u.url,
           notas: `registrado el: ${u.fecha_real}`,
@@ -77,8 +78,9 @@ async function main() {
 
   // 4. Preparar los precios del periodo (sin los campos auxiliares)
   const preciosFinales = precios.map(r => ({
-    fecha: r.fecha,
     nombre_producto: r.nombre_producto,
+    fecha: r.fecha,
+    precio: r.precio,
     comercio: r.comercio,
     url: r.url,
     notas: r.notas,
@@ -95,6 +97,7 @@ async function main() {
     header: [
       { id: 'nombre_producto', title: 'nombre producto' },
       { id: 'fecha', title: 'fecha' },
+      { id: 'precio', title: 'precio' },
       { id: 'comercio', title: 'comercio' },
       { id: 'url', title: 'url' },
       { id: 'notas', title: 'notas' },
