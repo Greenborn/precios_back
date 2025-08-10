@@ -93,8 +93,8 @@ async function main() {
   const csvWriter = createCsvWriter({
     path: path.join(__dirname, nombreArchivo),
     header: [
-      { id: 'fecha', title: 'fecha' },
       { id: 'nombre_producto', title: 'nombre producto' },
+      { id: 'fecha', title: 'fecha' },
       { id: 'comercio', title: 'comercio' },
       { id: 'url', title: 'url' },
       { id: 'notas', title: 'notas' },
