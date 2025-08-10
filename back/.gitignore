@@ -1,3 +1,4 @@
+informes/*.csv
 node_modules
 .env
 tests
