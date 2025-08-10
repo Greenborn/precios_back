@@ -34,8 +34,9 @@ async function main() {
   const [rows] = await connection.execute(query, [fechaInicio, fechaFin]);
   await connection.end();
 
+  const nombreArchivo = `precios_exportados_${fechaInicio}_${fechaFin}.csv`;
   const csvWriter = createCsvWriter({
-    path: path.join(__dirname, 'precios_exportados.csv'),
+    path: path.join(__dirname, nombreArchivo),
     header: [
       { id: 'fecha', title: 'fecha' },
       { id: 'nombre_producto', title: 'nombre producto' },
@@ -46,7 +47,7 @@ async function main() {
   });
 
   await csvWriter.writeRecords(rows);
-  console.log('Archivo precios_exportados.csv generado correctamente.');
+  console.log(`Archivo ${nombreArchivo} generado correctamente.`);
 }
 
 main().catch(err => {
