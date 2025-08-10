@@ -2,10 +2,14 @@
     <div class="row align-items-center justify-content-center">
         <div class="col-12 col-md-10 col-lg-8">
             <h4>{{ parametros?.item?.products?.name }} - {{ parametros?.item?.nombre_comercio }}{{ parametros?.item?.empresa?.name }}</h4>
-            <Chart type="line" :data="chartData" :options="chartOptions" class="w-full" />
         </div>
     </div>
     
+    <div class="row align-items-center justify-content-center">
+        <div class="col-12">
+            <Chart type="line" :data="chartData" :options="chartOptions" class="w-full" />
+        </div>
+    </div>
 </template>
 
 <script setup>
