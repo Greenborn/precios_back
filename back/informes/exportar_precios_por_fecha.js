@@ -23,7 +23,7 @@ const dbConfig = {
 async function main() {
   const connection = await mysql.createConnection(dbConfig);
   const query = `
-    SELECT p.date_time AS fecha, pr.name AS nombre_producto, e.name AS comercio, p.url, '' AS notas
+    SELECT DATE_FORMAT(p.date_time, '%Y-%m-%d') AS fecha, pr.name AS nombre_producto, e.name AS comercio, p.url, '' AS notas
     FROM price p
     JOIN products pr ON p.product_id = pr.id
     JOIN branch b ON p.branch_id = b.id
