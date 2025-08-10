@@ -1,4 +1,6 @@
 informes/*.csv
+informes/*.ods
+informes/*.zip
 node_modules
 .env
 tests
