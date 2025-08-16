@@ -22,23 +22,25 @@ const dbConfig = {
 async function main() {
   const connection = await mysql.createConnection(dbConfig);
 
-  // 1. Obtener todos los precios en el periodo
+  // 1. Obtener todos los precios en el periodo, incluyendo el nombre del producto
   const preciosQuery = `
-    SELECT p.id, p.product_id, p.price, DATE_FORMAT(p.date_time, '%Y-%m-%d %H:%i:%s') AS date_time, p.branch_id, p.es_oferta, p.porcentage_oferta, p.confiabilidad, p.url, p.notas
+    SELECT p.id, p.product_id, pr.name as product_name, p.price, DATE_FORMAT(p.date_time, '%Y-%m-%d %H:%i:%s') AS date_time, p.branch_id, p.es_oferta, p.porcentage_oferta, p.confiabilidad, p.url, p.notas
     FROM price p
+    JOIN products pr ON p.product_id = pr.id
     WHERE p.date_time BETWEEN ? AND ?
     ORDER BY p.product_id, p.date_time ASC
   `;
   const [precios] = await connection.execute(preciosQuery, [fechaInicio, fechaFin]);
 
-  // 2. Obtener el precio anterior para cada producto y sucursal
+  // 2. Obtener el precio anterior para cada producto y sucursal, incluyendo el nombre del producto
   const productosSucursales = [...new Set(precios.map(r => r.product_id + '-' + r.branch_id))];
   const preciosAnteriores = [];
   for (const key of productosSucursales) {
     const [product_id, branch_id] = key.split('-');
     const anteriorQuery = `
-      SELECT p.id, p.product_id, p.price, DATE_FORMAT(p.date_time, '%Y-%m-%d %H:%i:%s') AS date_time, p.branch_id, p.es_oferta, p.porcentage_oferta, p.confiabilidad, p.url, p.notas
+      SELECT p.id, p.product_id, pr.name as product_name, p.price, DATE_FORMAT(p.date_time, '%Y-%m-%d %H:%i:%s') AS date_time, p.branch_id, p.es_oferta, p.porcentage_oferta, p.confiabilidad, p.url, p.notas
       FROM price p
+      JOIN products pr ON p.product_id = pr.id
       WHERE p.product_id = ? AND p.branch_id = ? AND p.date_time < ?
       ORDER BY p.date_time DESC LIMIT 1
     `;
@@ -74,6 +76,7 @@ async function main() {
     resultado[fechaDia].precios.push({
       price: registro.price,
       product_id: registro.product_id,
+      product_name: registro.product_name,
       branch_id: registro.branch_id,
       aumento_interdiario: aumento_interdiario
     });
