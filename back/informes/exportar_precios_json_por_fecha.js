@@ -48,24 +48,64 @@ async function main() {
     }
   }
 
-  // 3. Agrupar por product_id
+  // 3. Calcular aumento porcentual interdiario y agrupar por día
+  // Crear un mapa para el último precio por producto y sucursal
+  const ultimoPrecioPorProductoSucursal = {};
+  for (const registro of preciosAnteriores) {
+    const key = registro.product_id + '-' + registro.branch_id;
+    ultimoPrecioPorProductoSucursal[key] = registro.price;
+  }
+
+  // Agrupar por día y calcular mediana
   const resultado = {};
-  for (const registro of [...preciosAnteriores, ...precios]) {
-    if (!resultado[registro.product_id]) {
-      resultado[registro.product_id] = { precios: [] };
+  for (const registro of precios) {
+    const fechaDia = registro.date_time.substring(0, 10); // YYYY-MM-DD
+    const key = registro.product_id + '-' + registro.branch_id;
+    const precioAnterior = ultimoPrecioPorProductoSucursal[key];
+    let aumento_interdiario = null;
+    if (precioAnterior !== undefined && precioAnterior > 0) {
+      aumento_interdiario = ((registro.price - precioAnterior) / precioAnterior) * 100;
     }
-    resultado[registro.product_id].precios.push({
-      id: registro.id,
+    // Actualizar el último precio para el siguiente registro
+    ultimoPrecioPorProductoSucursal[key] = registro.price;
+    if (!resultado[fechaDia]) {
+      resultado[fechaDia] = { precios: [], mediana: null };
+    }
+    resultado[fechaDia].precios.push({
       price: registro.price,
-      date_time: registro.date_time,
+      product_id: registro.product_id,
       branch_id: registro.branch_id,
-      es_oferta: registro.es_oferta,
-      porcentage_oferta: registro.porcentage_oferta,
-      confiabilidad: registro.confiabilidad,
-      url: registro.url,
-      notas: registro.notas
+      aumento_interdiario: aumento_interdiario
     });
   }
+
+  // Calcular la mediana del aumento interdiario por día
+  function calcularMediana(arr) {
+    if (arr.length === 0) return null;
+    const valores = arr.filter(obj => obj.aumento_interdiario !== null)
+      .map(obj => obj.aumento_interdiario)
+      .sort((a, b) => a - b);
+    if (valores.length === 0) return null;
+    const mid = Math.floor(valores.length / 2);
+    if (valores.length % 2 === 0) {
+      return (valores[mid - 1] + valores[mid]) / 2;
+    } else {
+      return valores[mid];
+    }
+  }
+  for (const fechaDia in resultado) {
+    resultado[fechaDia].mediana = calcularMediana(resultado[fechaDia].precios);
+  }
+
+  // Crear CSV con fecha y mediana de aumento interdiario
+  const fechasOrdenadas = Object.keys(resultado).sort();
+  const csvLines = ['fecha,mediana_aumento_interdiario'];
+  for (const fecha of fechasOrdenadas) {
+    csvLines.push(`${fecha},${resultado[fecha].mediana !== null ? resultado[fecha].mediana : ''}`);
+  }
+  const nombreArchivoCSV = `precios_exportados_${fechaInicio}_${fechaFin}_mediana_aumento_interdiario.csv`;
+  fs.writeFileSync(path.join(__dirname, nombreArchivoCSV), csvLines.join('\n'));
+  console.log(`Archivo ${nombreArchivoCSV} generado correctamente.`);
 
   await connection.end();
 
