@@ -51,11 +51,13 @@ async function main() {
   }
 
   // 3. Calcular aumento porcentual interdiario y agrupar por día
-  // Crear un mapa para el último precio por producto y sucursal
+  // Crear un mapa para el último precio y fecha por producto y sucursal
   const ultimoPrecioPorProductoSucursal = {};
+  const ultimaFechaPorProductoSucursal = {};
   for (const registro of preciosAnteriores) {
     const key = registro.product_id + '-' + registro.branch_id;
     ultimoPrecioPorProductoSucursal[key] = registro.price;
+    ultimaFechaPorProductoSucursal[key] = registro.date_time;
   }
 
   // Agrupar por día y calcular mediana
@@ -64,12 +66,21 @@ async function main() {
     const fechaDia = registro.date_time.substring(0, 10); // YYYY-MM-DD
     const key = registro.product_id + '-' + registro.branch_id;
     const precioAnterior = ultimoPrecioPorProductoSucursal[key];
+    const fechaAnterior = ultimaFechaPorProductoSucursal[key];
     let aumento_interdiario = null;
     if (precioAnterior !== undefined && precioAnterior > 0) {
       aumento_interdiario = ((registro.price - precioAnterior) / precioAnterior) * 100;
     }
-    // Actualizar el último precio para el siguiente registro
+    // Omitir si el aumento interdiario es mayor a 1000%
+    if (aumento_interdiario !== null && Math.abs(aumento_interdiario) > 1000) {
+      // Actualizar el último precio y fecha para el siguiente registro
+      ultimoPrecioPorProductoSucursal[key] = registro.price;
+      ultimaFechaPorProductoSucursal[key] = registro.date_time;
+      continue;
+    }
+    // Actualizar el último precio y fecha para el siguiente registro
     ultimoPrecioPorProductoSucursal[key] = registro.price;
+    ultimaFechaPorProductoSucursal[key] = registro.date_time;
     if (!resultado[fechaDia]) {
       resultado[fechaDia] = { precios: [], mediana: null };
     }
@@ -78,7 +89,8 @@ async function main() {
       product_id: registro.product_id,
       product_name: registro.product_name,
       branch_id: registro.branch_id,
-      aumento_interdiario: aumento_interdiario
+      aumento_interdiario: aumento_interdiario,
+      precio_anterior: precioAnterior !== undefined ? { precio: precioAnterior, fecha: fechaAnterior } : null
     });
   }
 
