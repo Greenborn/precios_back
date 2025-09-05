@@ -1,7 +1,7 @@
 {
   "name": "precios_front",
   "private": true,
-  "version": "1.6.10",
+  "version": "1.7.10",
   "type": "module",
   "scripts": {
     "dev": "vite --port 3000",

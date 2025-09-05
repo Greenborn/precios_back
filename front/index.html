@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Buscador e Histórico de Precios de Tandil</title>
 
+    <link rel="manifest" href="/manifest.json" />
+
     <meta property="og:title" content="Buscador de precios de Tandil">
     <meta property="og:description" content="Se trata de un buscador de precios y registro histórico de los mismos, centrado en la ciudad de Tandil, por el momento se entregan resultados sobre los últimos precios registrados para un producto">
     <meta property="og:image" content="images/logo300x300.png">
@@ -22,6 +24,12 @@
       gtag('js', new Date());
 
       gtag('config', 'G-E6C2XNBM9N');
+      // Registrar service worker para PWA
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/service-worker.js');
+        });
+      }
     </script>
   </body>
 </html>
