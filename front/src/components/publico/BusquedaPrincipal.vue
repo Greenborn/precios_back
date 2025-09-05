@@ -171,6 +171,13 @@
             </div>
         </div>
     </div>
+        <div class="row align-items-center justify-content-center" v-if="deferredPrompt">
+            <div class="col-12 col-md-10 col-lg-8">
+                <button class="btn btn-primary w-100 mb-3" @click="instalarApp">
+                    Instalar aplicación móvil
+                </button>
+            </div>
+        </div>
 
     <div class="row align-items-center justify-content-center">
         <div class="col-12 col-md-10 col-lg-8 ">
@@ -217,6 +224,7 @@ import { AppStore } from "../../stores/app"
 import GraficoEvolucionPrecio from './GraficoEvolucionPrecio.vue'
 import FormularioAddPrecio from './FormularioAddPrecio.vue'
 
+
 defineExpose({ buscar })
 const storeApp = AppStore()
 
@@ -226,6 +234,23 @@ const resultados = ref([]);
 const estadisticas_inc = ref([])
 const MODAL_STYLE = { width: '100vw', 'min-height': "100vh" }
 const mostrarDisclaimer = ref(true)
+const deferredPrompt = ref(null)
+
+function instalarApp() {
+    if (deferredPrompt.value) {
+        deferredPrompt.value.prompt();
+        deferredPrompt.value.userChoice.then((choiceResult) => {
+            deferredPrompt.value = null;
+        });
+    }
+}
+
+onMounted(() => {
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt.value = e;
+    });
+});
 
 async function ofertas_check_change(){
     if (termino_busqueda.value != '' && termino_busqueda.value?.length >= 3){
