@@ -1,6 +1,7 @@
 informes/*.csv
 informes/*.ods
 informes/*.zip
+informes/*.json
 node_modules
 .env
 tests
