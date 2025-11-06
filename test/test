@@ -1,0 +1,15 @@
+
+necesito agilizar la busqueda usando un servicio de busqueda interno, se debe parametrizar en .env
+
+este es un ejemplo de la como debe hacerse una peticion al servcio
+
+curl "http://localhost:3075/search?q=manzana"
+
+el cual respondera algo como:
+
+{"items":[{"id":1,"texto":"ejemplo"}]}
+
+hay que tener en cuenta id = products->id 
+
+
+se debe reemplazar la logica actual de busqueda en memoria, manten el cacheado por ahora si es necesario, por el llamado a la api de busqueda

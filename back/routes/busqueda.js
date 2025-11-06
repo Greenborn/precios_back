@@ -5,6 +5,36 @@ const bcrypt = require('bcrypt')
 const fs = require("fs")
 const busqueda_productos = require("../controllers/busqueda_productos")
 const utils = require("../helpers/utils")
+const axios = require('axios')
+
+// Configuración del servicio de búsqueda externa (parametrizado por .env)
+const SEARCH_SERVICE_ENDPOINT = process.env.SEARCH_SERVICE_ENDPOINT || 'http://localhost:3075/search'
+const SEARCH_SERVICE_TIMEOUT_MS = Number(process.env.SEARCH_SERVICE_TIMEOUT_MS || 2000)
+const SEARCH_SERVICE_CACHE_TTL_MS = Number(process.env.SEARCH_SERVICE_CACHE_TTL_MS || 120000)
+
+// Cache simple en memoria para resultados de búsqueda por término
+const searchCache = {}
+
+async function obtenerIdsBusquedaExterna(termino){
+  const ahora = Date.now()
+  const cacheItem = searchCache[termino]
+  if (cacheItem && (ahora - cacheItem.ts) < SEARCH_SERVICE_CACHE_TTL_MS){
+    return cacheItem.ids
+  }
+  try{
+    const resp = await axios.get(SEARCH_SERVICE_ENDPOINT, {
+      params: { q: termino },
+      timeout: SEARCH_SERVICE_TIMEOUT_MS
+    })
+    const items = resp?.data?.items || []
+    const ids = items.map(it => Number(it.id)).filter(Number.isFinite)
+    searchCache[termino] = { ts: ahora, ids }
+    return ids
+  } catch (err){
+    console.log('Error búsqueda externa, usando fallback en memoria:', err?.message)
+    return []
+  }
+}
 
 async function buscar_precios_producto( id_producto ){
   return new Promise(async (resolve, reject) => {
@@ -112,6 +142,67 @@ async function hacer_busqueda( termino, metodo ){
       resolve([])
     }
             
+  })
+}
+
+async function hacer_busqueda_externa( termino ){
+  return new Promise(async (resolve, reject) => {
+    try{
+      // Obtener IDs desde servicio externo y construir salida con precios
+      const productIds = await obtenerIdsBusquedaExterna(termino)
+
+      // Si el servicio externo no devolvió nada, intentar fallback en memoria
+      if (!productIds || productIds.length === 0){
+        const fallback = await hacer_busqueda(termino, 'AND')
+        return resolve(fallback || [])
+      }
+
+      let diccio_productos = {}
+      let diccio_precios = {}
+      let list_precios = []
+
+      // Preparar diccionario de productos por id
+      for (let i=0; i < productIds.length; i++){
+        const pid = productIds[i]
+        diccio_productos[pid] = global.products_diccio_id[pid]
+      }
+
+      // Buscar últimos precios por producto
+      let proms_precios = []
+      for (let i=0; i < productIds.length; i++){
+        proms_precios.push(buscar_precios_producto(productIds[i]))
+      }
+
+      let res_precios = await Promise.all(proms_precios)
+      if (res_precios){
+        for (let i=0; i < res_precios.length; i++){
+          for (let j=0; j < res_precios[i].length; j++){
+            let result_precio = res_precios[i][j]
+            if (diccio_precios[result_precio["id"]] != undefined)
+              continue
+
+            diccio_precios[result_precio["id"]] = result_precio
+            result_precio["empresa"]  = global.enterprice_diccio[global.branchs_diccio[result_precio["branch_id"]].enterprise_id]
+            result_precio["locales"]  = global.branch_enterprice_diccio[global.branchs_diccio[result_precio["branch_id"]].enterprise_id]
+            result_precio["products"] = diccio_productos[result_precio["product_id"]]
+
+            list_precios = insertar_ordenado(list_precios, result_precio)
+          }
+        }
+
+        let aux = []
+        for (let i=0; i < list_precios.length; i++){
+          list_precios[i]['date_time'] = new Date(list_precios[i]['date_time']).getTime()
+          aux = insertar_ordenado(aux, list_precios[i], 'date_time', "desc")
+        }
+        resolve(aux)
+      } else {
+        resolve([])
+      }
+    } catch (error){
+      console.log('hacer_busqueda_externa error', error)
+      resolve([])
+    }
   })
 }
 
@@ -232,7 +323,8 @@ router.get('/precios', async function (req, res) {
         res.status(200).send({ stat: true, items: res_busqueda })
       }
     } else {
-      let res_busqueda = await hacer_busqueda( product_name, 'AND' ) 
+      // Reemplazo de búsqueda en memoria por servicio de búsqueda externa (con fallback)
+      let res_busqueda = await hacer_busqueda_externa( product_name ) 
       if (res_busqueda){
         await global.knex('search_query_history')
                 .insert({ 

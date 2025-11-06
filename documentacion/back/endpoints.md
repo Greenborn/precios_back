@@ -59,6 +59,12 @@ Content-Type: application/json
 - **Transaccional**: No
 - **Rate Limiting**: No
 
+#### Implementación y búsqueda externa
+- La resolución de productos se realiza mediante un servicio de búsqueda externo configurado en `SEARCH_SERVICE_ENDPOINT`.
+- Ejemplo de request: `curl "http://localhost:3075/search?q=manzana"` que responde `{"items":[{"id":1,"texto":"ejemplo"}]}`.
+- El campo `id` devuelto por el servicio corresponde a `products.id` en la base local.
+- Se mantiene un cache en memoria con TTL configurable (`SEARCH_SERVICE_CACHE_TTL_MS`) para términos de búsqueda.
+
 ---
 
 #### 1.2 Buscar promociones
@@ -831,4 +837,4 @@ Content-Type: application/json
 ---
 
 ## Ejemplos de Uso
-Describir flujos completos de uso de la API. 
+Describir flujos completos de uso de la API.

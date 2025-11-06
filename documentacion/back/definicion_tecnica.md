@@ -25,6 +25,18 @@ Este documento especifica los detalles técnicos del backend de forma abstracta 
 ## Dependencias Clave
 Listar y describir las dependencias principales.
 
+### Búsqueda externa de productos
+- La identificación de productos por término se delega a un servicio externo.
+- Configuración mediante variables de entorno:
+  - `SEARCH_SERVICE_ENDPOINT`: Endpoint del servicio (ej: `http://localhost:3075/search`).
+  - `SEARCH_SERVICE_TIMEOUT_MS`: Timeout de la solicitud (ms).
+  - `SEARCH_SERVICE_CACHE_TTL_MS`: TTL del cache en memoria (ms).
+- Respuesta esperada del servicio:
+  ```json
+  { "items": [ { "id": 1, "texto": "ejemplo" } ] }
+  ```
+- El campo `id` se mapea a `products.id` en la base local para recuperar precios y metadatos.
+
 ## Serie Compilada Media Interdiaria
 
 La tabla `serie_compilada_media_interdiaria` almacena estadísticas diarias de los incrementos interdiarios de precios, calculadas a partir de la tabla `price`.
@@ -240,4 +252,4 @@ Para asegurar que los análisis y reportes reflejen únicamente los datos vigent
 
 - [Volver al README del backend](./README.md)
 - [Arquitectura](./arquitectura.md)
-- [Endpoints](./endpoints.md) 
+- [Endpoints](./endpoints.md)
