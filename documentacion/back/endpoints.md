@@ -61,8 +61,8 @@ Content-Type: application/json
 
 #### Implementación y búsqueda externa
 - La resolución de productos se realiza mediante un servicio de búsqueda externo configurado en `SEARCH_SERVICE_ENDPOINT`.
-- Ejemplo de request: `curl "http://localhost:3075/search?q=manzana"` que responde `{"items":[{"id":1,"texto":"ejemplo"}]}`.
-- El campo `id` devuelto por el servicio corresponde a `products.id` en la base local.
+- Ejemplo de request: `curl "http://localhost:3075/search?q=manzana"` que responde `{ "items": [ { "id": "123", "texto": "ejemplo" } ] }`.
+- El campo `id` devuelto por el servicio corresponde a `products.id` en la base local y es de tipo string.
 - Se mantiene un cache en memoria con TTL configurable (`SEARCH_SERVICE_CACHE_TTL_MS`) para términos de búsqueda.
 
 ---

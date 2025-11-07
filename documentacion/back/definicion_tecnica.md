@@ -33,9 +33,9 @@ Listar y describir las dependencias principales.
   - `SEARCH_SERVICE_CACHE_TTL_MS`: TTL del cache en memoria (ms).
 - Respuesta esperada del servicio:
   ```json
-  { "items": [ { "id": 1, "texto": "ejemplo" } ] }
+  { "items": [ { "id": "123", "texto": "ejemplo" } ] }
   ```
-- El campo `id` se mapea a `products.id` en la base local para recuperar precios y metadatos.
+- El campo `id` (string) se mapea a `products.id` en la base local para recuperar precios y metadatos.
 
 ## Serie Compilada Media Interdiaria
 

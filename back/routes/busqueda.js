@@ -27,7 +27,8 @@ async function obtenerIdsBusquedaExterna(termino){
       timeout: SEARCH_SERVICE_TIMEOUT_MS
     })
     const items = resp?.data?.items || []
-    const ids = items.map(it => Number(it.id)).filter(Number.isFinite)
+    // Los IDs del servicio externo son strings y deben mapear directo a products.id
+    const ids = items.map(it => String(it.id)).filter(id => typeof id === 'string' && id.length > 0)
     searchCache[termino] = { ts: ahora, ids }
     return ids
   } catch (err){
