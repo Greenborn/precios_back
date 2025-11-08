@@ -1,834 +1,194 @@
 # Documentación de Endpoints del Backend
 
 ## Información General
-- **Base URL:** `/api`
-- **Autenticación:** Bearer Token (JWT) (algunos endpoints públicos)
-- **Formato:** JSON
+- Base pública: `/publico`
+- Base administrativa: `/admin`
+- Autenticación: actualmente no se aplica (middleware de autorización deshabilitado)
+- Formato de respuestas: JSON
 
-> **Nota:** Las tablas temporales `estadistica_aumento_diario` y `promociones_hoy` solo contienen registros del día actual. El sistema elimina automáticamente los registros antiguos al inicio de cada lote de procesamiento, garantizando que los endpoints relacionados siempre devuelvan datos vigentes.
-
-## Navegación
-- [Volver al README del backend](./README.md)
-- [Arquitectura](./arquitectura.md)
-- [Definición técnica](./definicion_tecnica.md)
+Notas:
+- El backend monta routers bajo `/publico` y `/admin`. Las rutas mostradas aquí incluyen esos prefijos.
+- El servicio de búsqueda externa se configura por variables de entorno (`SEARCH_SERVICE_ENDPOINT`, `SEARCH_SERVICE_TIMEOUT_MS`, `SEARCH_SERVICE_CACHE_TTL_MS`).
 
 ---
 
-## Endpoints
+## Búsqueda
 
-### 1. Búsqueda
+### Buscar precios de productos
+GET `/publico/busqueda/precios`
 
-#### 1.1 Buscar precios de productos
-**GET** `/api/busqueda/precios`
+- Parámetros (query):
+  - `product_name` (string, mínimo 3 caracteres)
+- Comportamiento:
+  - Si el término contiene "alquiler", busca propiedades en alquiler.
+  - Usa servicio externo de búsqueda si está configurado; si falla, hace búsqueda interna.
+- Respuesta 200:
+  - `{ stat: true, items: [...] }`
+- Respuesta error:
+  - `{ stat: false, items: [], error: true }`
 
-Devuelve los precios de productos según el nombre buscado. Si el término contiene "alquiler", busca propiedades en alquiler.
+### Buscar promociones
+GET `/publico/busqueda/promociones`
 
-#### Headers
-```
-Content-Type: application/json
-```
+- Parámetros (query):
+  - `product_name` (string, mínimo 3 caracteres)
+- Respuesta 200:
+  - `{ stat: true, items: [...] }`
 
-#### Parámetros (query)
-```json
-{
-  "product_name": "nombre del producto o término de búsqueda"
-}
-```
+### Comercios con promociones
+GET `/publico/busqueda/comercios_promociones`
 
-#### Respuesta Exitosa (200)
-```json
-{
-  "stat": true,
-  "items": [ /* array de precios o propiedades */ ]
-}
-```
-
-#### Respuesta de Error (400)
-```json
-{
-  "stat": false,
-  "items": [],
-  "error": true
-}
-```
-
-#### Características del Endpoint
-- **Autenticación**: No requerida
-- **Permisos**: Público
-- **Validación**: Longitud mínima del término
-- **Transaccional**: No
-- **Rate Limiting**: No
+- Sin parámetros.
+- Respuesta 200:
+  - `{ stat: true, items: [...] }`
 
 ---
 
-#### 1.2 Buscar promociones
-**GET** `/api/busqueda/promociones`
+## Categorías
 
-Devuelve promociones activas según el nombre del producto.
+### Listar categorías
+GET `/publico/categorias/all`
 
-#### Headers
-```
-Content-Type: application/json
-```
+- Sin parámetros.
+- Respuesta 200: `{ stat: true, items: [...] }`
 
-#### Parámetros (query)
-```json
-{
-  "product_name": "nombre del producto"
-}
-```
+### Empresas por categoría
+GET `/publico/categorias/get_empresas_categoria`
 
-#### Respuesta Exitosa (200)
-```json
-{
-  "stat": true,
-  "items": [ /* array de promociones */ ]
-}
-```
+- Parámetros (query): `menu_category_id`
+- Respuesta 200: `{ stat: true, items: [...] }`
 
-#### Respuesta de Error (400)
-```json
-{
-  "stat": false,
-  "items": [],
-  "error": true
-}
-```
+### Subcategorías de una categoría
+GET `/publico/categorias/get_sub_categorias`
 
-#### Características del Endpoint
-- **Autenticación**: No requerida
-- **Permisos**: Público
-- **Validación**: Longitud mínima del término
-- **Transaccional**: No
-- **Rate Limiting**: No
+- Parámetros (query): `cat_menu_id`
+- Respuesta 200: `{ stat: true, items: [...] }`
+
+### Categorías de una empresa
+GET `/publico/categorias/get_categoria_empresa`
+
+- Parámetros (query): `enterprise_id`
+- Respuesta 200: `{ stat: true, items: [...] }`
 
 ---
 
-#### 1.3 Comercios con promociones
-**GET** `/api/busqueda/comercios_promociones`
+## Productos
 
-Devuelve comercios que tienen promociones activas.
+### Productos por categoría
+GET `/publico/productos/all`
 
-#### Headers
-```
-Content-Type: application/json
-```
+- Parámetros (query): `category_id`
+- Respuesta 200: `{ stat: true, items: [...] }`
 
-#### Parámetros (query)
-_No requiere parámetros._
+### Cargar nuevo precio
+PUT `/publico/productos/cargar_nuevo_precio`
 
-#### Respuesta Exitosa (200)
-```json
-{
-  "stat": true,
-  "items": [ /* array de comercios */ ]
-}
-```
+- Body JSON:
+  - `product_id` (string)
+  - `branch_id` (string)
+  - `price` (number)
+- Notas:
+  - Aplica límites básicos por IP y combinación producto-sucursal.
+- Respuesta 200:
+  - `{ stat: true }` o `{ stat: false, error: "..." }`
 
-#### Respuesta de Error (400)
-```json
-{
-  "stat": false,
-  "items": [],
-  "error": true
-}
-```
+### Importar artículos de plataformas
+POST `/publico/productos/importar_articulo_plataforma`
 
-#### Características del Endpoint
-- **Autenticación**: No requerida
-- **Permisos**: Público
-- **Validación**: No
-- **Transaccional**: No
-- **Rate Limiting**: No
+- Body JSON: array de items con campos como `name`, `price`, `currency`, `category_name`, `url`, `plataforma` (`ml` | `region20`).
+- Notas:
+  - Validación por `key` actualmente deshabilitada.
+- Respuesta 200: `{ stat: true }`
 
----
+### Importar ofertas
+POST `/publico/productos/importar_oferta`
 
-### 2. Categorías
+- Body JSON:
+  - `key` (string, debe igualar `KEY_INT`)
+  - `lst_importa` (array de items `{ titulo, precio, branch_id, url, datos_extra }`)
+- Respuesta 200: `{ stat: true }`
 
-#### 2.1 Listar todas las categorías
-**GET** `/api/categorias/all`
+### Importar alquileres
+POST `/publico/productos/importar_alquiler`
 
-Devuelve todas las categorías ordenadas alfabéticamente.
+- Body JSON:
+  - `key` (string, debe igualar `KEY_INT`)
+  - `titulo`, `locador`, `url`, `precio`, `moneda`, `especificaciones` (objeto), `hash` (MD5 de campos)
+- Respuesta 200: `{ stat: true, nuevo: 0|1|2 }`
 
-#### Headers
-```
-Content-Type: application/json
-```
+### Importación masiva de productos
+POST `/publico/productos/importar`
 
-#### Parámetros (query)
-_No requiere parámetros._
-
-#### Respuesta Exitosa (200)
-```json
-{
-  "stat": true,
-  "items": [ /* array de categorías */ ],
-  "error": true
-}
-```
-
-#### Respuesta de Error (400)
-```json
-{
-  "stat": false,
-  "items": [],
-  "error": true
-}
-```
-
-#### Características del Endpoint
-- **Autenticación**: No requerida
-- **Permisos**: Público
-- **Validación**: No
-- **Transaccional**: No
-- **Rate Limiting**: No
+- Body JSON:
+  - `key` (string, debe igualar `KEY_INT`)
+  - `lst_importa` (array de artículos)
+- Comportamiento:
+  - Los items se agregan a una cola en memoria (`colaProcProductos`) y se procesan en lotes periódicos.
+- Respuesta 200: `{ stat: true, count: <n> }`
 
 ---
 
-#### 2.2 Empresas por categoría
-**GET** `/api/categorias/get_empresas_categoria`
+## Estadística
 
-Devuelve las empresas asociadas a una categoría de menú.
+### Datos estadísticos
+GET `/publico/estadistica/data`
 
-#### Headers
-```
-Content-Type: application/json
-```
+- Parámetros (query):
+  - `id_estadistica` (string): uno de `incremental_stats`, `precios_por_negocio`, `trending`, `mayor_aumento_diario`, `variacion_precio`
+  - `limit` (number, opcional para `mayor_aumento_diario`)
+  - `id_producto`, `id_local` (para `variacion_precio`)
+- Respuesta 200: `{ stat: true, items: [...] }`
 
-#### Parámetros (query)
-```json
-{
-  "menu_category_id": "ID de la categoría de menú"
-}
-```
+### Precios cargados por usuarios
+POST `/publico/estadistica/precios_usuarios`
 
-#### Respuesta Exitosa (200)
-```json
-{
-  "stat": true,
-  "items": [ /* array de empresas */ ],
-  "error": true
-}
-```
-
-#### Respuesta de Error (400)
-```json
-{
-  "stat": false,
-  "items": [],
-  "error": true
-}
-```
-
-#### Características del Endpoint
-- **Autenticación**: No requerida
-- **Permisos**: Público
-- **Validación**: Requiere parámetro menu_category_id
-- **Transaccional**: No
-- **Rate Limiting**: No
+- Body JSON:
+  - `fecha` (string o Date)
+  - `nombre` (string)
+  - `comercio` (string)
+  - `productos` (array de hasta 100 items `{ nombre, marca, precio, presentacion }`)
+- Respuesta 200: `{ stat: true }`
 
 ---
 
-#### 2.3 Subcategorías de una categoría
-**GET** `/api/categorias/get_sub_categorias`
+## Chatbot
 
-Devuelve las subcategorías asociadas a una categoría de menú.
+### Respuesta del chatbot
+POST `/publico/chatbot/chat_bot_rsp`
 
-#### Headers
-```
-Content-Type: application/json
-```
-
-#### Parámetros (query)
-```json
-{
-  "cat_menu_id": "ID de la categoría de menú"
-}
-```
-
-#### Respuesta Exitosa (200)
-```json
-{
-  "stat": true,
-  "items": [ /* array de subcategorías */ ],
-  "error": true
-}
-```
-
-#### Respuesta de Error (400)
-```json
-{
-  "stat": false,
-  "items": [],
-  "error": true
-}
-```
-
-#### Características del Endpoint
-- **Autenticación**: No requerida
-- **Permisos**: Público
-- **Validación**: Requiere parámetro cat_menu_id
-- **Transaccional**: No
-- **Rate Limiting**: No
+- Body JSON:
+  - `texto` (string)
+  - `user_id` (string)
+- Respuesta 200:
+  - `{ stat: true, msg: <texto> }`
+- Notas:
+  - Llama a un servicio externo (`http://localhost:6789/api/chat`).
 
 ---
 
-#### 2.4 Categorías por empresa
-**GET** `/api/categorias/get_categoria_empresa`
+## Administración
 
-Devuelve las categorías asociadas a una empresa.
+### Información
+GET `/admin/user/info`
 
-#### Headers
-```
-Content-Type: application/json
-```
+- Respuesta 200: `{ stat: true, data: { rutas: [] } }`
 
-#### Parámetros (query)
-```json
-{
-  "enterprise_id": "ID de la empresa"
-}
-```
+### Login
+POST `/admin/user/login`
 
-#### Respuesta Exitosa (200)
-```json
-{
-  "stat": true,
-  "items": [ /* array de categorías */ ],
-  "error": true
-}
-```
-
-#### Respuesta de Error (400)
-```json
-{
-  "stat": false,
-  "items": [],
-  "error": true
-}
-```
-
-#### Características del Endpoint
-- **Autenticación**: No requerida
-- **Permisos**: Público
-- **Validación**: Requiere parámetro enterprise_id
-- **Transaccional**: No
-- **Rate Limiting**: No
+- Respuesta 200: `{ stat: true, data: { rutas: [] } }`
 
 ---
 
-### 3. Chatbot
+## Variables de entorno relevantes
 
-#### 3.1 Respuesta del chatbot
-**POST** `/api/chatbot/chat_bot_rsp`
-
-Envía un mensaje al chatbot y recibe una respuesta.
-
-#### Headers
-```
-Content-Type: application/json
-```
-
-#### Body (request)
-```json
-{
-  "texto": "Mensaje del usuario",
-  "user_id": "ID del usuario"
-}
-```
-
-#### Respuesta Exitosa (200)
-```json
-{
-  "stat": true,
-  "msg": "Respuesta del chatbot"
-}
-```
-
-#### Respuesta de Error (400)
-```json
-{
-  "stat": false,
-  "items": [],
-  "error": true
-}
-```
-
-#### Características del Endpoint
-- **Autenticación**: No requerida
-- **Permisos**: Público
-- **Validación**: Requiere texto y user_id
-- **Transaccional**: No
-- **Rate Limiting**: No
+- Base de datos: `mysql_host`, `mysql_user`, `mysql_password`, `mysql_database`, `mysql_port`
+- API: `service_port_api`, `cors_origin`, `KEY_INT`
+- Búsqueda externa: `SEARCH_SERVICE_ENDPOINT`, `SEARCH_SERVICE_TIMEOUT_MS`, `SEARCH_SERVICE_CACHE_TTL_MS`
+- Zona horaria: el proceso fija `process.env.TZ = 'America/Argentina/Buenos_Aires'`
 
 ---
 
-### 4. Estadística
-
-#### 4.1 Obtener datos estadísticos
-**GET** `/api/estadistica/data`
-
-Devuelve datos estadísticos según el parámetro id_estadistica.
-
-#### Headers
-```
-Content-Type: application/json
-```
-
-#### Parámetros (query)
-```json
-{
-  "id_estadistica": "Tipo de estadística",
-  "id_producto": "ID del producto (opcional)",
-  "id_local": "ID del local (opcional)",
-  "limit": "Límite de resultados (opcional)"
-}
-```
-
-#### Respuesta Exitosa (200)
-```json
-{
-  "stat": true,
-  "items": [ /* array de datos */ ],
-  "media": "valor medio si aplica"
-}
-```
-
-#### Respuesta de Error (400)
-```json
-{
-  "stat": false,
-  "items": [],
-  "error": true
-}
-```
-
-#### Características del Endpoint
-- **Autenticación**: No requerida
-- **Permisos**: Público
-- **Validación**: Requiere id_estadistica
-- **Transaccional**: No
-- **Rate Limiting**: No
-
----
-
-#### 4.2 Cargar precios de usuarios
-**POST** `/api/estadistica/precios_usuarios`
-
-Permite a los usuarios cargar precios de productos de forma comunitaria.
-
-#### Headers
-```
-Content-Type: application/json
-```
-
-#### Body (request)
-```json
-{
-  "fecha": "Fecha de carga",
-  "nombre": "Nombre del usuario",
-  "comercio": "Nombre del comercio",
-  "productos": [
-    {
-      "nombre": "Nombre del producto",
-      "marca": "Marca",
-      "precio": 0,
-      "presentacion": "Presentación"
-    }
-  ]
-}
-```
-
-#### Respuesta Exitosa (200)
-```json
-{
-  "stat": true,
-  "items": [],
-  "error": false
-}
-```
-
-#### Respuesta de Error (400)
-```json
-{
-  "stat": false,
-  "items": [],
-  "error": true
-}
-```
-
-#### Características del Endpoint
-- **Autenticación**: No requerida
-- **Permisos**: Público
-- **Validación**: Estructura del body
-- **Transaccional**: No
-- **Rate Limiting**: No
-
----
-
-### 5. Productos
-
-#### 5.1 Listar productos por categoría
-**GET** `/api/productos/all`
-
-Devuelve los productos de una categoría específica.
-
-#### Headers
-```
-Content-Type: application/json
-```
-
-#### Parámetros (query)
-```json
-{
-  "category_id": "ID de la categoría"
-}
-```
-
-#### Respuesta Exitosa (200)
-```json
-{
-  "stat": true,
-  "items": [ /* array de productos */ ],
-  "error": true
-}
-```
-
-#### Respuesta de Error (400)
-```json
-{
-  "stat": false,
-  "items": [],
-  "error": true
-}
-```
-
-#### Características del Endpoint
-- **Autenticación**: No requerida
-- **Permisos**: Público
-- **Validación**: Requiere category_id
-- **Transaccional**: No
-- **Rate Limiting**: No
-
----
-
-#### 5.2 Cargar nuevo precio
-**PUT** `/api/productos/cargar_nuevo_precio`
-
-Permite cargar un nuevo precio para un producto en un local.
-
-#### Headers
-```
-Content-Type: application/json
-```
-
-#### Body (request)
-```json
-{
-  "product_id": "ID del producto",
-  "branch_id": "ID del local",
-  "price": 0
-}
-```
-
-#### Respuesta Exitosa (200)
-```json
-{
-  "stat": true
-}
-```
-
-#### Respuesta de Error (400)
-```json
-{
-  "stat": false,
-  "error": "Mensaje de error"
-}
-```
-
-#### Características del Endpoint
-- **Autenticación**: No requerida
-- **Permisos**: Público
-- **Validación**: Requiere product_id, branch_id y price
-- **Transaccional**: No
-- **Rate Limiting**: Limita frecuencia y cantidad por IP
-
----
-
-#### 5.3 Importar precios masivos
-**POST** `/api/productos/importar`
-
-Permite importar precios de productos en lote (requiere clave interna).
-
-#### Headers
-```
-Content-Type: application/json
-```
-
-#### Body (request)
-```json
-{
-  "key": "clave interna",
-  "lst_importa": [ /* array de productos a importar */ ]
-}
-```
-
-#### Respuesta Exitosa (200)
-```json
-{
-  "stat": true
-}
-```
-
-#### Respuesta de Error (400)
-```json
-{
-  "stat": false,
-  "error": "Mensaje de error"
-}
-```
-
-#### Características del Endpoint
-- **Autenticación**: Requiere clave interna
-- **Permisos**: Solo sistemas autorizados
-- **Validación**: Estructura del body
-- **Transaccional**: No
-- **Rate Limiting**: No
-
----
-
-#### 5.4 Importar artículo de plataforma
-**POST** `/api/productos/importar_articulo_plataforma`
-
-Permite importar artículos desde plataformas externas (requiere clave interna, actualmente comentada en el código).
-
-#### Headers
-```
-Content-Type: application/json
-```
-
-#### Body (request)
-```json
-[
-  {
-    "plataforma": "ml|region20",
-    "name": "Nombre del artículo",
-    "price": 0,
-    "currency": "pesos|dolares",
-    "category_name": "Categoría",
-    "url": "URL del artículo"
-  }
-]
-```
-
-#### Respuesta Exitosa (200)
-```json
-{
-  "stat": true
-}
-```
-
-#### Respuesta de Error (400)
-```json
-{
-  "stat": false,
-  "error": "Mensaje de error"
-}
-```
-
-#### Características del Endpoint
-- **Autenticación**: Requiere clave interna (comentada en el código)
-- **Permisos**: Solo sistemas autorizados
-- **Validación**: Estructura del body
-- **Transaccional**: No
-- **Rate Limiting**: No
-
----
-
-#### 5.5 Importar ofertas masivas
-**POST** `/api/productos/importar_oferta`
-
-Permite importar ofertas en lote (requiere clave interna).
-
-#### Headers
-```
-Content-Type: application/json
-```
-
-#### Body (request)
-```json
-{
-  "key": "clave interna",
-  "lst_importa": [ /* array de ofertas */ ]
-}
-```
-
-#### Respuesta Exitosa (200)
-```json
-{
-  "stat": true,
-  "res": "Resultado de la importación"
-}
-```
-
-#### Respuesta de Error (400)
-```json
-{
-  "stat": false,
-  "error": "Mensaje de error"
-}
-```
-
-#### Características del Endpoint
-- **Autenticación**: Requiere clave interna
-- **Permisos**: Solo sistemas autorizados
-- **Validación**: Estructura del body
-- **Transaccional**: No
-- **Rate Limiting**: No
-
----
-
-#### 5.6 Importar alquileres
-**POST** `/api/productos/importar_alquiler`
-
-Permite importar propiedades en alquiler (requiere clave interna y hash de validación).
-
-#### Headers
-```
-Content-Type: application/json
-```
-
-#### Body (request)
-```json
-{
-  "key": "clave interna",
-  "titulo": "Título de la propiedad",
-  "locador": "Nombre del locador",
-  "url": "URL",
-  "precio": 0,
-  "moneda": "Moneda",
-  "especificaciones": { /* objeto de especificaciones */ },
-  "hash": "hash de validación"
-}
-```
-
-#### Respuesta Exitosa (200)
-```json
-{
-  "stat": true,
-  "nuevo": 1
-}
-```
-
-#### Respuesta de Error (400)
-```json
-{
-  "stat": false,
-  "error": "Mensaje de error"
-}
-```
-
-#### Características del Endpoint
-- **Autenticación**: Requiere clave interna y hash
-- **Permisos**: Solo sistemas autorizados
-- **Validación**: Estructura del body y hash
-- **Transaccional**: Sí (usa transacciones de BD)
-- **Rate Limiting**: No
-
----
-
-### 6. Administración de Usuarios
-
-#### 6.1 Información de usuario admin
-**GET** `/api/userAdmin/info`
-
-Devuelve información básica de rutas disponibles para el usuario admin.
-
-#### Headers
-```
-Content-Type: application/json
-```
-
-#### Parámetros (query)
-_No requiere parámetros._
-
-#### Respuesta Exitosa (200)
-```json
-{
-  "stat": true,
-  "data": { "rutas": [] }
-}
-```
-
-#### Respuesta de Error (400)
-```json
-{
-  "stat": false,
-  "data": null
-}
-```
-
-#### Características del Endpoint
-- **Autenticación**: Requerida (admin)
-- **Permisos**: Admin
-- **Validación**: No
-- **Transaccional**: No
-- **Rate Limiting**: No
-
----
-
-#### 6.2 Login de usuario admin
-**POST** `/api/userAdmin/login`
-
-Permite iniciar sesión como usuario admin.
-
-#### Headers
-```
-Content-Type: application/json
-```
-
-#### Body (request)
-```json
-{
-  "usuario": "Nombre de usuario",
-  "password": "Contraseña"
-}
-```
-
-#### Respuesta Exitosa (200)
-```json
-{
-  "stat": true,
-  "data": { "rutas": [] }
-}
-```
-
-#### Respuesta de Error (400)
-```json
-{
-  "stat": false,
-  "data": null
-}
-```
-
-#### Características del Endpoint
-- **Autenticación**: No requerida (devuelve rutas si login es correcto)
-- **Permisos**: Admin
-- **Validación**: usuario y password
-- **Transaccional**: No
-- **Rate Limiting**: No
-
----
-
-## Códigos de Error
-- 400: Bad Request
-- 401: Unauthorized
-- 403: Forbidden
-- 404: Not Found
-- 422: Unprocessable Entity
-- 500: Internal Server Error
-
----
-
-## Ejemplos de Uso
-Describir flujos completos de uso de la API. 
+[Volver al README del backend](./README.md)
+[Arquitectura](./arquitectura.md)
+[Definición técnica](./definicion_tecnica.md)

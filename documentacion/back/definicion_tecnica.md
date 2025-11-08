@@ -9,9 +9,9 @@ Este documento especifica los detalles técnicos del backend de forma abstracta 
 - Base de datos (especificar tipo)
 - Knex (migraciones y query builder)
 
-## Estándar de Fechas: Uso de UTC en todo el backend
+## Zona horaria y manejo de fechas
 
-> **Nota:** Todo el backend utiliza **UTC** para el manejo, almacenamiento y comparación de fechas. Todas las operaciones de limpieza, inserción y consulta de fechas usan métodos como `setUTCHours` y `toISOString`. Este es un estándar obligatorio en el proyecto para evitar inconsistencias por zona horaria y garantizar coherencia temporal en todos los procesos.
+El backend establece `process.env.TZ = 'America/Argentina/Buenos_Aires'` y maneja el "día actual" con hora local (UTC-3). Las limpiezas de datos temporales usan `setHours(0,0,0,0)`. La serialización a ISO (`toISOString`) se utiliza cuando corresponde, pero no se emplea `setUTCHours` para cálculos diarios.
 
 ## Estructura de Carpetas
 - `controllers/`: Controladores de rutas
@@ -206,20 +206,19 @@ La tabla `price_today` está diseñada para contener únicamente los precios cor
   await trx('price_today').where('date_time', '<', HOY).del();
   ```
 
-### Limpieza automática de la tabla `estadistica_aumento_diario` y manejo de zona horaria (UTC)
+### Limpieza automática de `estadistica_aumento_diario` y `promociones_hoy`
 
-Para evitar inconsistencias por diferencias de zona horaria, **toda la lógica de limpieza y comparación de fechas en la tabla `estadistica_aumento_diario` se realiza usando UTC**.
+La limpieza de datos temporales usa inicio de día en hora local (UTC-3):
 
-- Al finalizar el procesamiento de la cola de productos (`colaProcProductos`), antes de actualizar la serie compilada, se eliminan todos los registros cuya columna `fecha_utlimo_precio` sea anterior al inicio del día actual en UTC.
-- El cálculo del inicio del día se realiza con:
+- Al vaciarse `colaProcProductos` se ejecuta un callback `onEmpty` que, además de actualizar la serie compilada, elimina registros en `estadistica_aumento_diario` con `fecha_utlimo_precio` anterior a `HOY` (inicio del día local).
+- Al vaciarse `colaProcOfertas` se eliminan registros en `promociones_hoy` con `fecha` anterior a `HOY`.
+- Cálculo de `HOY`:
   ```js
   let HOY = new Date();
-  HOY.setUTCHours(0,0,0,0);
-  await global.knex("estadistica_aumento_diario").where('fecha_utlimo_precio', '<', HOY).del();
+  HOY.setHours(0,0,0,0);
   ```
-- Todas las fechas insertadas y consultadas en la base de datos están en formato UTC (`toISOString()` o equivalente).
 
-**Ventaja:** Esto garantiza que la limpieza y los análisis sean coherentes, independientemente de la ubicación geográfica del servidor o de los clientes.
+Esto mantiene las tablas temporales consistentes con el día operativo local del sistema.
 
 ## Limpieza diaria automática de tablas temporales
 
@@ -240,4 +239,4 @@ Para asegurar que los análisis y reportes reflejen únicamente los datos vigent
 
 - [Volver al README del backend](./README.md)
 - [Arquitectura](./arquitectura.md)
-- [Endpoints](./endpoints.md) 
+- [Endpoints](./endpoints.md)
