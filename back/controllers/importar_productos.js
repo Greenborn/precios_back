@@ -7,10 +7,11 @@ let nuevos_precios_creados = []
 
 async function nuevo_reg_precio( trx, articulo, producto_db, fecha_registro ){
     try {
-        // Limpiar price_today para dejar solo los precios del día actual
-        const HOY = new Date();
-        HOY.setHours(0,0,0,0);
-        await trx('price_today').where('date_time', '<', HOY).del();
+        // Si el precio es menor o igual a cero, no hacer nada
+        if (!articulo.price || articulo.price <= 0) {
+            return false;
+        }
+
         const insert = {
             "id": uuid.v7(),
             "product_id": producto_db.id,
@@ -23,22 +24,49 @@ async function nuevo_reg_precio( trx, articulo, producto_db, fecha_registro ){
             "url": ( articulo.url ) ? articulo.url : null,
             "time": new Date(), // Guardar el timestamp actual en hora local argentina
         }
-        let insert_1 = await trx('price').insert( insert )
-        precio_hoy = {...insert}
-        precio_hoy['id'] = uuid.v7()
-        precio_hoy['product_name'] = articulo.name
-        precio_hoy['price_id']     = insert.id
+        let insert_1 = await trx('price').insert( insert );
 
-        let insert_2 = await trx('price_today').insert( precio_hoy )
-        if (insert_1 && insert_2){
-            nuevos_precios_creados.push( insert )
-            return insert
+        // Preparar registro para price_today
+        let precio_hoy = { ...insert };
+        precio_hoy['id'] = uuid.v7();
+        precio_hoy['product_name'] = articulo.name;
+        precio_hoy['price_id'] = insert.id;
+
+        // Buscar si ya existe registro para product_id y branch_id
+        let existe = await trx('price_today')
+            .where({ product_id: producto_db.id, branch_id: articulo.branch_id })
+            .first();
+
+        let result;
+        if (!existe) {
+            // Si no existe, insertar
+            result = await trx('price_today').insert(precio_hoy);
         } else {
-            return false
+            // Si existe, actualizar
+            result = await trx('price_today')
+                .where({ product_id: producto_db.id, branch_id: articulo.branch_id })
+                .update({
+                    price: articulo.price,
+                    date_time: new Date(),
+                    es_oferta: 0,
+                    confiabilidad: 100,
+                    notas: (articulo?.nota) ? articulo.nota : null,
+                    url: (articulo.url) ? articulo.url : null,
+                    time: new Date(),
+                    product_name: articulo.name,
+                    price_id: insert.id
+                });
+        }
+
+        if (insert_1 && result) {
+            nuevos_precios_creados.push(insert);
+            return insert;
+        } else {
+            return false;
         }
     } catch (error) {
-        console.log(error, 'error al registrar producto')
-        return null
+        console.log(error, 'error al registrar producto');
+        return null;
     }
     
 }
