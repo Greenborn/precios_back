@@ -70,8 +70,12 @@
                         </div>
                     </template>
                     <transition name="fade">
-                        <div v-if="resultados.length != 0">
-                            <div v-for="resultado in resultados" :key="resultado.producto" class="card mb-1 p-0 fade-item">
+                        <div v-if="resultadosPaginados.length != 0">
+                            <div v-for="resultado in resultadosPaginados" :key="resultado.producto" class="card mb-1 p-0 fade-item">
+                            <div v-if="cargandoMas" class="text-center my-3">
+                                <span class="spinner-border" role="status" aria-hidden="true"></span>
+                                <span class="ms-2">Cargando más resultados...</span>
+                            </div>
                                 <div class="card-header p-4 pt-0 pb-0">
                                     <div class="row align-items-center justify-content-center">
                                         <div class="col-12 col-sm-4">
@@ -215,7 +219,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted  } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { busqueda, busqueda_promociones, get_estadistica } from '../../api/public/publicEndpoints'
 
 import { formatMoney, fechaDateToString } from '../../helpers/formatter'
@@ -231,6 +235,10 @@ const storeApp = AppStore()
 const termino_busqueda = ref('')
 const solo_ofertas = ref(false)
 const resultados = ref([]);
+const pagina = ref(1);
+const pageSize = 100;
+const resultadosPaginados = ref([]);
+const cargandoMas = ref(false);
 const estadisticas_inc = ref([])
 const MODAL_STYLE = { width: '100vw', 'min-height': "100vh" }
 const mostrarDisclaimer = ref(true)
@@ -309,6 +317,7 @@ async function buscar ( termino = undefined ) {
     }
 
     resultados.value = []
+    pagina.value = 1
     storeApp.loading = true
     let res = await FUNCION_BUSQUEDA[ solo_ofertas.value ? 'promociones' : 'general' ](termino_busqueda.value);
     if (res) {
@@ -323,25 +332,46 @@ async function buscar ( termino = undefined ) {
             behavior: 'smooth'
         })
 
-        // Filtrar para ignorar precios igual a 0
-        resultados.value = (res?.items ? res.items : []).filter(item => item.price > 0);
-
-        // Ordenar resultados primero por precio (menor a mayor), luego por fecha (más nuevo a más viejo)
-        resultados.value = resultados.value.sort((a, b) => {
-            if (a.price !== b.price) {
-                return a.price - b.price;
-            }
-            // Si el precio es igual, ordenar por fecha más nueva primero
-            const fechaA = new Date(a.date_time).getTime();
-            const fechaB = new Date(b.date_time).getTime();
-            return fechaB - fechaA;
-        });
+        resultados.value = res?.items;
+        actualizarResultadosPaginados();
         return true
     } else {
         storeApp.loading = false
         return false
     }
 }
+
+function actualizarResultadosPaginados() {
+    resultadosPaginados.value = resultados.value.slice(0, pagina.value * pageSize);
+}
+
+function cargarMasResultados() {
+    if (cargandoMas.value) return;
+    if (resultadosPaginados.value.length >= resultados.value.length) return;
+    cargandoMas.value = true;
+    setTimeout(() => {
+        pagina.value++;
+        actualizarResultadosPaginados();
+        cargandoMas.value = false;
+    }, 500); // Simula carga, puede quitarse si es instantáneo
+}
+
+function handleScroll() {
+    const scrollY = window.scrollY || window.pageYOffset;
+    const windowHeight = window.innerHeight;
+    const docHeight = document.documentElement.scrollHeight;
+    if (scrollY + windowHeight >= docHeight - 200) {
+        cargarMasResultados();
+    }
+}
+
+onMounted(() => {
+    window.addEventListener('scroll', handleScroll);
+});
+
+onBeforeUnmount(() => {
+    window.removeEventListener('scroll', handleScroll);
+});
 
 function formateaFecha( fecha, time ){
     let hora = new Date(time)
@@ -436,9 +466,6 @@ onMounted(async ()=>{
 }
 .fade-enter-from, .fade-leave-to {
   opacity: 0;
-}
-.fade-item {
-  /* Para asegurar que la transición se aplique a cada tarjeta */
 }
 
 .form-control:focus, .btn:focus {
