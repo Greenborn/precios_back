@@ -6,36 +6,6 @@ const fs = require("fs")
 const busqueda_productos = require("../controllers/busqueda_productos")
 const utils = require("../helpers/utils")
 
-async function buscar_precios_producto( id_producto ){
-  return new Promise(async (resolve, reject) => {
-    try{
-      let branch_diccio = {}
-
-      let precios = await global.knex('price')
-                      .orderBy('date_time', 'desc')
-                      .where({ product_id: id_producto }).limit(10)//
-      
-      let salida = []
-      if (precios){
-        //console.log('buscar_precios_producto precios', precios.length, 'id_producto ', id_producto)
-        for (let i=0; i < precios.length; i++){
-          let branch_id = precios[i].branch_id
-          if (!branch_diccio[branch_id] || (branch_diccio[branch_id] && precios[i].notas !== null)){
-            if (precios[i].notas == null)
-              branch_diccio[branch_id] = true
-            salida.push(precios[i])
-          }
-        }
-        resolve(salida)  
-      } else
-        resolve([])
-
-    } catch (error) {
-      console.log('buscar_precios_producto',error)
-      resolve([])
-    }       
-  })
-}
 
 function insertar_ordenado( array_, elemento, campo="price", sentido = "asc" ){
   const ARR_LEN = array_.length
@@ -65,13 +35,23 @@ async function hacer_busqueda( termino, metodo ){
 
       let productos = await busqueda_productos.busqueda(termino, 200)      
 
-      let diccio_productos = {}
-      let diccio_precios = {}
       let list_precios = []
 
       if (productos){
-        console.log("Cant encontrados ", productos.length)
-        let proms_precios = []
+        console.log("Cant encontrados ", productos)
+
+        for (let i=0; i < productos.length; i++){
+          let result_precio = productos[i]
+
+          result_precio["empresa"]  = global.enterprice_diccio[global.branchs_diccio[result_precio["branch_id"]].enterprise_id]
+          result_precio["locales"]  = global.branch_enterprice_diccio[global.branchs_diccio[result_precio["branch_id"]].enterprise_id]
+          //result_precio["products"] = diccio_productos[result_precio["product_id"]]
+
+          list_precios = insertar_ordenado(list_precios, result_precio)
+        }
+
+        //console.log("list_precios",list_precios)
+        /*let proms_precios = []
         for (let i=0; i < productos.length; i++){
           proms_precios.push(buscar_precios_producto(productos[i].id))
           diccio_productos[productos[i].id] = productos[i]
@@ -79,20 +59,7 @@ async function hacer_busqueda( termino, metodo ){
 
         let res_precios = await Promise.all(proms_precios)
         if (res_precios){
-          for (let i=0; i < res_precios.length; i++){
-            for (let j=0; j < res_precios[i].length; j++){
-              let result_precio = res_precios[i][j]
-              if (diccio_precios[result_precio["id"]] != undefined) //si ya existe no seagre a la salida
-                continue
-
-              diccio_precios[result_precio["id"]] = result_precio
-              result_precio["empresa"]  = global.enterprice_diccio[global.branchs_diccio[result_precio["branch_id"]].enterprise_id]
-              result_precio["locales"]  = global.branch_enterprice_diccio[global.branchs_diccio[result_precio["branch_id"]].enterprise_id]
-              result_precio["products"] = diccio_productos[result_precio["product_id"]]
-
-              list_precios = insertar_ordenado(list_precios, result_precio)
-            }
-          }
+          
 
           let aux = []
           for (let i=0; i < list_precios.length; i++){
@@ -104,8 +71,9 @@ async function hacer_busqueda( termino, metodo ){
         } else
           resolve([])
         
-      } else 
-        resolve([])
+      } else */
+        resolve(list_precios)
+      }
 
     } catch (error) {
       console.log(error)

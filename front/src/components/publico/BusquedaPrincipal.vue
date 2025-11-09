@@ -88,7 +88,7 @@
                                             </b>
                                         </div>
                                         <div class="col-12 col-sm product-name-cont">
-                                            <span v-html="resaltarBusqueda(resultado?.products?.name, termino_busqueda)"></span>
+                                            <span v-html="resaltarBusqueda(resultado?.name, termino_busqueda)"></span>
                                             &nbsp;
                                             <small v-if="resultado?.url"><a :href="resultado?.url" target="_blank">IR A WEB</a></small>
                                             &nbsp;
