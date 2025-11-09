@@ -18,6 +18,9 @@ exports.inicializa_buscador = async function() {
 
     // Usar price_today para inicializar el buscador
     const productosHoy = await global.knex('price_today').select()
+        .orderBy('date_time', 'desc')
+        .orderBy('price', 'asc')
+        .where('price', '<>', 0)
     for (let i = 0; i < productosHoy.length; i++) {
         const nombre = productosHoy[i].product_name
         let props = obtener_propiedades(nombre)
