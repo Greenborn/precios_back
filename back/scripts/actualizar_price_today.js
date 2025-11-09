@@ -54,7 +54,7 @@ async function actualizarPriceToday() {
         await trx.raw(`INSERT INTO tmp_pairs (product_id, branch_id) VALUES ${values}`)
       }
 
-      // Seleccionar el último registro por cada par limitado a tmp_pairs
+      // Seleccionar el último registro por cada par limitado a tmp_pairs, excluyendo precios igual a 0
       await trx.raw(`
         CREATE TEMPORARY TABLE tmp_latest AS 
         SELECT 
@@ -85,6 +85,7 @@ async function actualizarPriceToday() {
             )) AS mx
           FROM price p
           INNER JOIN tmp_pairs tp ON p.product_id = tp.product_id AND p.branch_id = tp.branch_id
+          WHERE p.price > 0
           GROUP BY tp.product_id, tp.branch_id
         ) t 
           ON p.product_id = t.product_id 
@@ -95,9 +96,17 @@ async function actualizarPriceToday() {
            '|', p.id
          ) = t.mx
         INNER JOIN products pr ON pr.id = p.product_id
+        WHERE p.price > 0
       `)
 
-      // Reemplazar combinaciones del chunk
+      // Eliminar registros con precio 0 de price_today para las combinaciones del chunk
+      await trx.raw(`
+        DELETE pt 
+        FROM price_today pt
+        INNER JOIN tmp_pairs tp ON pt.product_id = tp.product_id AND pt.branch_id = tp.branch_id
+        WHERE pt.price = 0
+      `)
+      // Reemplazar combinaciones del chunk (solo las que tienen precio > 0)
       await trx.raw(`
         DELETE pt 
         FROM price_today pt
@@ -138,6 +147,7 @@ async function actualizarPriceToday() {
           product_name,
           price_id
         FROM tmp_latest
+        WHERE price > 0
       `)
 
       await trx.raw('DROP TEMPORARY TABLE IF EXISTS tmp_pairs')
