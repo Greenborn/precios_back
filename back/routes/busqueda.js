@@ -6,39 +6,14 @@ const fs = require("fs")
 const busqueda_productos = require("../controllers/busqueda_productos")
 const utils = require("../helpers/utils")
 
-
-function insertar_ordenado( array_, elemento, campo="price", sentido = "asc" ){
-  const ARR_LEN = array_.length
-
-  if (ARR_LEN == 0){
-    array_.push(elemento)
-    return array_
-  }
-
-  for (let i=0; i < ARR_LEN; i++){
-    if (sentido == "asc" && array_[i][campo] > elemento[campo]){
-      array_.splice(i, 0, elemento)
-      return array_
-    } else if (sentido == "desc" && array_[i][campo] < elemento[campo]){
-      array_.splice(i, 0, elemento)
-      return array_
-    }
-  }
-
-  array_.push(elemento)
-  return array_
-}
-
 async function hacer_busqueda( termino, metodo ){
   return new Promise(async (resolve, reject) => {
     try{
 
       let productos = await busqueda_productos.busqueda(termino, 200)      
 
-      let list_precios = []
-
       if (productos){
-        console.log("Cant encontrados ", productos)
+        console.log("Cant encontrados ", productos.length)
 
         for (let i=0; i < productos.length; i++){
           let result_precio = productos[i]
@@ -46,33 +21,9 @@ async function hacer_busqueda( termino, metodo ){
           result_precio["empresa"]  = global.enterprice_diccio[global.branchs_diccio[result_precio["branch_id"]].enterprise_id]
           result_precio["locales"]  = global.branch_enterprice_diccio[global.branchs_diccio[result_precio["branch_id"]].enterprise_id]
           //result_precio["products"] = diccio_productos[result_precio["product_id"]]
-
-          list_precios = insertar_ordenado(list_precios, result_precio)
         }
 
-        //console.log("list_precios",list_precios)
-        /*let proms_precios = []
-        for (let i=0; i < productos.length; i++){
-          proms_precios.push(buscar_precios_producto(productos[i].id))
-          diccio_productos[productos[i].id] = productos[i]
-        }
-
-        let res_precios = await Promise.all(proms_precios)
-        if (res_precios){
-          
-
-          let aux = []
-          for (let i=0; i < list_precios.length; i++){
-            list_precios[i]['date_time'] = new Date(list_precios[i]['date_time']).getTime()
-            aux = insertar_ordenado(aux, list_precios[i], 'date_time', "desc")
-          }
-
-          resolve(aux)   
-        } else
-          resolve([])
-        
-      } else */
-        resolve(list_precios)
+        resolve(productos)
       }
 
     } catch (error) {

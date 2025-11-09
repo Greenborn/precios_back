@@ -28,7 +28,8 @@ exports.inicializa_buscador = async function() {
             'price':      productosHoy[i].price,
             'branch_id':  productosHoy[i].branch_id,
             'date_time':  productosHoy[i].date_time,
-            'time':       productosHoy[i].time
+            'time':       productosHoy[i].time,
+            'url':        productosHoy[i].url,
         }
         let o_k = Object.keys(props)
         for (let j = 0; j < o_k.length; j++) {
@@ -75,7 +76,8 @@ exports.busqueda = async function( termino, limit = -1 ) {
                             'branch_id':e_actual.branch_id,
                             'product_id':e_actual.product_id,
                             'date_time':e_actual.date_time,
-                            'time':e_actual.time
+                            'time':e_actual.time,
+                            'url':e_actual.url
                         })
                         encontrados.push(e_actual)
                         break

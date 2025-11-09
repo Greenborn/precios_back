@@ -147,9 +147,16 @@ function programarActualizacionPriceToday(){
     }
     priceTodayJobRunning = true
     const child = fork(path.join(__dirname, 'scripts', 'actualizar_price_today.js'))
-    child.on('exit', (code) => {
+    child.on('exit', async (code) => {
       priceTodayJobRunning = false
       console.log('[price_today] Job finalizado con código', code)
+      // Actualizar la estructura de búsqueda después de actualizar price_today
+      try {
+        await busqueda_productos.inicializa_buscador();
+        console.log('[busqueda_productos] Estructura de búsqueda actualizada tras price_today.');
+      } catch (err) {
+        console.error('[busqueda_productos] Error al actualizar estructura de búsqueda:', err);
+      }
     })
     child.on('error', (err) => {
       priceTodayJobRunning = false
