@@ -88,7 +88,7 @@
                                             </b>
                                         </div>
                                         <div class="col-12 col-sm product-name-cont">
-                                            <span v-html="resaltarBusqueda(resultado?.products?.name, termino_busqueda)"></span>
+                                            <span v-html="resaltarBusqueda(resultado?.name, termino_busqueda)"></span>
                                             &nbsp;
                                             <small v-if="resultado?.url"><a :href="resultado?.url" target="_blank">IR A WEB</a></small>
                                             &nbsp;
@@ -323,45 +323,19 @@ async function buscar ( termino = undefined ) {
             behavior: 'smooth'
         })
 
-        resultados.value = res?.items ? res.items: [];
+        // Filtrar para ignorar precios igual a 0
+        resultados.value = (res?.items ? res.items : []).filter(item => item.price > 0);
 
-        //agrupando por confiabilidad y fecha
-        let diccio_ = {}
-        for (let i = 0; i < resultados.value.length; i++){
-            const item = resultados.value[i]
-            const fecha = new Date( item.date_time ).getTime()
-
-            if (diccio_[ item.confiabilidad ] == undefined)
-                diccio_[ item.confiabilidad ] = {}
-
-            if (diccio_[ item.confiabilidad ][ fecha ] == undefined)
-                diccio_[ item.confiabilidad ][ fecha ] = []
-            
-            diccio_[ item.confiabilidad ][ fecha ].push( item )
-        }
-        
-        //Se ordenan las claves de los diccionarios
-        let confia_keys = Object.keys( diccio_ )
-        confia_keys.sort( (a, b) => (a > b) ? 1 : -1 )
-
-        let diccio_date_k = {}
-        for (let i = 0; i < confia_keys.length; i++){
-            diccio_date_k[ confia_keys[i] ] = Object.keys( diccio_[ confia_keys[i] ] )
-            diccio_date_k[ confia_keys[i] ].sort( (a, b) => (a < b) ? 1 : -1 )
-        }
-
-        //Se genera nuevo arreglo de resultados ordenado
-        let aux = []
-        for (let i = 0; i < confia_keys.length; i++)
-            for (let j=0; j < diccio_date_k[ confia_keys[i] ].length; j ++) {
-                let aux_1 = diccio_[ confia_keys[i] ][ diccio_date_k[ confia_keys[i] ][j] ]
-                aux_1.sort( (a, b) => (a.price > b.price) ? 1 : -1 )
-
-                for (let k = 0; k < aux_1.length; k++ )
-                    aux.push( aux_1[ k ] )
+        // Ordenar resultados primero por precio (menor a mayor), luego por fecha (más nuevo a más viejo)
+        resultados.value = resultados.value.sort((a, b) => {
+            if (a.price !== b.price) {
+                return a.price - b.price;
             }
-
-        resultados.value = aux
+            // Si el precio es igual, ordenar por fecha más nueva primero
+            const fechaA = new Date(a.date_time).getTime();
+            const fechaB = new Date(b.date_time).getTime();
+            return fechaB - fechaA;
+        });
         return true
     } else {
         storeApp.loading = false
