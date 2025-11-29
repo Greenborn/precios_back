@@ -1,6 +1,7 @@
 require("dotenv").config({ path: '../.env' })
 const uuid = require("uuid")
 const utils = require("../helpers/utils")
+const busqueda_productos = require("./busqueda_productos")
 
 let precios_actualizados = []
 let nuevos_precios_creados = []
@@ -60,6 +61,18 @@ async function nuevo_reg_precio( trx, articulo, producto_db, fecha_registro ){
 
         if (insert_1 && result) {
             nuevos_precios_creados.push(insert);
+            
+            // Actualizar estructura de búsqueda en tiempo real
+            busqueda_productos.agregar_a_buscador({
+                product_name: articulo.name,
+                product_id: producto_db.id,
+                price: articulo.price,
+                branch_id: articulo.branch_id,
+                date_time: insert.date_time,
+                time: insert.time,
+                url: insert.url
+            });
+            
             return insert;
         } else {
             return false;
@@ -175,8 +188,20 @@ async function procesa_precio( trx, producto_db, articulo, fecha_registro ){
                 let repetido = await global.knex('price_today').where({
                     'price_id': ultimo_precio.id,
                 }).first()
-                if (!repetido)
+                if (!repetido) {
                     await trx('price_today').insert( precio_hoy )
+                    
+                    // Actualizar estructura de búsqueda (mismo precio, solo actualiza timestamp)
+                    busqueda_productos.agregar_a_buscador({
+                        product_name: articulo.name,
+                        product_id: producto_db.id,
+                        price: ultimo_precio.price,
+                        branch_id: articulo.branch_id,
+                        date_time: new Date(),
+                        time: new Date(),
+                        url: articulo.url
+                    });
+                }
                 return resolve(true)
             } else  if (!ultimo_precio) {
                 let nuevo_precio = await nuevo_reg_precio( trx, articulo, producto_db, fecha_registro )

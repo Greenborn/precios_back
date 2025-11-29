@@ -135,7 +135,6 @@ async function base_de_datos_iniciada(){
   programarActualizacionPriceToday()
 }
 
-// Scheduler no bloqueante: corre el script en un proceso hijo para evitar bloquear el event loop
 let priceTodayJobRunning = false
 function programarActualizacionPriceToday(){
   const { fork } = require('child_process')
@@ -165,6 +164,4 @@ function programarActualizacionPriceToday(){
   }
   // Ejecutar una vez al inicio
   run()
-  // Repetir cada 24 horas
-  setInterval(run, 24 * 60 * 60 * 1000)
 }
