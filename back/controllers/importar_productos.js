@@ -163,7 +163,13 @@ async function procesa_precio( trx, producto_db, articulo, fecha_registro ){
         let HOY = new Date()
         HOY.setHours(0,0,0,1)
 
-        let ultimo_precio = await global.knex('price').select().where('product_id', producto_db.id).orderBy('time', 'desc').first()
+        // IMPORTANTE: Buscar último precio del MISMO producto Y MISMA sucursal
+        let ultimo_precio = await global.knex('price').select()
+            .where('product_id', producto_db.id)
+            .where('branch_id', articulo.branch_id)
+            .orderBy('time', 'desc')
+            .first()
+        
         if (ultimo_precio){
             if (Math.abs(ultimo_precio.price - articulo?.price) > 1){
                 let nuevo_precio = await nuevo_reg_precio( trx, articulo, producto_db, fecha_registro )
