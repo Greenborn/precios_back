@@ -2,12 +2,14 @@ let lst_letras = {}
 
 function obtener_propiedades(name) {
     let letras = {}
+    // Convertir a minúsculas para búsqueda case-insensitive
+    const nameLower = name.toLowerCase()
 
-    for (let i = 0; i < name.length; i++) {
-        if (!letras[name[i]])
-            letras[name[i]] = []
+    for (let i = 0; i < nameLower.length; i++) {
+        if (!letras[nameLower[i]])
+            letras[nameLower[i]] = []
 
-        letras[name[i]].push(i)
+        letras[nameLower[i]].push(i)
     }
     return letras
 }
@@ -23,10 +25,12 @@ exports.inicializa_buscador = async function() {
         .where('price', '<>', 0)
     for (let i = 0; i < productosHoy.length; i++) {
         const nombre = productosHoy[i].product_name
+        const nombreLower = nombre.toLowerCase()  // Para indexación
         let props = obtener_propiedades(nombre)
         let aux = {
             'dsc':        props,
-            'name':       nombre,
+            'name':       nombre,  // Guardamos el nombre original
+            'nameLower':  nombreLower,  // Guardamos versión en minúsculas para búsqueda
             'product_id': productosHoy[i].product_id,
             'price':      productosHoy[i].price,
             'branch_id':  productosHoy[i].branch_id,
@@ -86,10 +90,12 @@ exports.agregar_a_buscador = function(producto) {
 
     // Crear la nueva entrada
     const nombre = producto.product_name
+    const nombreLower = nombre.toLowerCase()  // Para búsqueda case-insensitive
     let props = obtener_propiedades(nombre)
     let aux = {
         'dsc':        props,
-        'name':       nombre,
+        'name':       nombre,  // Guardamos el nombre original
+        'nameLower':  nombreLower,  // Guardamos versión en minúsculas para búsqueda
         'product_id': producto.product_id,
         'price':      producto.price,
         'branch_id':  producto.branch_id,
@@ -114,6 +120,8 @@ exports.agregar_a_buscador = function(producto) {
 
 
 exports.busqueda = async function( termino, limit = -1 ) {
+    // Convertir término de búsqueda a minúsculas para búsqueda case-insensitive
+    termino = termino.toLowerCase()
     let palabras = termino.split(" ")
     let encontrados = []
     let encontrados_k = []
@@ -133,15 +141,16 @@ exports.busqueda = async function( termino, limit = -1 ) {
             const posiciones_letras = e_actual.dsc[primera_letra]
             for (let NUM_APARICION = 0; NUM_APARICION < posiciones_letras.length; NUM_APARICION++) {
                 let POS_T = 0
-                for (let POS_LETRA = posiciones_letras[NUM_APARICION]; POS_LETRA < e_actual.name.length; POS_LETRA++) {
-                    const letra_db = e_actual.name[POS_LETRA]
+                // Usar nameLower para comparación case-insensitive
+                for (let POS_LETRA = posiciones_letras[NUM_APARICION]; POS_LETRA < e_actual.nameLower.length; POS_LETRA++) {
+                    const letra_db = e_actual.nameLower[POS_LETRA]
                     if (letra_db != palabra[POS_T])
                         break
                     POS_T++
                     if (POS_T == palabra.length) {
                         encontrados_k.push({
                             'id':e_actual.id,
-                            'name':e_actual.name,
+                            'name':e_actual.name,  // Retornar nombre original con mayúsculas/minúsculas
                             'price':e_actual.price,
                             'branch_id':e_actual.branch_id,
                             'product_id':e_actual.product_id,

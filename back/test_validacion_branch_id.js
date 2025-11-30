@@ -49,8 +49,9 @@ async function testValidacionBranchId() {
         // 2. Agregar mismo producto en 3 sucursales diferentes con precios diferentes
         console.log('\n2. Agregando mismo producto en 3 sucursales diferentes...')
         
+        // Usar mayúsculas/minúsculas mezcladas para validar búsqueda case-insensitive
         const producto_base = {
-            product_name: 'Coca Cola 2.25L',
+            product_name: 'Coca Cola 2.25L Test Validacion',  // Con mayúsculas
             product_id: 'test-coca-001',
         }
 
@@ -87,8 +88,8 @@ async function testValidacionBranchId() {
         })
         console.log('   ✓ Sucursal 3: $950.00')
 
-        // 3. Buscar el producto y verificar que existen 3 entradas
-        console.log('\n3. Buscando "Coca Cola"...')
+        // 3. Buscar con MINÚSCULAS (debe encontrar productos con MAYÚSCULAS)
+        console.log('\n3. Buscando "coca cola" (en minúsculas)...')
         let resultados = await busqueda_productos.busqueda('coca cola', 100)
         const productos_coca = resultados.filter(p => p.product_id === 'test-coca-001')
         
@@ -113,7 +114,7 @@ async function testValidacionBranchId() {
             price: 1350.00,
             date_time: new Date(),
             time: new Date(),
-            url: 'https://sucursal2.com/coca'
+            url: 'https://sucursal2.com/coca-actualizado'
         })
         console.log('   ✓ Precio actualizado')
 

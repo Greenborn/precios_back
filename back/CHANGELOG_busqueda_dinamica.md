@@ -19,6 +19,13 @@
    - Retorna `true/false` según el resultado
    - Logging detallado de operaciones
 
+3. **Búsqueda Case-Insensitive**
+   - La función `busqueda()` ahora es case-insensitive
+   - Los nombres se almacenan en su forma original + versión en minúsculas
+   - La comparación se realiza siempre en minúsculas
+   - Los resultados retornan el nombre original del producto
+   - Funciona con cualquier combinación de mayúsculas/minúsculas
+
 #### `controllers/importar_productos.js`
 
 1. **Integración automática con búsqueda**
@@ -29,8 +36,11 @@
 ### 🔧 Modificaciones
 
 #### Archivo: `controllers/busqueda_productos.js`
+- **Línea 3-13**: Modificada función `obtener_propiedades()` para convertir a minúsculas
+- **Línea 20-26**: En `inicializa_buscador()` se agrega campo `nameLower` para búsqueda case-insensitive
 - **Línea 45-61**: Nueva función `eliminar_de_buscador()`
-- **Línea 63-118**: Nueva función `agregar_a_buscador()`
+- **Línea 63-118**: Nueva función `agregar_a_buscador()` con soporte case-insensitive
+- **Línea 120-165**: Modificada función `busqueda()` para convertir término a minúsculas y comparar con `nameLower`
 
 #### Archivo: `controllers/importar_productos.js`
 - **Línea 4**: Importación del módulo `busqueda_productos`
@@ -43,12 +53,27 @@
    - Script completo de pruebas automatizadas
    - Valida todas las funcionalidades nuevas
    - Incluye 8 casos de prueba
+   - Prueba búsqueda case-insensitive
 
-2. **`documentacion/busqueda_dinamica.md`**
+2. **`test_validacion_branch_id.js`**
+   - Test de validación de separación por sucursal
+   - Valida que no se pisen precios entre sucursales
+   - Prueba búsqueda case-insensitive
+
+3. **`test_case_insensitive.js`**
+   - Test específico para validar búsqueda case-insensitive
+   - 7 casos de prueba con diferentes combinaciones de mayúsculas/minúsculas
+   - Valida que funciona con productos en mayúsculas, minúsculas y mezclados
+
+4. **`documentacion/busqueda_dinamica.md`**
    - Documentación completa de las nuevas funcionalidades
    - Diagramas de flujo
    - Ejemplos de uso
-   - Notas técnicas
+   - Notas técnicas sobre case-insensitive
+
+5. **`documentacion/validacion_branch_id.md`**
+   - Documentación de la corrección del bug crítico
+   - Garantías de separación por sucursal
 
 ### 🎯 Impacto
 
@@ -62,13 +87,22 @@
 - ✅ Sin duplicados en la estructura de búsqueda
 - ✅ Memoria optimizada (limpieza automática)
 - ✅ Sincronización garantizada entre `price_today` y estructura de búsqueda
+- ✅ **Búsqueda case-insensitive**: Funciona con mayúsculas, minúsculas o mezclado
 
 ### 🧪 Testing
 
 Para ejecutar las pruebas:
 ```bash
 cd back
+
+# Test de búsqueda dinámica
 node test_busqueda_dinamica.js
+
+# Test de validación de separación por sucursal
+node test_validacion_branch_id.js
+
+# Test de búsqueda case-insensitive
+node test_case_insensitive.js
 ```
 
 ### 📊 Performance

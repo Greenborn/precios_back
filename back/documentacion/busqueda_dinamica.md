@@ -33,6 +33,7 @@ Agrega o actualiza un producto en la estructura de búsqueda.
 - ✅ Si ya existe un producto con el mismo `product_id` y `branch_id`, primero lo elimina
 - ✅ Evita duplicados en la estructura
 - ✅ Actualiza todas las letras indexadas automáticamente
+- ✅ **Búsqueda case-insensitive**: Se puede buscar con mayúsculas o minúsculas indistintamente
 - ✅ Retorna `true` si se agregó correctamente, `false` si faltan campos requeridos
 
 **Ejemplo de uso:**
@@ -175,8 +176,33 @@ node test_busqueda_dinamica.js
 3. **Eficiencia**: No requiere regenerar toda la estructura
 4. **Consistencia**: Garantiza que `price_today` y la estructura de búsqueda estén sincronizadas
 5. **Memoria optimizada**: Limpia arrays vacíos automáticamente
+6. **Case-insensitive**: La búsqueda funciona independientemente de mayúsculas/minúsculas
 
 ## 📝 Notas Técnicas
+
+### Búsqueda Case-Insensitive
+
+La búsqueda es **case-insensitive**, lo que significa que:
+
+- Buscar "coca cola" encuentra productos nombrados como "Coca Cola", "COCA COLA", "CoCa CoLa", etc.
+- Los nombres de productos se almacenan tanto en su forma original como en minúsculas
+- La comparación se realiza siempre en minúsculas
+- Los resultados retornan el nombre original del producto (con sus mayúsculas/minúsculas)
+
+**Ejemplo:**
+```javascript
+// Producto almacenado: "Leche La Serenísima ENTERA 1L"
+
+// Todas estas búsquedas lo encuentran:
+busqueda('leche')           // ✓
+busqueda('LECHE')           // ✓
+busqueda('Leche')           // ✓
+busqueda('leche serenisima') // ✓
+busqueda('LECHE SERENISIMA') // ✓
+
+// El resultado siempre retorna el nombre original:
+// → "Leche La Serenísima ENTERA 1L"
+```
 
 ### Identificación única
 Un producto se identifica de forma única por la combinación de:

@@ -52,7 +52,7 @@ async function testBusquedaDinamica() {
         // 3. Agregar un nuevo producto de prueba
         console.log('\n3. Agregando producto de prueba a la estructura...')
         const productoTest = {
-            product_name: 'Leche Descremada Test 1L',
+            product_name: 'Leche Descremada Test 1L',  // Con mayúsculas - debe encontrarse con minúsculas
             product_id: 'test-prod-001',
             price: 999.99,
             branch_id: 1,
