@@ -1,194 +1,649 @@
-# Documentación de Endpoints del Backend
+# 📡 Endpoints del Backend
 
-## Información General
-- Base pública: `/publico`
-- Base administrativa: `/admin`
-- Autenticación: actualmente no se aplica (middleware de autorización deshabilitado)
-- Formato de respuestas: JSON
+Documentación completa de todos los endpoints REST disponibles en la API de Precios.
 
-Notas:
-- El backend monta routers bajo `/publico` y `/admin`. Las rutas mostradas aquí incluyen esos prefijos.
-- El servicio de búsqueda externa se configura por variables de entorno (`SEARCH_SERVICE_ENDPOINT`, `SEARCH_SERVICE_TIMEOUT_MS`, `SEARCH_SERVICE_CACHE_TTL_MS`).
+## 🎯 Convenciones
 
----
+| Aspecto | Detalles |
+|---------|----------|
+| **Base pública** | `/publico` |
+| **Base administrativa** | `/admin` |
+| **Formato de respuesta** | JSON |
+| **Autenticación** | Opcional por rol |
+| **Encoding** | UTF-8 |
 
-## Búsqueda
+## 📚 Tabla de Contenidos
 
-### Buscar precios de productos
-GET `/publico/busqueda/precios`
-
-- Parámetros (query):
-  - `product_name` (string, mínimo 3 caracteres)
-- Comportamiento:
-  - Si el término contiene "alquiler", busca propiedades en alquiler.
-  - Usa servicio externo de búsqueda si está configurado; si falla, hace búsqueda interna.
-- Respuesta 200:
-  - `{ stat: true, items: [...] }`
-- Respuesta error:
-  - `{ stat: false, items: [], error: true }`
-
-### Buscar promociones
-GET `/publico/busqueda/promociones`
-
-- Parámetros (query):
-  - `product_name` (string, mínimo 3 caracteres)
-- Respuesta 200:
-  - `{ stat: true, items: [...] }`
-
-### Comercios con promociones
-GET `/publico/busqueda/comercios_promociones`
-
-- Sin parámetros.
-- Respuesta 200:
-  - `{ stat: true, items: [...] }`
+1. [Búsqueda](#búsqueda)
+2. [Categorías](#categorías)
+3. [Productos](#productos)
+4. [Importación](#importación)
+5. [Análisis y Estadísticas](#análisis-y-estadísticas)
+6. [Respuestas Estándar](#respuestas-estándar)
 
 ---
 
-## Categorías
+## 🔍 Búsqueda
 
-### Listar categorías
-GET `/publico/categorias/all`
+### Buscar Precios de Productos
 
-- Sin parámetros.
-- Respuesta 200: `{ stat: true, items: [...] }`
+```http
+GET /publico/busqueda/precios?product_name=TÉRMINO
+```
 
-### Empresas por categoría
-GET `/publico/categorias/get_empresas_categoria`
+**Parámetros Query**:
+| Parámetro | Tipo | Requerido | Descripción |
+|-----------|------|----------|-------------|
+| `product_name` | string | ✅ | Término de búsqueda (min 3 caracteres) |
 
-- Parámetros (query): `menu_category_id`
-- Respuesta 200: `{ stat: true, items: [...] }`
+**Comportamiento**:
+- ✅ Búsqueda case-insensitive
+- ✅ Indexación en memoria ultrarrápida
+- ✅ Dinámicamente actualizado en cada importación
+- 🔄 Si contiene "alquiler" → busca propiedades de alquiler
 
-### Subcategorías de una categoría
-GET `/publico/categorias/get_sub_categorias`
+**Respuesta 200 (Éxito)**:
+```json
+{
+  "stat": true,
+  "items": [
+    {
+      "product_id": "uuid-1",
+      "name": "Leche entera La Serenísima 1L",
+      "price": 1250,
+      "branch_id": 5,
+      "branch_name": "Sucursal Centro",
+      "empresa": "Supermercado X",
+      "locales": [
+        {
+          "branch_id": 5,
+          "branch_name": "Centro",
+          "price": 1250
+        }
+      ]
+    }
+  ]
+}
+```
 
-- Parámetros (query): `cat_menu_id`
-- Respuesta 200: `{ stat: true, items: [...] }`
+**Respuesta 400 (Parámetro inválido)**:
+```json
+{
+  "stat": false,
+  "error": "product_name must be at least 3 characters"
+}
+```
 
-### Categorías de una empresa
-GET `/publico/categorias/get_categoria_empresa`
-
-- Parámetros (query): `enterprise_id`
-- Respuesta 200: `{ stat: true, items: [...] }`
-
----
-
-## Productos
-
-### Productos por categoría
-GET `/publico/productos/all`
-
-- Parámetros (query): `category_id`
-- Respuesta 200: `{ stat: true, items: [...] }`
-
-### Cargar nuevo precio
-PUT `/publico/productos/cargar_nuevo_precio`
-
-- Body JSON:
-  - `product_id` (string)
-  - `branch_id` (string)
-  - `price` (number)
-- Notas:
-  - Aplica límites básicos por IP y combinación producto-sucursal.
-- Respuesta 200:
-  - `{ stat: true }` o `{ stat: false, error: "..." }`
-
-### Importar artículos de plataformas
-POST `/publico/productos/importar_articulo_plataforma`
-
-- Body JSON: array de items con campos como `name`, `price`, `currency`, `category_name`, `url`, `plataforma` (`ml` | `region20`).
-- Notas:
-  - Validación por `key` actualmente deshabilitada.
-- Respuesta 200: `{ stat: true }`
-
-### Importar ofertas
-POST `/publico/productos/importar_oferta`
-
-- Body JSON:
-  - `key` (string, debe igualar `KEY_INT`)
-  - `lst_importa` (array de items `{ titulo, precio, branch_id, url, datos_extra }`)
-- Respuesta 200: `{ stat: true }`
-
-### Importar alquileres
-POST `/publico/productos/importar_alquiler`
-
-- Body JSON:
-  - `key` (string, debe igualar `KEY_INT`)
-  - `titulo`, `locador`, `url`, `precio`, `moneda`, `especificaciones` (objeto), `hash` (MD5 de campos)
-- Respuesta 200: `{ stat: true, nuevo: 0|1|2 }`
-
-### Importación masiva de productos
-POST `/publico/productos/importar`
-
-- Body JSON:
-  - `key` (string, debe igualar `KEY_INT`)
-  - `lst_importa` (array de artículos)
-- Comportamiento:
-  - Los items se agregan a una cola en memoria (`colaProcProductos`) y se procesan en lotes periódicos.
-- Respuesta 200: `{ stat: true, count: <n> }`
+**Respuesta 500 (Error interno)**:
+```json
+{
+  "stat": false,
+  "items": [],
+  "error": true
+}
+```
 
 ---
 
-## Estadística
+### Buscar Promociones
 
-### Datos estadísticos
-GET `/publico/estadistica/data`
+```http
+GET /publico/busqueda/promociones?product_name=TÉRMINO
+```
 
-- Parámetros (query):
-  - `id_estadistica` (string): uno de `incremental_stats`, `precios_por_negocio`, `trending`, `mayor_aumento_diario`, `variacion_precio`
-  - `limit` (number, opcional para `mayor_aumento_diario`)
-  - `id_producto`, `id_local` (para `variacion_precio`)
-- Respuesta 200: `{ stat: true, items: [...] }`
+**Parámetros Query**:
+| Parámetro | Tipo | Requerido | Descripción |
+|-----------|------|----------|-------------|
+| `product_name` | string | ✅ | Término de búsqueda (min 3 caracteres) |
 
-### Precios cargados por usuarios
-POST `/publico/estadistica/precios_usuarios`
-
-- Body JSON:
-  - `fecha` (string o Date)
-  - `nombre` (string)
-  - `comercio` (string)
-  - `productos` (array de hasta 100 items `{ nombre, marca, precio, presentacion }`)
-- Respuesta 200: `{ stat: true }`
-
----
-
-## Chatbot
-
-### Respuesta del chatbot
-POST `/publico/chatbot/chat_bot_rsp`
-
-- Body JSON:
-  - `texto` (string)
-  - `user_id` (string)
-- Respuesta 200:
-  - `{ stat: true, msg: <texto> }`
-- Notas:
-  - Llama a un servicio externo (`http://localhost:6789/api/chat`).
+**Respuesta 200**:
+```json
+{
+  "stat": true,
+  "items": [
+    {
+      "product_id": "...",
+      "name": "Promoción especial",
+      "promo_discount": 15,
+      "locales": [...]
+    }
+  ]
+}
+```
 
 ---
 
-## Administración
+### Comercios con Promociones
 
-### Información
-GET `/admin/user/info`
+```http
+GET /publico/busqueda/comercios_promociones
+```
 
-- Respuesta 200: `{ stat: true, data: { rutas: [] } }`
+**Parámetros**: Ninguno
 
-### Login
-POST `/admin/user/login`
-
-- Respuesta 200: `{ stat: true, data: { rutas: [] } }`
+**Respuesta 200**:
+```json
+{
+  "stat": true,
+  "items": [
+    {
+      "branch_id": 1,
+      "branch_name": "Sucursal 1",
+      "enterprise": "Supermercado X",
+      "promo_count": 5
+    }
+  ]
+}
+```
 
 ---
 
-## Variables de entorno relevantes
+## 🏷️ Categorías
 
-- Base de datos: `mysql_host`, `mysql_user`, `mysql_password`, `mysql_database`, `mysql_port`
-- API: `service_port_api`, `cors_origin`, `KEY_INT`
-- Búsqueda externa: `SEARCH_SERVICE_ENDPOINT`, `SEARCH_SERVICE_TIMEOUT_MS`, `SEARCH_SERVICE_CACHE_TTL_MS`
-- Zona horaria: el proceso fija `process.env.TZ = 'America/Argentina/Buenos_Aires'`
+### Listar Todas las Categorías
+
+```http
+GET /publico/categorias/all
+```
+
+**Parámetros**: Ninguno
+
+**Respuesta 200**:
+```json
+{
+  "stat": true,
+  "items": [
+    {
+      "cat_menu_id": 1,
+      "cat_name": "Almacén",
+      "icon": "box",
+      "sub_count": 5
+    }
+  ]
+}
+```
 
 ---
 
-[Volver al README del backend](./README.md)
-[Arquitectura](./arquitectura.md)
-[Definición técnica](./definicion_tecnica.md)
+### Empresas por Categoría
+
+```http
+GET /publico/categorias/get_empresas_categoria?menu_category_id=ID
+```
+
+**Parámetros Query**:
+| Parámetro | Tipo | Requerido | Descripción |
+|-----------|------|----------|-------------|
+| `menu_category_id` | number | ✅ | ID de la categoría |
+
+**Respuesta 200**:
+```json
+{
+  "stat": true,
+  "items": [
+    {
+      "enterprise_id": 1,
+      "enterprise_name": "Supermercado X",
+      "product_count": 150
+    }
+  ]
+}
+```
+
+---
+
+### Subcategorías de una Categoría
+
+```http
+GET /publico/categorias/get_sub_categorias?cat_menu_id=ID
+```
+
+**Parámetros Query**:
+| Parámetro | Tipo | Requerido | Descripción |
+|-----------|------|----------|-------------|
+| `cat_menu_id` | number | ✅ | ID de la categoría padre |
+
+**Respuesta 200**:
+```json
+{
+  "stat": true,
+  "items": [
+    {
+      "subcat_id": 10,
+      "subcat_name": "Leches",
+      "icon": "milk"
+    }
+  ]
+}
+```
+
+---
+
+### Categorías de una Empresa
+
+```http
+GET /publico/categorias/get_categoria_empresa?enterprise_id=ID
+```
+
+**Parámetros Query**:
+| Parámetro | Tipo | Requerido | Descripción |
+|-----------|------|----------|-------------|
+| `enterprise_id` | number | ✅ | ID de la empresa |
+
+**Respuesta 200**:
+```json
+{
+  "stat": true,
+  "items": [
+    {
+      "cat_id": 1,
+      "cat_name": "Almacén"
+    }
+  ]
+}
+```
+
+---
+
+## 📦 Productos
+
+### Productos por Categoría
+
+```http
+GET /publico/productos/all?category_id=ID
+```
+
+**Parámetros Query**:
+| Parámetro | Tipo | Requerido | Descripción |
+|-----------|------|----------|-------------|
+| `category_id` | number | ✅ | ID de la categoría |
+
+**Respuesta 200**:
+```json
+{
+  "stat": true,
+  "items": [
+    {
+      "product_id": "uuid",
+      "name": "Leche entera 1L",
+      "current_price": 1250,
+      "branch_count": 3
+    }
+  ]
+}
+```
+
+---
+
+### Cargar Nuevo Precio
+
+```http
+PUT /publico/productos/cargar_nuevo_precio
+```
+
+**Body JSON**:
+```json
+{
+  "product_id": "uuid-del-producto",
+  "branch_id": 5,
+  "price": 1250
+}
+```
+
+**Validaciones**:
+- ✅ Valida `product_id` + `branch_id` combinación única
+- ✅ Límite de 100 ingresos globales por IP
+- ✅ Esperar 3 segundos mínimo entre ingresos
+- ✅ Max 1 corrección por combinación producto-sucursal
+- ✅ Marca confiabilidad = 50
+
+**Respuesta 200 (Éxito)**:
+```json
+{
+  "stat": true,
+  "message": "Precio actualizado"
+}
+```
+
+**Respuesta 429 (Límite de rate)**:
+```json
+{
+  "stat": false,
+  "error": "Too many requests from this IP"
+}
+```
+
+**Respuesta 400 (Validación)**:
+```json
+{
+  "stat": false,
+  "error": "Invalid product_id or branch_id"
+}
+```
+
+---
+
+## 📥 Importación
+
+### Importar Artículos de Plataforma
+
+```http
+POST /publico/productos/importar_articulo_plataforma
+```
+
+**Body JSON**:
+```json
+[
+  {
+    "name": "Leche La Serenísima 1L",
+    "price": 1250,
+    "currency": "ARS",
+    "category_name": "Almacén > Lácteos",
+    "url": "https://mercadolibre.com/...",
+    "plataforma": "ml",
+    "enterprise_id": 1,
+    "branch_id": 5
+  }
+]
+```
+
+**Campos**:
+| Campo | Tipo | Requerido | Descripción |
+|-------|------|----------|-------------|
+| `name` | string | ✅ | Nombre del producto (normalizado) |
+| `price` | number | ✅ | Precio en la moneda especificada |
+| `currency` | string | ✅ | ISO 4217 (ARS, USD, etc.) |
+| `category_name` | string | ✅ | Ruta: "Categoría > Subcategoría" |
+| `url` | string | ❌ | URL del producto en plataforma |
+| `plataforma` | string | ✅ | "ml" (MercadoLibre) o "region20" |
+| `enterprise_id` | number | ✅ | ID de la empresa |
+| `branch_id` | number | ✅ | ID de la sucursal |
+
+**Características**:
+- 🔄 Procesamiento asíncrono (no bloquea)
+- 📋 Cola en memoria (max 50 items/ciclo)
+- 🔁 Reintento automático de errores
+- 🔒 Validación de `product_id + branch_id`
+- 📊 Calcula automáticamente estadísticas de cambio
+
+**Respuesta 200 (Aceptado)**:
+```json
+{
+  "stat": true,
+  "message": "Importación en cola",
+  "queued_items": 1,
+  "total_in_queue": 5
+}
+```
+
+**Respuesta 400 (Validación)**:
+```json
+{
+  "stat": false,
+  "error": "Invalid items format",
+  "details": [
+    {
+      "index": 0,
+      "error": "name is required"
+    }
+  ]
+}
+```
+
+---
+
+### Importación Masiva (Alternativa)
+
+```http
+POST /publico/productos/importar
+```
+
+**Body JSON**:
+```json
+{
+  "key": "KEY_INT_SECRET",
+  "lst_importa": [
+    {
+      "nombre": "Leche 1L",
+      "precio": 1250,
+      "empresa_id": 1,
+      "sucursal_id": 5
+    }
+  ]
+}
+```
+
+**Notas**:
+- 🔐 Requiere clave `KEY_INT` (variable de entorno)
+- 🔄 Cola asíncrona con procesamiento en background
+- Respuesta inmediata sin esperar procesamiento
+
+**Respuesta 200**:
+```json
+{
+  "stat": true,
+  "message": "Items encolados para procesamiento"
+}
+```
+
+---
+
+## 📊 Análisis y Estadísticas
+
+### Incremento Acumulado de Precios
+
+```http
+GET /publico/estadisticas/incremento_acumulado_mensual?year=YYYY&month=MM
+```
+
+**Parámetros Query**:
+| Parámetro | Tipo | Requerido | Descripción |
+|-----------|------|----------|-------------|
+| `year` | number | ✅ | Año (YYYY) |
+| `month` | number | ✅ | Mes (1-12) |
+
+**Respuesta 200**:
+```json
+{
+  "stat": true,
+  "year": 2025,
+  "month": 11,
+  "items": [
+    {
+      "product_id": "uuid",
+      "name": "Leche 1L",
+      "accumulated_increase": 5.2,
+      "percentile": 0.75
+    }
+  ]
+}
+```
+
+---
+
+### Media de Incremento Interdiario
+
+```http
+GET /publico/estadisticas/media_incremento_interdiario?year=YYYY&month=MM
+```
+
+**Parámetros Query**:
+| Parámetro | Tipo | Requerido | Descripción |
+|-----------|------|----------|-------------|
+| `year` | number | ✅ | Año |
+| `month` | number | ✅ | Mes |
+
+**Respuesta 200**:
+```json
+{
+  "stat": true,
+  "items": [
+    {
+      "product_id": "uuid",
+      "name": "Producto",
+      "daily_avg_increase": 0.15,
+      "volatility": 0.08
+    }
+  ]
+}
+```
+
+---
+
+### Variación de Precios
+
+```http
+GET /publico/estadisticas/variacion_precios?product_id=UUID&branch_id=ID&days=DÍAS
+```
+
+**Parámetros Query**:
+| Parámetro | Tipo | Requerido | Descripción |
+|-----------|------|----------|-------------|
+| `product_id` | string | ✅ | ID del producto |
+| `branch_id` | number | ✅ | ID de la sucursal |
+| `days` | number | ❌ | Últimos N días (default 30) |
+
+**Respuesta 200**:
+```json
+{
+  "stat": true,
+  "product": "Leche 1L",
+  "branch": "Sucursal Centro",
+  "history": [
+    {
+      "date": "2025-11-15",
+      "price": 1250,
+      "change_percent": 2.5
+    }
+  ]
+}
+```
+
+---
+
+## ✅ Respuestas Estándar
+
+### Formato Base de Respuesta
+
+Todas las respuestas siguen este formato:
+
+```json
+{
+  "stat": true|false,
+  "items": [],
+  "error": null|"mensaje"
+}
+```
+
+**Campos**:
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `stat` | boolean | Indica éxito (`true`) o error (`false`) |
+| `items` | array | Datos solicitados (vacío si error) |
+| `error` | string \| null | Mensaje de error (si aplica) |
+
+### Códigos HTTP
+
+| Código | Situación | Ejemplo |
+|--------|-----------|---------|
+| **200** | Éxito en operación | GET búsqueda exitosa |
+| **400** | Validación fallida | Parámetros inválidos |
+| **401** | No autenticado | Token expirado |
+| **403** | No autorizado | Rol insuficiente |
+| **429** | Rate limit | Demasiadas solicitudes |
+| **500** | Error del servidor | Excepción no capturada |
+
+---
+
+## 🔐 Autenticación y Autorización
+
+### Headers Requeridos
+
+Para endpoints administrativos:
+
+```http
+Authorization: Bearer <token>
+X-API-Key: <api_key>
+```
+
+### Prefijos de Rutas
+
+- `/publico/*` → **Acceso público sin autenticación**
+- `/admin/*` → **Requiere autenticación de rol administrativo**
+
+---
+
+## 📝 Ejemplos Prácticos
+
+### 1. Buscar y Obtener Precios
+
+```bash
+# Buscar productos
+curl -X GET "http://localhost:3001/publico/busqueda/precios?product_name=leche"
+
+# Respuesta
+{
+  "stat": true,
+  "items": [
+    {
+      "product_id": "abc123",
+      "name": "Leche La Serenísima 1L",
+      "price": 1250,
+      "branch_name": "Centro"
+    }
+  ]
+}
+```
+
+### 2. Importar Precios Nuevos
+
+```bash
+curl -X POST "http://localhost:3001/publico/productos/importar_articulo_plataforma" \
+  -H "Content-Type: application/json" \
+  -d '[
+    {
+      "name": "Leche 1L",
+      "price": 1250,
+      "currency": "ARS",
+      "category_name": "Almacén > Lácteos",
+      "plataforma": "ml",
+      "enterprise_id": 1,
+      "branch_id": 5
+    }
+  ]'
+```
+
+### 3. Actualizar Precio Existente
+
+```bash
+curl -X PUT "http://localhost:3001/publico/productos/cargar_nuevo_precio" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "product_id": "abc123",
+    "branch_id": 5,
+    "price": 1300
+  }'
+```
+
+---
+
+## 🚀 Versiones y Compatibilidad
+
+| Versión | Fecha | Cambios |
+|---------|-------|---------|
+| 1.1 | 2025-11-30 | ✅ Búsqueda case-insensitive, validación branch_id |
+| 1.0 | 2025-07-22 | 🎉 Lanzamiento inicial |
+
+---
+
+## 📞 Soporte
+
+Para reportar problemas con los endpoints:
+1. Verificar documentación
+2. Revisar logs del servidor
+3. Contactar al equipo de desarrollo
+
+---
+
+**Última actualización**: 30 de noviembre de 2025  
+**Mantenedor**: Equipo de Backend

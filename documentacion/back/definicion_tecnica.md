@@ -1,41 +1,454 @@
-# Definición Técnica del Backend
+# 🔧 Definición Técnica del Backend
 
-Este documento especifica los detalles técnicos del backend de forma abstracta para permitir su reconstrucción en otra tecnología.
+Especificación técnica completa del backend: stack, configuración, modelos, y detalles de implementación.
 
-## Tecnologías Utilizadas
-- Node.js
-- Express
-- ORM/ODM (especificar si aplica)
-- Base de datos (especificar tipo)
-- Knex (migraciones y query builder)
+## 🏗️ Stack Tecnológico
 
-## Zona horaria y manejo de fechas
+### Runtime & Framework
+| Componente | Versión | Propósito |
+|------------|---------|----------|
+| **Node.js** | 14+ | Runtime JavaScript |
+| **Express.js** | 4.x | Framework web REST |
+| **Knex.js** | 2.x | Query builder ORM |
+| **MySQL** | 5.7+ / 8.0 | Base de datos relacional |
 
-El backend establece `process.env.TZ = 'America/Argentina/Buenos_Aires'` y maneja el "día actual" con hora local (UTC-3). Las limpiezas de datos temporales usan `setHours(0,0,0,0)`. La serialización a ISO (`toISOString`) se utiliza cuando corresponde, pero no se emplea `setUTCHours` para cálculos diarios.
+### Librerías Principales
+```json
+{
+  "uuid": "Generación de IDs únicos",
+  "dotenv": "Gestión de variables de entorno",
+  "axios": "Cliente HTTP (integraciones)",
+  "cors": "Control de origen cruzado",
+  "helmet": "Seguridad headers HTTP",
+  "morgan": "Logging de requests HTTP"
+}
+```
 
-## Estructura de Carpetas
-- `controllers/`: Controladores de rutas
-- `models/`: Modelos de datos
-- `routes/`: Definición de endpoints
-- `middleware/`: Lógica de autenticación y autorización
-- `helpers/`: Utilidades y funciones auxiliares
-- `scripts/`: Scripts de procesamiento y migración
-- `migrations/`: Migraciones de base de datos (Knex)
+---
 
-## Dependencias Clave
-Listar y describir las dependencias principales.
+## 📁 Estructura de Carpetas
 
-## Serie Compilada Media Interdiaria
+```
+back/
+├── controllers/          # Lógica de negocio por módulo
+│   ├── busqueda_productos.js      (búsqueda en memoria)
+│   └── importar_productos.js      (procesamiento de importaciones)
+├── models/              # Definiciones ORM (Objection.js/Knex)
+│   ├── BaseModel.js     (clase base con relaciones)
+│   ├── Product.js
+│   ├── Price.js
+│   ├── Branch.js
+│   └── ...
+├── routes/              # Definición de endpoints HTTP
+│   ├── busqueda.js      (GET búsquedas)
+│   ├── categorias.js    (GET categorías)
+│   ├── productos.js     (GET/PUT/POST productos y precios)
+│   └── ...
+├── middleware/          # Autenticación y autorización
+│   ├── Admin.js         (verificación rol admin)
+│   └── Publico.js       (endpoints públicos)
+├── helpers/             # Utilidades y funciones auxiliares
+│   ├── authorization.js (verificación de acceso)
+│   ├── processing.js    (cola de procesamiento async)
+│   └── utils.js         (funciones generales)
+├── scripts/             # Scripts one-off y procesos
+│   └── actualizar_price_today.js (scheduler 24h)
+├── migrations/          # Migraciones de BD (Knex)
+│   ├── 20250722075112_init_schema.js
+│   └── ...
+├── db/                  # Configuración y seeders
+├── server.js            # Entry point principal
+├── knexfile.js          # Config de Knex y BD
+├── package.json
+└── requirements.txt     # Dependencias Python (si aplica)
+```
 
-La tabla `serie_compilada_media_interdiaria` almacena estadísticas diarias de los incrementos interdiarios de precios, calculadas a partir de la tabla `price`.
+## ⚙️ Configuración
 
-- **Campos principales:**
-  - `date`: Fecha de la estadística
-  - `mean_inc`: Media de los incrementos interdiarios
-  - `median_inc`: Mediana de los incrementos interdiarios
-  - `std_inc`: Desviación estándar de los incrementos interdiarios
-  - `count`: Cantidad de productos considerados
-  - `inc_acumulado`: Incremento acumulado desde 2024-01-01 (composición multiplicativa)
+### Variables de Entorno (`.env`)
+
+```bash
+# Base de Datos
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_USER=root
+MYSQL_PASSWORD=password
+MYSQL_DATABASE=greenborn_precios
+
+# Servidor
+NODE_ENV=development|production
+service_port_api=3001
+cors_origin=http://localhost:3000
+
+# Timezone (CRÍTICO)
+TZ=America/Argentina/Buenos_Aires
+
+# Seguridad
+KEY_INT=tu_clave_secreta_interna
+
+# Importación y Cola
+PRICE_TODAY_CHUNK_SIZE=5000
+QUEUE_WORKER_CYCLE_MS=2000
+QUEUE_MAX_ITEMS_PER_CYCLE=50
+
+# Integraciones Externas (opcional)
+SEARCH_SERVICE_ENDPOINT=http://search-service:8000
+SEARCH_SERVICE_TIMEOUT_MS=5000
+```
+
+### Configuración Knex (`knexfile.js`)
+
+```javascript
+module.exports = {
+  development: {
+    client: 'mysql2',
+    connection: {
+      host: process.env.MYSQL_HOST,
+      user: process.env.MYSQL_USER,
+      password: process.env.MYSQL_PASSWORD,
+      database: process.env.MYSQL_DATABASE,
+      timezone: 'Z'
+    },
+    pool: { min: 0, max: 1000 },
+    migrations: { directory: './migrations' }
+  }
+};
+```
+
+---
+
+## 🗄️ Modelos de Datos
+
+### Tabla `products`
+
+```sql
+CREATE TABLE products (
+  product_id VARCHAR(36) PRIMARY KEY,
+  name VARCHAR(500) NOT NULL,
+  category_id INT,
+  alias_search TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at TIMESTAMP NULL,
+  INDEX (category_id),
+  FULLTEXT INDEX (name, alias_search)
+);
+```
+
+### Tabla `price`
+
+```sql
+CREATE TABLE price (
+  price_id VARCHAR(36) PRIMARY KEY,
+  product_id VARCHAR(36) NOT NULL,
+  branch_id INT NOT NULL,
+  price DECIMAL(12,2) NOT NULL,
+  currency VARCHAR(3) DEFAULT 'ARS',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  reliability INT DEFAULT 50,
+  imported_from VARCHAR(50),
+  url TEXT,
+  
+  UNIQUE KEY unique_price_today_product_branch (product_id, branch_id),
+  INDEX (branch_id),
+  INDEX (created_at),
+  INDEX (imported_from)
+);
+```
+
+**⚠️ CRÍTICO**: Validación siempre por `product_id + branch_id` para evitar mezclar sucursales.
+
+### Tabla `price_today` (Caché)
+
+```sql
+CREATE TABLE price_today (
+  product_id VARCHAR(36) NOT NULL,
+  branch_id INT NOT NULL,
+  price DECIMAL(12,2) NOT NULL,
+  currency VARCHAR(3) DEFAULT 'ARS',
+  last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  
+  PRIMARY KEY (product_id, branch_id),
+  INDEX (last_updated)
+);
+```
+
+**Propósito**: Caché del último precio (últimos 30 días). Actualizado cada 24h.
+
+### Tabla `branch` (Sucursales)
+
+```sql
+CREATE TABLE branch (
+  branch_id INT AUTO_INCREMENT PRIMARY KEY,
+  branch_name VARCHAR(200) NOT NULL,
+  enterprise_id INT NOT NULL,
+  address VARCHAR(500),
+  latitude DECIMAL(10,8),
+  longitude DECIMAL(11,8),
+  city VARCHAR(100),
+  INDEX (enterprise_id)
+);
+```
+
+### Tabla `enterprise` (Empresas)
+
+```sql
+CREATE TABLE enterprise (
+  enterprise_id INT AUTO_INCREMENT PRIMARY KEY,
+  enterprise_name VARCHAR(300) NOT NULL UNIQUE,
+  type VARCHAR(50),
+  website VARCHAR(255),
+  logo_url VARCHAR(255),
+  active BOOLEAN DEFAULT TRUE
+);
+```
+
+### Tabla `category` (Categorías)
+
+```sql
+CREATE TABLE category (
+  category_id INT AUTO_INCREMENT PRIMARY KEY,
+  cat_name VARCHAR(200) NOT NULL UNIQUE,
+  cat_menu_id INT,
+  description TEXT,
+  icon VARCHAR(100),
+  active BOOLEAN DEFAULT TRUE,
+  INDEX (cat_menu_id)
+);
+```
+
+### Tabla `estadistica_aumento_diario`
+
+```sql
+CREATE TABLE estadistica_aumento_diario (
+  stat_id INT AUTO_INCREMENT PRIMARY KEY,
+  product_id VARCHAR(36) NOT NULL,
+  branch_id INT NOT NULL,
+  fecha_registro DATE NOT NULL,
+  price_anterior DECIMAL(12,2),
+  price_actual DECIMAL(12,2),
+  porcentaje_cambio DECIMAL(6,4),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  
+  UNIQUE KEY unique_daily_stat (product_id, branch_id, fecha_registro),
+  INDEX (fecha_registro),
+  INDEX (porcentaje_cambio)
+);
+```
+
+**Propósito**: Registro histórico de cambios de precio para análisis y gráficos.
+
+### Tabla `serie_compilada_media_interdiaria`
+
+```sql
+CREATE TABLE serie_compilada_media_interdiaria (
+  date DATE PRIMARY KEY,
+  mean_inc DECIMAL(10,6),
+  median_inc DECIMAL(10,6),
+  std_inc DECIMAL(10,6),
+  count INT,
+  inc_acumulado DECIMAL(10,4),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+**Campos**:
+- `date`: Fecha de la estadística
+- `mean_inc`: Media de incrementos interdiarios (%)
+- `median_inc`: Mediana de incrementos (%)
+- `std_inc`: Desviación estándar (%)
+- `count`: Cantidad de productos
+- `inc_acumulado`: Incremento acumulado desde 2024-01-01 (composición multiplicativa)
+
+**Ejemplo de `inc_acumulado`**:
+- Valor: 166.223%
+- Significa: Precios se multiplicaron por 2.66223
+- Si $100 el 2024-01-01 → $266,22 al final
+- Fórmula: `Precio final = Precio inicial × (1 + inc_acumulado/100)`
+
+---
+
+## 🔄 Sistema de Búsqueda
+
+### Estructura en Memoria
+
+```javascript
+const lst_letras = {
+  'l': {
+    'e': {
+      'c': {
+        'h': {
+          'e': [
+            {
+              product_id: "uuid-1",
+              name: "Leche La Serenísima 1L",
+              name_lower: "leche la serenísima 1l",
+              price: 1250,
+              branch_id: 5
+            }
+          ]
+        }
+      }
+    }
+  }
+};
+```
+
+**Características**:
+- ✅ Árbol de letras multinivel (por iniciales)
+- ✅ Almacena `name` original + `name_lower`
+- ✅ Array de productos al final
+- ✅ Indexación ultrarrápida
+
+### Algoritmo (Simplificado)
+
+```javascript
+function busqueda(termino) {
+  termino_lower = termino.toLowerCase()
+  letras = extraer_iniciales(termino_lower)
+  
+  nodo = lst_letras
+  for (letra of letras) {
+    nodo = nodo[letra]
+    if (!nodo) return []
+  }
+  
+  return nodo.filter(prod => prod.name_lower.includes(termino_lower))
+}
+```
+
+**Complejidad**: O(1) en promedio, O(n) peor caso.
+
+---
+
+## 📥 Sistema de Importación
+
+### Cola Asíncrona
+
+```javascript
+// helpers/processing.js
+const colaProcProductos = [];
+
+setInterval(() => {
+  if (colaProcProductos.length === 0) return;
+  
+  const items = colaProcProductos.splice(0, MAX_ITEMS_PER_CYCLE);
+  items.forEach(procesar_articulo);
+  
+  if (colaProcProductos.length === 0) emitir_evento('queue:empty');
+}, QUEUE_WORKER_CYCLE_MS);
+```
+
+**Flujo**:
+1. Cliente envía POST → Valida formato → Agrega a cola
+2. Responde 200 inmediatamente
+3. Worker procesa asíncronamente (50 items/ciclo)
+4. Cada item → transacción completa
+5. Actualiza búsqueda dinámicamente
+
+### Validación de Precios
+
+```javascript
+// SIEMPRE validar por product_id + branch_id
+const ultimo = await knex('price')
+  .where('product_id', articulo.product_id)
+  .where('branch_id', articulo.branch_id)  // ← CRÍTICO
+  .orderBy('created_at', 'desc')
+  .first();
+```
+
+---
+
+## ⏰ Scheduler (Cada 24h)
+
+**Archivo**: `scripts/actualizar_price_today.js`
+
+**Proceso**:
+1. Obtiene combinaciones únicas (product_id, branch_id)
+2. Procesa en chunks de 5000 registros
+3. Para cada combinación: obtiene último precio válido (últimos 30 días)
+4. Actualiza `price_today`
+5. Reconstruye estructura de búsqueda
+6. Elimina precios antiguos
+
+**Transaccionalidad**: Por chunk, no por item.
+
+---
+
+## 🌍 Manejo de Timezone
+
+**CRÍTICO**:
+```javascript
+process.env.TZ = 'America/Argentina/Buenos_Aires'  // UTC-3
+
+// Día actual = hora local (setHours(0,0,0,0))
+const hoy = new Date().setHours(0,0,0,0)
+
+// NO usar setUTCHours para cálculos diarios
+// ISO string para persistencia
+const iso = fecha.toISOString()
+```
+
+---
+
+## 🔒 Seguridad
+
+### Rate Limiting
+- Max 100 requests globales por IP
+- Min 3 segundos entre requests
+- Max 1 corrección por (product_id, branch_id)
+
+### Autenticación por Rol
+- `middleware/Publico.js`: Endpoints públicos
+- `middleware/Admin.js`: Endpoints administrativos
+
+### Validación de Datos
+- Campos requeridos
+- Tipos correctos
+- Longitud máxima
+- Valores en rango
+
+---
+
+## 🧪 Testing
+
+```javascript
+// test/test_busqueda_dinamica.js
+describe('Búsqueda Dinámica', () => {
+  it('debe agregar producto a buscador', async () => {
+    // Test
+  });
+});
+```
+
+**Ejecución**:
+```bash
+npm test
+```
+
+---
+
+## 📚 Índices Críticos
+
+```sql
+CREATE INDEX idx_price_product_branch ON price(product_id, branch_id);
+CREATE INDEX idx_price_today_product_branch ON price_today(product_id, branch_id);
+CREATE INDEX idx_stat_fecha ON estadistica_aumento_diario(fecha_registro);
+CREATE FULLTEXT INDEX idx_product_name ON products(name, alias_search);
+```
+
+---
+
+## 🔌 Integraciones
+
+- **MercadoLibre** (plataforma: `ml`)
+- **Region20** (propiedades en alquiler)
+
+---
+
+## 📖 Series Compilada Media Interdiaria
+
+La tabla `serie_compilada_media_interdiaria` almacena estadísticas diarias de los incrementos interdiarios de precios, calculadas a partir de la tabla `price`
 
 ### ¿Qué significa el incremento acumulado?
 
