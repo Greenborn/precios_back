@@ -107,19 +107,23 @@ const colaProcProductos = []
 const idCola = "productos"
 
 setInterval(async () => {
-    // Limpiar la tabla estadistica_aumento_diario para dejar solo los registros del día actual
-    // let HOY = new Date()
-    // HOY.setHours(0,0,0,0)
-    // await global.knex("estadistica_aumento_diario").where('fecha_utlimo_precio', '<', HOY).del()
+    // Limpiar la tabla estadistica_aumento_diario para dejar solo los registros del día actual (GMT-3)
+    let HOY_ARG = new Date();
+    // Ajustar a zona horaria Argentina (GMT-3): obtener timestamp UTC y restar 3 horas
+    HOY_ARG = new Date(HOY_ARG.getTime() - (3 * 60 * 60 * 1000));
+    HOY_ARG.setHours(0, 0, 0, 0);
+    await global.knex("estadistica_aumento_diario").where('fecha_utlimo_precio', '<', HOY_ARG).del();
+    
     await processing.procesarColaProc(idCola, colaProcProductos, async (item) => {
         let HOY = new Date()
         HOY.setHours(0,0,0,1)
         // HOY aquí es UTC, para inserts y updates usar new Date() directamente
         return await procesa_item(item, HOY)
     }, async () => {
-        // Limpiar la tabla antes de actualizar la serie compilada (usando inicio de día Argentina)
-        /*let HOY_ARG = new Date();
-        HOY_ARG.setHours(0,0,0,0);
+        // Limpiar la tabla antes de actualizar la serie compilada (usando inicio de día Argentina GMT-3)
+        let HOY_ARG = new Date();
+        HOY_ARG = new Date(HOY_ARG.getTime() - (3 * 60 * 60 * 1000));
+        HOY_ARG.setHours(0, 0, 0, 0);
         await global.knex("estadistica_aumento_diario").where('fecha_utlimo_precio', '<', HOY_ARG).del();
         console.log("Cola de productos vacía, actualizando serie_compilada_media_interdiaria...");
         exec('node scripts/resetear_serie_compilada_media_interdiaria.js price_today --no-truncate', (error, stdout, stderr) => {
@@ -132,7 +136,7 @@ setInterval(async () => {
                 return;
             }
             console.log(`stdout: ${stdout}`);
-        });*/
+        });
     });
 }, 2000);
 
