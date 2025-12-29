@@ -184,30 +184,49 @@ async function procesa_precio( trx, producto_db, articulo, fecha_registro ){
                     "date_time": new Date(), "time": new Date(), "url": ( articulo.url ) ? articulo.url : null
                 } ).where("id", ultimo_precio.id)
                 
-                let precio_hoy = {
-                    ...ultimo_precio,
-                    "date_time": new Date(), "time": new Date(), "url": ( articulo.url ) ? articulo.url : null
-                }
-                precio_hoy['id']           = uuid.v7()
-                precio_hoy['product_name'] = articulo.name
-                precio_hoy['price_id']     = ultimo_precio.id
-                let repetido = await global.knex('price_today').where({
-                    'price_id': ultimo_precio.id,
-                }).first()
-                if (!repetido) {
-                    await trx('price_today').insert( precio_hoy )
+                // Buscar si ya existe registro para product_id y branch_id
+                let existe = await trx('price_today')
+                    .where({ product_id: producto_db.id, branch_id: articulo.branch_id })
+                    .first();
+
+                if (!existe) {
+                    // Si no existe, insertar nuevo registro
+                    let precio_hoy = {
+                        ...ultimo_precio,
+                        "date_time": new Date(), 
+                        "time": new Date(), 
+                        "url": ( articulo.url ) ? articulo.url : null
+                    }
+                    precio_hoy['id']           = uuid.v7()
+                    precio_hoy['product_name'] = articulo.name
+                    precio_hoy['price_id']     = ultimo_precio.id
                     
-                    // Actualizar estructura de búsqueda (mismo precio, solo actualiza timestamp)
-                    busqueda_productos.agregar_a_buscador({
-                        product_name: articulo.name,
-                        product_id: producto_db.id,
-                        price: ultimo_precio.price,
-                        branch_id: articulo.branch_id,
-                        date_time: new Date(),
-                        time: new Date(),
-                        url: articulo.url
-                    });
+                    await trx('price_today').insert( precio_hoy )
+                } else {
+                    // Si existe, actualizar
+                    await trx('price_today')
+                        .where({ product_id: producto_db.id, branch_id: articulo.branch_id })
+                        .update({
+                            price: ultimo_precio.price,
+                            date_time: new Date(),
+                            time: new Date(),
+                            url: (articulo.url) ? articulo.url : null,
+                            product_name: articulo.name,
+                            price_id: ultimo_precio.id
+                        });
                 }
+                
+                // Actualizar estructura de búsqueda (mismo precio, solo actualiza timestamp)
+                busqueda_productos.agregar_a_buscador({
+                    product_name: articulo.name,
+                    product_id: producto_db.id,
+                    price: ultimo_precio.price,
+                    branch_id: articulo.branch_id,
+                    date_time: new Date(),
+                    time: new Date(),
+                    url: articulo.url
+                });
+                
                 return resolve(true)
             } else  if (!ultimo_precio) {
                 let nuevo_precio = await nuevo_reg_precio( trx, articulo, producto_db, fecha_registro )

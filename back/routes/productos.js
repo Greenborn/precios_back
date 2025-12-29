@@ -417,6 +417,7 @@ router.post('/importar_alquiler', async function (req, res) {
 })
 
 // Endpoint para importar productos y llenar la cola de procesamiento
+// El endpoint /importar ya utiliza la cola y procesamiento correcto, que actualiza price_today.
 router.post('/importar', async function (req, res) {
     const KEY = req.body?.key;
     try {
