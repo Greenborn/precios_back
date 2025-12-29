@@ -121,7 +121,7 @@ setInterval(async () => {
         return await procesa_item(item, HOY)
     }, async () => {
         // Limpiar la tabla antes de actualizar la serie compilada (usando inicio de día Argentina GMT-3)
-        let HOY_ARG = new Date();
+        /*let HOY_ARG = new Date();
         HOY_ARG = new Date(HOY_ARG.getTime() - (3 * 60 * 60 * 1000));
         HOY_ARG.setHours(0, 0, 0, 0);
         await global.knex("estadistica_aumento_diario").where('fecha_utlimo_precio', '<', HOY_ARG).del();
@@ -136,7 +136,7 @@ setInterval(async () => {
                 return;
             }
             console.log(`stdout: ${stdout}`);
-        });
+        });*/
     });
 }, 2000);
 
