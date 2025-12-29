@@ -13,17 +13,20 @@ async function nuevo_reg_precio( trx, articulo, producto_db, fecha_registro ){
             return false;
         }
 
+        // Usar fecha_registro si viene, sino fecha actual
+        let fecha = articulo.fecha_registro || fecha_registro || new Date();
+
         const insert = {
             "id": uuid.v7(),
             "product_id": producto_db.id,
             "price": articulo.price,
-            "date_time": new Date(),
+            "date_time": fecha,
             "branch_id": articulo.branch_id,
             "es_oferta": 0,
             "confiabilidad": 100,
             "notas": (articulo?.nota) ? articulo.nota : null,
             "url": ( articulo.url ) ? articulo.url : null,
-            "time": new Date(), // Guardar el timestamp actual en hora local argentina
+            "time": fecha, // Guardar el timestamp de registro
         }
         let insert_1 = await trx('price').insert( insert );
 
@@ -48,12 +51,12 @@ async function nuevo_reg_precio( trx, articulo, producto_db, fecha_registro ){
                 .where({ product_id: producto_db.id, branch_id: articulo.branch_id })
                 .update({
                     price: articulo.price,
-                    date_time: new Date(),
+                    date_time: fecha,
                     es_oferta: 0,
                     confiabilidad: 100,
                     notas: (articulo?.nota) ? articulo.nota : null,
                     url: (articulo.url) ? articulo.url : null,
-                    time: new Date(),
+                    time: fecha,
                     product_name: articulo.name,
                     price_id: insert.id
                 });
@@ -61,7 +64,6 @@ async function nuevo_reg_precio( trx, articulo, producto_db, fecha_registro ){
 
         if (insert_1 && result) {
             nuevos_precios_creados.push(insert);
-            
             // Actualizar estructura de búsqueda en tiempo real
             busqueda_productos.agregar_a_buscador({
                 product_name: articulo.name,
@@ -72,7 +74,6 @@ async function nuevo_reg_precio( trx, articulo, producto_db, fecha_registro ){
                 time: insert.time,
                 url: insert.url
             });
-            
             return insert;
         } else {
             return false;
@@ -81,7 +82,6 @@ async function nuevo_reg_precio( trx, articulo, producto_db, fecha_registro ){
         console.log(error, 'error al registrar producto');
         return null;
     }
-    
 }
 
 

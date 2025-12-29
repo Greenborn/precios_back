@@ -256,10 +256,11 @@ async function procesar_oferta(trx, item, HOY, AYER){
                 return resolve({ stat: false,  error: "Ya existe oferta con ese título ", 'item':JSON.stringify(item) })
             else {
                 let proms_arr = []
-            
+                // Usar fecha_registro si viene, sino fecha actual
+                let fecha = item.fecha_registro || new Date();
                 const insert_ = {
                     'orden': 0,
-                    'fecha': new Date(),
+                    'fecha': fecha,
                     'titulo': item.titulo,
                     'id_producto': -1,
                     'precio': item.precio,
