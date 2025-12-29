@@ -131,37 +131,7 @@ async function base_de_datos_iniciada(){
     for (let i=0; i < alias.length; i++)
       global.alias_busqueda[alias[i].alias.toLowerCase()] = alias[i].termino
 
-  // Programar actualización de price_today al inicio y cada 24 horas en proceso separado
-  programarActualizacionPriceToday()
-}
-
-let priceTodayJobRunning = false
-function programarActualizacionPriceToday(){
-  const { fork } = require('child_process')
-  const path = require('path')
-  const run = () => {
-    if (priceTodayJobRunning){
-      console.log('[price_today] Job en ejecución, se omite')
-      return
-    }
-    priceTodayJobRunning = true
-    const child = fork(path.join(__dirname, 'scripts', 'actualizar_price_today.js'))
-    child.on('exit', async (code) => {
-      priceTodayJobRunning = false
-      console.log('[price_today] Job finalizado con código', code)
-      // Actualizar la estructura de búsqueda después de actualizar price_today
-      try {
-        await busqueda_productos.inicializa_buscador();
-        console.log('[busqueda_productos] Estructura de búsqueda actualizada tras price_today.');
-      } catch (err) {
-        console.error('[busqueda_productos] Error al actualizar estructura de búsqueda:', err);
-      }
-    })
-    child.on('error', (err) => {
-      priceTodayJobRunning = false
-      console.error('[price_today] Error en job:', err)
-    })
-  }
-  // Ejecutar una vez al inicio
-  run()
+  // La actualización de price_today debe ejecutarse manualmente mediante:
+  // node scripts/recrear_price_today.js
+  console.log('[price_today] Para actualizar price_today, ejecutar: node scripts/recrear_price_today.js')
 }
