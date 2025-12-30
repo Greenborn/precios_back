@@ -2,11 +2,6 @@ const express = require('express')
 require("dotenv").config({ path: '../.env' })
 var router = express.Router()
 module.exports = router
-const bcrypt = require('bcrypt')
-const fs = require("fs")
-const cargador_precios = require("../controllers/importar_productos")
-const processing = require("../helpers/processing")
-const { exec } = require('child_process')
 const axios = require('axios')
 
 // Configuración del servicio de colas

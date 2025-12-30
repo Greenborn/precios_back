@@ -61,6 +61,7 @@ PACKAGES=(
     "requests"
     "python-dotenv"
     "mysql-connector-python"
+    "python-dateutil"
 )
 
 for package in "${PACKAGES[@]}"; do

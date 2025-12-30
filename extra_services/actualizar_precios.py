@@ -11,11 +11,12 @@ import sys
 import time
 import json
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 import mysql.connector
 from mysql.connector import Error
 import uuid
+from dateutil import parser
 
 
 # Cargar variables de entorno desde back/.env
@@ -66,12 +67,12 @@ def obtener_conexion():
         return None
 
 
-def obtener_elemento_cola():
-    """Obtiene un elemento de la cola de productos desde el servicio de colas"""
+def obtener_elemento_cola(clave='productos'):
+    """Obtiene un elemento de la cola desde el servicio de colas"""
     try:
         response = requests.get(
             GET_DATA_ENDPOINT,
-            params={'clave': 'productos'},
+            params={'clave': clave},
             timeout=5
         )
         
@@ -515,6 +516,106 @@ def procesar_articulo(articulo, fecha_registro=None):
         return {'stat': False, 'text': str(e)}
 
 
+def procesar_oferta(oferta):
+    """
+    Procesa una oferta siguiendo el esquema requerido
+    """
+    # Validar campos requeridos
+    campos_requeridos = ['titulo', 'precio', 'branch_id', 'url', 'fecha_registro']
+    for campo in campos_requeridos:
+        if not oferta.get(campo):
+            return {'stat': False, 'text': f'Campo {campo} es obligatorio'}
+    
+    # Obtener conexión
+    conexion = obtener_conexion()
+    if not conexion:
+        return {'stat': False, 'text': 'Error de conexión a la base de datos'}
+    
+    try:
+        cursor = conexion.cursor()
+        
+        # Convertir fecha_registro a datetime
+        fecha_registro = oferta.get('fecha_registro')
+        if isinstance(fecha_registro, str):
+            from dateutil import parser
+            fecha_registro = parser.parse(fecha_registro)
+        
+        # Verificar que la fecha sea de hoy o ayer
+        hoy = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        ayer = hoy - timedelta(days=1)
+        
+        if fecha_registro < ayer:
+            cursor.close()
+            conexion.close()
+            return {'stat': False, 'text': 'Fecha de registro es anterior a ayer, oferta descartada'}
+        
+        # Limpiar ofertas antiguas (anteriores al día de ayer)
+        cursor.execute("DELETE FROM promociones_hoy WHERE fecha < %s", (ayer,))
+        
+        # Verificar si ya existe por título
+        cursor.execute("""
+            SELECT * FROM promociones_hoy WHERE titulo = %s LIMIT 1
+        """, (oferta['titulo'],))
+        
+        existe = cursor.fetchone()
+        
+        if existe:
+            cursor.close()
+            conexion.close()
+            return {'stat': False, 'text': 'Oferta duplicada (título ya existe)'}
+        
+        # Preparar datos para insertar
+        datos_extra = oferta.get('datos_extra', {})
+        if isinstance(datos_extra, dict):
+            datos_extra = json.dumps(datos_extra)
+        
+        insert_data = {
+            'orden': oferta.get('orden', 0),
+            'fecha': fecha_registro,
+            'titulo': oferta['titulo'],
+            'id_producto': oferta.get('id_producto', -1),
+            'precio': oferta['precio'],
+            'datos_extra': datos_extra,
+            'branch_id': oferta['branch_id'],
+            'url': oferta['url']
+        }
+        
+        # Insertar en promociones_hoy
+        cursor.execute("""
+            INSERT INTO promociones_hoy 
+            (orden, fecha, titulo, id_producto, precio, datos_extra, branch_id, url)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """, (
+            insert_data['orden'], insert_data['fecha'], insert_data['titulo'],
+            insert_data['id_producto'], insert_data['precio'], insert_data['datos_extra'],
+            insert_data['branch_id'], insert_data['url']
+        ))
+        
+        # Insertar en promociones (tabla histórica)
+        cursor.execute("""
+            INSERT INTO promociones 
+            (orden, fecha, titulo, id_producto, precio, datos_extra, branch_id, url)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """, (
+            insert_data['orden'], insert_data['fecha'], insert_data['titulo'],
+            insert_data['id_producto'], insert_data['precio'], insert_data['datos_extra'],
+            insert_data['branch_id'], insert_data['url']
+        ))
+        
+        conexion.commit()
+        cursor.close()
+        conexion.close()
+        
+        return {'stat': True, 'text': 'Oferta procesada exitosamente'}
+    
+    except Exception as e:
+        print(f"Error al procesar oferta: {e}")
+        if conexion and conexion.is_connected():
+            conexion.rollback()
+            conexion.close()
+        return {'stat': False, 'text': str(e)}
+
+
 def actualizar_estadisticas():
     """Actualiza las estadísticas incrementales"""
     conexion = obtener_conexion()
@@ -537,6 +638,13 @@ def actualizar_estadisticas():
         cursor.execute("""
             UPDATE incremental_stats SET value = %s WHERE `key` = 'precios_hoy'
         """, (cant_price_today,))
+        
+        # Actualizar cant_promos
+        cursor.execute("SELECT COUNT(id) FROM promociones_hoy")
+        cant_promos = cursor.fetchone()[0]
+        cursor.execute("""
+            UPDATE incremental_stats SET value = %s WHERE `key` = 'cant_promos'
+        """, (cant_promos,))
         
         conexion.commit()
         cursor.close()
@@ -578,39 +686,69 @@ def main():
             print(f"   El script continuará verificando...")
     
     print()
-    
-    procesados_total = 0
+    ductos_procesados = 0
+    ofertas_procesadas = 0
     errores_total = 0
     
     while True:
         try:
-            # Obtener elemento de la cola
-            elemento = obtener_elemento_cola()
+            # Obtener elemento de la cola de productos
+            elemento_producto = obtener_elemento_cola('productos')
             
-            if elemento:
-                print(f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Elemento obtenido de la cola")
-                print(f"Producto: {elemento.get('name', 'N/A')}")
+            if elemento_producto:
+                print(f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Producto obtenido de la cola")
+                print(f"Producto: {elemento_producto.get('name', 'N/A')}")
                 
-                # Procesar elemento
-                resultado = procesar_articulo(elemento)
+                # Procesar producto
+                resultado = procesar_articulo(elemento_producto)
                 
                 if resultado['stat']:
-                    procesados_total += 1
-                    print(f"✓ Procesado exitosamente (Total: {procesados_total})")
+                    productos_procesados += 1
+                    print(f"✓ Producto procesado (Total: {productos_procesados})")
                     
-                    # Actualizar estadísticas cada 10 productos procesados
-                    if procesados_total % 10 == 0:
+                    # Actualizar estadísticas cada 10 productos
+                    if productos_procesados % 10 == 0:
                         actualizar_estadisticas()
                         print("  → Estadísticas actualizadas")
                 else:
                     errores_total += 1
-                    print(f"✗ Error al procesar: {resultado.get('text', 'Error desconocido')}")
-                    print(f"  Total errores: {errores_total}")
+                    print(f"✗ Error al procesar producto: {resultado.get('text', 'Error desconocido')}")
                 
-                # Procesar siguiente inmediatamente (no esperar)
+                # Procesar siguiente inmediatamente
                 continue
-            else:
-                # No hay elementos, esperar
+            
+            # Obtener elemento de la cola de ofertas
+            elemento_oferta = obtener_elemento_cola('ofertas')
+            
+            if elemento_oferta:
+                print(f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Oferta obtenida de la cola")
+                print(f"Oferta: {elemento_oferta.get('titulo', 'N/A')}")
+                
+                # Procesar oferta
+                resuProductos procesados: {productos_procesados}")
+            print(f"Ofertas procesadas: {ofertas_procesadaserta)
+                
+                if resultado['stat']:
+                    ofertas_procesadas += 1
+                    print(f"✓ Oferta procesada (Total: {ofertas_procesadas})")
+                    
+                    # Actualizar estadísticas cada 10 ofertas
+                    if ofertas_procesadas % 10 == 0:
+                        actualizar_estadisticas()
+                        print("  → Estadísticas actualizadas")
+                else:
+                    if 'duplicada' not in resultado.get('text', '').lower() and 'anterior a ayer' not in resultado.get('text', '').lower():
+                        errores_total += 1
+                        print(f"✗ Error al procesar oferta: {resultado.get('text', 'Error desconocido')}")
+                    else:
+                        print(f"⊘ Oferta descartada: {resultado.get('text', '')}")
+                
+                # Procesar siguiente inmediatamente
+                continue
+            
+            # Si no hay elementos en ninguna cola, esperar
+            if not elemento_producto and not elemento_oferta:
+                print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Colas vacías
                 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Cola vacía, esperando...", end='\r')
                 time.sleep(INTERVALO_VERIFICACION)
         
