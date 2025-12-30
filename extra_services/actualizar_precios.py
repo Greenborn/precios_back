@@ -34,14 +34,6 @@ DB_CONFIG = {
 
 # Configuración del servicio de colas
 QUEUE_SERVICE_URL = os.getenv('QUEUE_SERVICE_URL', 'http://localhost:3501')
-
-# IMPORTANTE: El servicio de colas puede funcionar de dos formas:
-# 1. Con endpoint /get_data (pull model) - el script obtiene items
-# 2. Procesamiento interno automático (push model) - el servicio procesa
-# 
-# Si USAR_SERVICIO_COLAS = True, intentará obtener de /get_data
-# Si USAR_SERVICIO_COLAS = False, procesará desde una cola local o base de datos
-USAR_SERVICIO_COLAS = os.getenv('USAR_SERVICIO_COLAS', 'true').lower() == 'true'
 GET_DATA_ENDPOINT = f"{QUEUE_SERVICE_URL}/get_data"
 INTERVALO_VERIFICACION = 1  # 1 segundo
 
@@ -75,104 +67,29 @@ def obtener_conexion():
 
 
 def obtener_elemento_cola():
-    """Obtiene un elemento de la cola de productos"""
-    if USAR_SERVICIO_COLAS:
-        # Intentar obtener del servicio de colas externo
-        try:
-            response = requests.get(
-                GET_DATA_ENDPOINT,
-                params={'clave': 'productos'},
-                timeout=5
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                # El servicio retorna { data: <valor> }
-                if 'data' in data and data['data'] is not None:
-                    return data['data']
-                return None
-            elif response.status_code == 404:
-                # No hay datos en la cola
-                return None
-            else:
-                print(f"Error del servicio de colas: {response.status_code} - {response.text}")
-                return None
-        except requests.exceptions.RequestException as e:
-            print(f"Error al obtener elemento de la cola: {e}")
+    """Obtiene un elemento de la cola de productos desde el servicio de colas"""
+    try:
+        response = requests.get(
+            GET_DATA_ENDPOINT,
+            params={'clave': 'productos'},
+            timeout=5
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            # El servicio retorna { data: <valor> }
+            if 'data' in data and data['data'] is not None:
+                return data['data']
             return None
-    else:
-        # Obtener desde tabla de cola en base de datos
-        return obtener_elemento_cola_db()
-
-
-def obtener_elemento_cola_db():
-    """Obtiene un elemento desde una tabla de cola en la base de datos"""
-    conexion = obtener_conexion()
-    if not conexion:
+        elif response.status_code == 404:
+            # No hay datos en la cola
+            return None
+        else:
+            print(f"Error del servicio de colas: {response.status_code} - {response.text}")
+            return None
+    except requests.exceptions.RequestException as e:
+        print(f"Error al obtener elemento de la cola: {e}")
         return None
-    
-    try:
-        cursor = conexion.cursor(dictionary=True)
-        
-        # Buscar el primer elemento pendiente
-        cursor.execute("""
-            SELECT * FROM queue_items 
-            WHERE clave = 'productos' AND estado = 'pending'
-            ORDER BY id ASC
-            LIMIT 1
-            FOR UPDATE
-        """)
-        
-        item = cursor.fetchone()
-        
-        if item:
-            # Marcar como procesando
-            cursor.execute("""
-                UPDATE queue_items 
-                SET estado = 'processing', fecha_procesamiento = NOW()
-                WHERE id = %s
-            """, (item['id'],))
-            conexion.commit()
-            
-            cursor.close()
-            conexion.close()
-            
-            # Retornar los datos
-            import json
-            return json.loads(item['data'])
-        
-        cursor.close()
-        conexion.close()
-        return None
-        
-    except Exception as e:
-        print(f"Error al obtener elemento de cola DB: {e}")
-        if conexion and conexion.is_connected():
-            conexion.close()
-        return None
-
-
-def marcar_elemento_procesado(item_id, exito=True):
-    """Marca un elemento como procesado o fallido en la BD"""
-    conexion = obtener_conexion()
-    if not conexion:
-        return
-    
-    try:
-        cursor = conexion.cursor()
-        estado = 'completed' if exito else 'failed'
-        cursor.execute("""
-            UPDATE queue_items 
-            SET estado = %s, fecha_completado = NOW()
-            WHERE id = %s
-        """, (estado, item_id))
-        conexion.commit()
-        cursor.close()
-        conexion.close()
-    except Exception as e:
-        print(f"Error al marcar elemento: {e}")
-        if conexion and conexion.is_connected():
-            conexion.close()
 
 
 def get_categoria(cursor, conexion, articulo):
@@ -636,33 +553,29 @@ def main():
     print("Iniciando procesador de productos desde servicio de colas")
     print("=" * 60)
     print(f"Servicio de colas: {QUEUE_SERVICE_URL}")
-    print(f"Usar servicio de colas: {USAR_SERVICIO_COLAS}")
     print(f"Base de datos: {DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}")
     print(f"Intervalo de verificación: {INTERVALO_VERIFICACION} segundo(s)")
     print("=" * 60)
     
     # Verificar conectividad con el servicio de colas
-    if USAR_SERVICIO_COLAS:
-        print("\n⚙️  Verificando conectividad con servicio de colas...")
+    print("\n⚙️  Verificando conectividad con servicio de colas...")
+    try:
+        response = requests.get(f"{QUEUE_SERVICE_URL}/health", timeout=3)
+        print("✓ Servicio de colas conectado")
+    except:
         try:
-            response = requests.get(f"{QUEUE_SERVICE_URL}/health", timeout=3)
-            print("✓ Servicio de colas conectado")
-        except:
-            try:
-                # Intentar con el endpoint add_data
-                response = requests.post(
-                    f"{QUEUE_SERVICE_URL}/add_data",
-                    json={"clave": "test", "data": {}},
-                    timeout=3
-                )
-                print("✓ Servicio de colas respondiendo")
-            except Exception as e:
-                print(f"⚠️  ADVERTENCIA: No se puede conectar al servicio de colas")
-                print(f"   Error: {e}")
-                print(f"   Asegúrate de que el servicio esté corriendo en {QUEUE_SERVICE_URL}")
-                print(f"   El script continuará verificando...")
-    else:
-        print("\n⚙️  Modo: Cola desde base de datos")
+            # Intentar con el endpoint add_data
+            response = requests.post(
+                f"{QUEUE_SERVICE_URL}/add_data",
+                json={"clave": "test", "data": {}},
+                timeout=3
+            )
+            print("✓ Servicio de colas respondiendo")
+        except Exception as e:
+            print(f"⚠️  ADVERTENCIA: No se puede conectar al servicio de colas")
+            print(f"   Error: {e}")
+            print(f"   Asegúrate de que el servicio esté corriendo en {QUEUE_SERVICE_URL}")
+            print(f"   El script continuará verificando...")
     
     print()
     
