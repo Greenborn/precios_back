@@ -747,14 +747,14 @@ def main():
             
             # Si no hay elementos en ninguna cola, esperar
             if not elemento_producto and not elemento_oferta:
-                print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Colas vacías
-                print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Cola vacía, esperando...", end='\r')
+                print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Colas vacías, esperando...", end='\r')
                 time.sleep(INTERVALO_VERIFICACION)
         
         except KeyboardInterrupt:
             print("\n\n" + "=" * 60)
             print("Deteniendo procesador...")
-            print(f"Total procesados: {procesados_total}")
+            print(f"Productos procesados: {productos_procesados}")
+            print(f"Ofertas procesadas: {ofertas_procesadas}")
             print(f"Total errores: {errores_total}")
             print("=" * 60)
             sys.exit(0)
