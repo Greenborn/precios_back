@@ -686,7 +686,8 @@ def main():
             print(f"   El script continuará verificando...")
     
     print()
-    ductos_procesados = 0
+    
+    productos_procesados = 0
     ofertas_procesadas = 0
     errores_total = 0
     
