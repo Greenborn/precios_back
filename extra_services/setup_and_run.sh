@@ -44,9 +44,12 @@ source venv/bin/activate
 echo "✓ Entorno virtual activado"
 echo ""
 
+# Desactivar instalación en user site para evitar conflictos
+export PIP_USER=false
+
 # Actualizar pip
 echo "⬆️  Actualizando pip..."
-pip install --upgrade pip --quiet
+python -m pip install --upgrade pip --quiet
 echo "✓ pip actualizado"
 echo ""
 
@@ -62,7 +65,7 @@ PACKAGES=(
 
 for package in "${PACKAGES[@]}"; do
     echo "  - Instalando $package..."
-    pip install "$package" --quiet
+    python -m pip install "$package" --quiet
 done
 
 echo "✓ Todas las dependencias instaladas"
