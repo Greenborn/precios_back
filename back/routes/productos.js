@@ -12,13 +12,43 @@ const axios = require('axios')
 // Configuración del servicio de colas
 const QUEUE_SERVICE_URL = process.env.QUEUE_SERVICE_URL || 'http://localhost:3501'
 
+// Log de configuración al cargar el módulo
+console.log('='.repeat(70))
+console.log('[routes/productos] Configuración del servicio de colas:')
+console.log(`  URL: ${QUEUE_SERVICE_URL}`)
+console.log(`  Variable de entorno QUEUE_SERVICE_URL: ${process.env.QUEUE_SERVICE_URL ? 'DEFINIDA' : 'NO DEFINIDA (usando default)'}`)
+console.log('='.repeat(70))
+
 // Función helper para enviar datos al servicio de colas externo
 async function agregarACola(clave, data) {
     try {
-        await axios.post(`${QUEUE_SERVICE_URL}/add_data`, { clave, data })
-        return true
+        console.log(`[agregarACola] Enviando a ${QUEUE_SERVICE_URL}/add_data, clave: ${clave}`)
+        const response = await axios.post(`${QUEUE_SERVICE_URL}/add_data`, { clave, data }, {
+            timeout: 5000, // 5 segundos de timeout
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        
+        if (response.data?.success) {
+            console.log(`[Cola ${clave}] ✓ Item agregado exitosamente`)
+            return true
+        } else {
+            console.error(`[Cola ${clave}] ✗ Respuesta inesperada:`, response.data)
+            return false
+        }
     } catch (error) {
-        console.error(`[Cola ${clave}] Error al agregar item:`, error.message)
+        if (error.code === 'ECONNREFUSED') {
+            console.error(`[Cola ${clave}] ✗ ERROR: No se puede conectar al servicio en ${QUEUE_SERVICE_URL}`)
+            console.error(`[Cola ${clave}] ✗ Verificar que el servicio esté corriendo en puerto 3501`)
+        } else if (error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED') {
+            console.error(`[Cola ${clave}] ✗ ERROR: Timeout al conectar con el servicio`)
+        } else if (error.response) {
+            console.error(`[Cola ${clave}] ✗ ERROR: Servicio respondió con status ${error.response.status}`)
+            console.error(`[Cola ${clave}] ✗ Respuesta:`, error.response.data)
+        } else {
+            console.error(`[Cola ${clave}] ✗ ERROR al agregar item:`, error.message)
+        }
         return false
     }
 }
@@ -210,21 +240,26 @@ const MD5 = function(d){var r = M(V(Y(X(d),8*d.length)));return r.toLowerCase()}
 const idColaOfertas = "ofertas"
 
 router.post('/importar_oferta', async function (req, res) {
-    //console.log("data ", req.body)
     const KEY = req.body?.key
     try {
         const KEY_VALID = process.env.KEY_INT
         const ARR_IMPORTA = req.body?.lst_importa
 
+        console.log(`[importar_oferta] Recibida petición con ${ARR_IMPORTA?.length || 0} ofertas`)
+
         if (KEY != KEY_VALID){
+            console.log('[importar_oferta] ✗ KEY inválida')
             res.status(200).send({ stat: false,  error: "Error interno, reintente luego_" })
             return
         }
 
         if (!Array.isArray(ARR_IMPORTA) || ARR_IMPORTA.length === 0) {
+            console.log('[importar_oferta] ✗ No hay items para importar')
             res.status(200).send({ stat: false, error: "No hay items para importar" })
             return
         }
+
+        console.log(`[importar_oferta] Enviando ${ARR_IMPORTA.length} ofertas al servicio de colas...`)
 
         // Agregar items a la cola externa
         let agregados = 0;
@@ -234,7 +269,7 @@ router.post('/importar_oferta', async function (req, res) {
             if (success) agregados++;
         }
         
-        console.log(`[importar_oferta] Se agregaron ${agregados}/${ARR_IMPORTA.length} ofertas a la cola.`)
+        console.log(`[importar_oferta] ✓ Completado: ${agregados}/${ARR_IMPORTA.length} ofertas enviadas`)
         return res.status(200).send({ stat: true, count: agregados })
     } catch (error) {
         console.log("error", error)
@@ -331,14 +366,21 @@ router.post('/importar', async function (req, res) {
         const KEY_VALID = process.env.KEY_INT;
         const ARR_IMPORTA = req.body?.lst_importa;
 
+        console.log(`[importar] Recibida petición con ${ARR_IMPORTA?.length || 0} productos`)
+
         if (KEY != KEY_VALID) {
+            console.log('[importar] ✗ KEY inválida')
             res.status(200).send({ stat: false, error: "Error interno, reintente luego_" });
             return;
         }
         if (!Array.isArray(ARR_IMPORTA) || ARR_IMPORTA.length === 0) {
+            console.log('[importar] ✗ No hay items para importar')
             res.status(200).send({ stat: false, error: "No hay items para importar" });
             return;
         }
+
+        console.log(`[importar] Enviando ${ARR_IMPORTA.length} productos al servicio de colas...`)
+        console.log(`[importar] URL del servicio: ${QUEUE_SERVICE_URL}`)
 
         // Agregar items a la cola externa
         let agregados = 0;
@@ -347,7 +389,7 @@ router.post('/importar', async function (req, res) {
             if (success) agregados++;
         }
         
-        console.log(`[importar] Se agregaron ${agregados}/${ARR_IMPORTA.length} items a la cola.`);
+        console.log(`[importar] ✓ Completado: ${agregados}/${ARR_IMPORTA.length} productos enviados`);
         res.status(200).send({ stat: true, count: agregados });
         return;
     } catch (error) {
