@@ -1,5 +1,7 @@
 require("dotenv").config({ path: '.env' })
 const busqueda_productos = require("./controllers/busqueda_productos")
+const { spawn } = require('child_process')
+const path = require('path')
 
 //conexion a base de datos
 let conn_obj = {
@@ -38,6 +40,36 @@ global.products_category_diccio = { by_product_id: {}, by_category_id: {} }
 
 // Configurar zona horaria del proceso para Argentina (UTC-3)
 process.env.TZ = 'America/Argentina/Buenos_Aires';
+
+// Ejecutar servicio de actualización de precios en paralelo
+const scriptPath = path.join(__dirname, '..', 'extra_services', 'setup_and_run.sh')
+const setupProcess = spawn('bash', [scriptPath], {
+  cwd: path.join(__dirname, '..', 'extra_services'),
+  stdio: ['ignore', 'pipe', 'pipe'],
+  detached: false
+})
+
+setupProcess.stdout.on('data', (data) => {
+  console.log(`[setup_and_run.sh] ${data.toString().trim()}`)
+})
+
+setupProcess.stderr.on('data', (data) => {
+  console.error(`[setup_and_run.sh ERROR] ${data.toString().trim()}`)
+})
+
+setupProcess.on('error', (error) => {
+  console.error(`[setup_and_run.sh] Error al ejecutar: ${error.message}`)
+})
+
+setupProcess.on('exit', (code, signal) => {
+  if (code !== null) {
+    console.log(`[setup_and_run.sh] Proceso finalizado con código: ${code}`)
+  } else {
+    console.log(`[setup_and_run.sh] Proceso finalizado por señal: ${signal}`)
+  }
+})
+
+console.log('[setup_and_run.sh] Servicio de actualización de precios iniciado en paralelo')
 
 //Es de esperar que en 3s ya tenemos conexion disponible
 setTimeout(async () => {
