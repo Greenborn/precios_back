@@ -725,8 +725,7 @@ def main():
                 print(f"Oferta: {elemento_oferta.get('titulo', 'N/A')}")
                 
                 # Procesar oferta
-                resuProductos procesados: {productos_procesados}")
-            print(f"Ofertas procesadas: {ofertas_procesadaserta)
+                resultado = procesar_oferta(elemento_oferta)
                 
                 if resultado['stat']:
                     ofertas_procesadas += 1
