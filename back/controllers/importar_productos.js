@@ -13,8 +13,12 @@ async function nuevo_reg_precio( trx, articulo, producto_db, fecha_registro ){
             return false;
         }
 
-        // Usar fecha_registro si viene, sino fecha actual
-        let fecha = articulo.fecha_registro || fecha_registro || new Date();
+        // El campo fecha_registro es obligatorio
+        let fecha = articulo.fecha_registro || fecha_registro;
+        if (!fecha) {
+            console.error('Error: fecha_registro es obligatorio');
+            return false;
+        }
 
         const insert = {
             "id": uuid.v7(),
@@ -232,6 +236,12 @@ async function procesar_articulo(articulo, fecha_registro ){
     return new Promise( async (resolve, reject) => {
         if (!articulo?.category_name){
             return resolve({stat:false, text: 'No se especifica categoria!'})
+        }
+
+        // Validar que fecha_registro sea obligatorio
+        const fecha_final = articulo.fecha_registro || fecha_registro;
+        if (!fecha_final) {
+            return resolve({stat:false, text: 'El campo fecha_registro es obligatorio'})
         }
 
         let trx = await global.knex.transaction()

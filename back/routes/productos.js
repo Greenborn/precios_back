@@ -7,6 +7,44 @@ const fs = require("fs")
 const cargador_precios = require("../controllers/importar_productos")
 const processing = require("../helpers/processing")
 const { exec } = require('child_process')
+const axios = require('axios')
+
+// Configuración del servicio de colas
+const QUEUE_SERVICE_URL = process.env.QUEUE_SERVICE_URL || 'http://localhost:3501'
+
+// Funciones helper para interactuar con el servicio de colas
+async function agregarACola(clave, data) {
+    try {
+        await axios.post(`${QUEUE_SERVICE_URL}/add_data`, { clave, data })
+        return true
+    } catch (error) {
+        console.error(`[Cola ${clave}] Error al agregar item:`, error.message)
+        return false
+    }
+}
+
+async function obtenerDeCola(clave) {
+    try {
+        const response = await axios.get(`${QUEUE_SERVICE_URL}/get_data`, { params: { clave } })
+        return response.data.data
+    } catch (error) {
+        if (error.response?.status === 404) {
+            // No hay datos, es esperado
+            return null
+        }
+        console.error(`[Cola ${clave}] Error al obtener item:`, error.message)
+        return null
+    }
+}
+
+async function contarItemsCola(clave) {
+    try {
+        const response = await axios.get(`${QUEUE_SERVICE_URL}/count_data`, { params: { clave } })
+        return response.data.count || 0
+    } catch (error) {
+        return 0
+    }
+}
 
 router.get('/all', async function (req, res) {
     console.log("query ", req.query)
@@ -103,9 +141,9 @@ async function procesa_item( item, HOY){
     })
 }
 
-const colaProcProductos = []
-const idCola = "productos"
+const idColaProductos = "productos"
 
+// Procesador de cola de productos usando servicio externo
 setInterval(async () => {
     // Limpiar la tabla estadistica_aumento_diario para dejar solo los registros del día actual (GMT-3)
     let HOY_ARG = new Date();
@@ -114,30 +152,35 @@ setInterval(async () => {
     HOY_ARG.setHours(0, 0, 0, 0);
     await global.knex("estadistica_aumento_diario").where('fecha_utlimo_precio', '<', HOY_ARG).del();
     
-    await processing.procesarColaProc(idCola, colaProcProductos, async (item) => {
-        let HOY = new Date()
-        HOY.setHours(0,0,0,1)
-        // HOY aquí es UTC, para inserts y updates usar new Date() directamente
-        return await procesa_item(item, HOY)
-    }, async () => {
-        // Limpiar la tabla antes de actualizar la serie compilada (usando inicio de día Argentina GMT-3)
-        /*let HOY_ARG = new Date();
-        HOY_ARG = new Date(HOY_ARG.getTime() - (3 * 60 * 60 * 1000));
-        HOY_ARG.setHours(0, 0, 0, 0);
-        await global.knex("estadistica_aumento_diario").where('fecha_utlimo_precio', '<', HOY_ARG).del();
-        console.log("Cola de productos vacía, actualizando serie_compilada_media_interdiaria...");
-        exec('node scripts/resetear_serie_compilada_media_interdiaria.js price_today --no-truncate', (error, stdout, stderr) => {
-            if (error) {
-                console.error(`Error al actualizar serie compilada: ${error.message}`);
-                return;
+    // Procesar items de la cola externa
+    let procesados = 0;
+    const MAX_ITEMS_PERIODO = 50;
+    
+    while (procesados < MAX_ITEMS_PERIODO) {
+        const item = await obtenerDeCola(idColaProductos);
+        if (!item) break; // No hay más items
+        
+        try {
+            let HOY = new Date()
+            HOY.setHours(0,0,0,1)
+            // HOY aquí es UTC, para inserts y updates usar new Date() directamente
+            const resultado = await procesa_item(item, HOY)
+            procesados++;
+            if (procesados === 1) {
+                console.log(`[${idColaProductos}] Iniciando procesamiento de la cola.`);
             }
-            if (stderr) {
-                console.error(`stderr: ${stderr}`);
-                return;
-            }
-            console.log(`stdout: ${stdout}`);
-        });*/
-    });
+            console.log(`[${idColaProductos}] Procesando item #${procesados}.`);
+        } catch (error) {
+            console.error(`[${idColaProductos}] Error procesando item, reintentando...`, error);
+            // Reintroduce el item en la cola
+            await agregarACola(idColaProductos, item);
+            break; // Salir del ciclo para no bloquear
+        }
+    }
+    
+    if (procesados > 0) {
+        console.log(`[${idColaProductos}] Fin de ciclo. Items procesados: ${procesados}`);
+    }
 }, 2000);
 
 const TABLAS = {
@@ -251,13 +294,16 @@ async function procesar_oferta(trx, item, HOY, AYER){
             if (!item?.titulo)
                 return resolve({ stat: false,  error: "Revisar titulo ", 'item':JSON.stringify(item) })
             
+            // Validar que fecha_registro sea obligatorio
+            if (!item?.fecha_registro)
+                return resolve({ stat: false,  error: "El campo fecha_registro es obligatorio", 'item':JSON.stringify(item) })
+            
             let existe = await global.knex("promociones_hoy").where("titulo", item.titulo).first()
             if (existe)
                 return resolve({ stat: false,  error: "Ya existe oferta con ese título ", 'item':JSON.stringify(item) })
             else {
                 let proms_arr = []
-                // Usar fecha_registro si viene, sino fecha actual
-                let fecha = item.fecha_registro || new Date();
+                let fecha = item.fecha_registro;
                 const insert_ = {
                     'orden': 0,
                     'fecha': fecha,
@@ -293,23 +339,47 @@ async function procesar_oferta(trx, item, HOY, AYER){
     })
 }
 
-let colaProcOfertas = []
+const idColaOfertas = "ofertas"
 
-// Worker que se encarga de procesar los items de la cola
+// Procesador de cola de ofertas usando servicio externo
 setInterval(async()=>{
     // Limpiar la tabla promociones_hoy para dejar solo los registros del día actual
     let HOY = new Date()
     HOY.setHours(0,0,0,0)
     await global.knex("promociones_hoy").where('fecha', '<', HOY).del()
-    await processing.procesarColaProc("ofertas", colaProcOfertas, async (item) => {
-        let HOY = new Date()
-        HOY.setHours(0,0,0,1)
-
-        let AYER = new Date()
-        AYER.setDate(AYER.getDate() - 1)
-        AYER.setHours(23,59,59)
-        return await procesar_oferta(global.knex, item, HOY, AYER)
-    })
+    
+    // Procesar items de la cola externa
+    let procesados = 0;
+    const MAX_ITEMS_PERIODO = 50;
+    
+    while (procesados < MAX_ITEMS_PERIODO) {
+        const item = await obtenerDeCola(idColaOfertas);
+        if (!item) break; // No hay más items
+        
+        try {
+            let HOY = new Date()
+            HOY.setHours(0,0,0,1)
+            let AYER = new Date()
+            AYER.setDate(AYER.getDate() - 1)
+            AYER.setHours(23,59,59)
+            
+            const resultado = await procesar_oferta(global.knex, item, HOY, AYER)
+            procesados++;
+            if (procesados === 1) {
+                console.log(`[${idColaOfertas}] Iniciando procesamiento de la cola.`);
+            }
+            console.log(`[${idColaOfertas}] Procesando item #${procesados}.`);
+        } catch (error) {
+            console.error(`[${idColaOfertas}] Error procesando item, reintentando...`, error);
+            // Reintroduce el item en la cola
+            await agregarACola(idColaOfertas, item);
+            break; // Salir del ciclo para no bloquear
+        }
+    }
+    
+    if (procesados > 0) {
+        console.log(`[${idColaOfertas}] Fin de ciclo. Items procesados: ${procesados}`);
+    }
 }, 2000)
 
 router.post('/importar_oferta', async function (req, res) {
@@ -324,12 +394,21 @@ router.post('/importar_oferta', async function (req, res) {
             return
         }
 
+        if (!Array.isArray(ARR_IMPORTA) || ARR_IMPORTA.length === 0) {
+            res.status(200).send({ stat: false, error: "No hay items para importar" })
+            return
+        }
+
+        // Agregar items a la cola externa
+        let agregados = 0;
         for (let index = 0; index < ARR_IMPORTA.length; index++) {
             const item = ARR_IMPORTA[index]
-            colaProcOfertas.push( item )
+            const success = await agregarACola(idColaOfertas, item)
+            if (success) agregados++;
         }
         
-        return res.status(200).send({ stat: true })
+        console.log(`[importar_oferta] Se agregaron ${agregados}/${ARR_IMPORTA.length} ofertas a la cola.`)
+        return res.status(200).send({ stat: true, count: agregados })
     } catch (error) {
         console.log("error", error)
         res.status(200).send({ stat: false,  error: "Error interno, reintente luego" })
@@ -418,7 +497,7 @@ router.post('/importar_alquiler', async function (req, res) {
 })
 
 // Endpoint para importar productos y llenar la cola de procesamiento
-// El endpoint /importar ya utiliza la cola y procesamiento correcto, que actualiza price_today.
+// El endpoint /importar utiliza el servicio externo de colas
 router.post('/importar', async function (req, res) {
     const KEY = req.body?.key;
     try {
@@ -434,11 +513,15 @@ router.post('/importar', async function (req, res) {
             return;
         }
 
-        ARR_IMPORTA.forEach((item) => {
-            colaProcProductos.push(item);
-        });
-        console.log(`[importar] Se agregaron ${ARR_IMPORTA.length} items a la cola. Tamaño actual:`, colaProcProductos.length);
-        res.status(200).send({ stat: true, count: ARR_IMPORTA.length });
+        // Agregar items a la cola externa
+        let agregados = 0;
+        for (const item of ARR_IMPORTA) {
+            const success = await agregarACola(idColaProductos, item);
+            if (success) agregados++;
+        }
+        
+        console.log(`[importar] Se agregaron ${agregados}/${ARR_IMPORTA.length} items a la cola.`);
+        res.status(200).send({ stat: true, count: agregados });
         return;
     } catch (error) {
         console.log("[importar] error", error);
