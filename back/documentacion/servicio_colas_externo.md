@@ -2,12 +2,31 @@
 
 ## 📋 Descripción
 
-El sistema de importación ahora utiliza un servicio externo de colas en lugar de arreglos locales en memoria. Esto permite:
+El sistema de importación ahora utiliza un servicio externo de colas que se encarga tanto del almacenamiento como del procesamiento de los datos. El backend actúa únicamente como proxy, enviando los datos al servicio externo.
+
+## 🎯 Arquitectura
+
+**Backend (routes/productos.js):**
+- ✅ Recibe peticiones de importación
+- ✅ Valida KEY y datos
+- ✅ Envía datos al servicio de colas (POST /add_data)
+- ❌ **NO** procesa colas localmente
+- ❌ **NO** tiene setInterval de procesamiento
+
+**Servicio Externo (puerto 3501):**
+- ✅ Almacena datos en colas
+- ✅ Procesa items de las colas
+- ✅ Ejecuta `procesar_articulo()` y `procesar_oferta()`
+- ✅ Actualiza base de datos
+- ✅ Maneja reintentos y errores
+
+## 💡 Beneficios
 
 - ✅ **Persistencia**: Los datos en cola no se pierden si el servidor se reinicia
-- ✅ **Escalabilidad**: Múltiples instancias del backend pueden compartir la misma cola
+- ✅ **Escalabilidad**: Múltiples instancias del backend pueden enviar datos
 - ✅ **Monitoreo**: Posibilidad de consultar el estado de las colas externamente
-- ✅ **Desacoplamiento**: El procesamiento de colas está separado del almacenamiento
+- ✅ **Desacoplamiento**: Procesamiento completamente separado del backend API
+- ✅ **Simplicidad**: El backend solo envía datos, sin lógica compleja de procesamiento
 
 ---
 
@@ -80,81 +99,94 @@ El sistema utiliza dos colas principales:
 
 **Uso:** Importación de productos y precios
 
-**Items procesados por:** `setInterval` cada 2 segundos en [productos.js:106-145](../routes/productos.js#L106-L145)
-
-**Límite de procesamiento:** 50 items por ciclo
+**Procesamiento:** El servicio externo se encarga del procesamiento
 
 **Alimentada por:** 
 - Endpoint `/importar` - Importación masiva de productos
+
+**Datos esperados:**
+```json
+{
+  "name": "string",
+  "price": "number",
+  "branch_id": "number",
+  "category_name": "string",
+  "fecha_registro": "Date",
+  "vendor_id": "string (opcional)",
+  "barcode": "string (opcional)",
+  "description": "string (opcional)",
+  "url": "string (opcional)",
+  "nota": "string (opcional)"
+}
+```
 
 ### 2. Cola de Ofertas (`ofertas`)
 
 **Uso:** Importación de promociones y ofertas
 
-**Items procesados por:** `setInterval` cada 2 segundos en [productos.js:304-340](../routes/productos.js#L304-L340)
-
-**Límite de procesamiento:** 50 items por ciclo
-
-**Alimentada por:**
-- Endpoint `/importar_oferta` - Importación de ofertas
-
----
-
-## 🔄 Flujo de Procesamiento
-
-### Importación de Productos
-
-```
-1. Cliente → POST /importar
+**Procesamiento:** El servi (al backend)
    └─> Validación de KEY
    └─> Validación de ARR_IMPORTA
    
 2. Backend → POST {QUEUE_SERVICE_URL}/add_data
    └─> clave: "productos"
    └─> data: cada item del array
+   └─> Responde al cliente con { stat: true, count: N }
    
-3. setInterval (cada 2s)
-   └─> GET {QUEUE_SERVICE_URL}/get_data?clave=productos
-   └─> Procesar hasta 50 items
+3. Servicio Externo (procesamiento automático)
+   └─> Obtiene items de la cola
    └─> procesa_item() → procesar_articulo()
-   └─> Actualizar estadísticas
+   └─> Actualiza base de datos
+   └─> Actualiza estadísticas
+   └─> Actualiza buscador en tiempo real
 ```
 
 ### Importación de Ofertas
 
 ```
-1. Cliente → POST /importar_oferta
+1. Cliente → POST /importar_oferta (al backend)
    └─> Validación de KEY
    └─> Validación de ARR_IMPORTA
    
 2. Backend → POST {QUEUE_SERVICE_URL}/add_data
    └─> clave: "ofertas"
    └─> data: cada item del array
+   └─> Responde al cliente con { stat: true, count: N }
+   
+3. Servicio Externo (procesamiento automático)
+   └─> Obtiene items de la cola
+   └─> procesar_oferta()
+   └─> Actualiza base de datos
+   └─> Actualiza estadísticas de promocioneray
    
 3. setInterval (cada 2s)
-   └─> GET {QUEUE_SERVICE_URL}/get_data?clave=ofertas
+   └─> GET {QUEUE_SERVICE_URL}/get_data?clave=productos
    └─> Procesar hasta 50 items
-   └─> procesar_oferta()
-   └─> Actualizar estadísticas
-```
-
----
-
-## 🛠️ Funciones Helper
-
-### `agregarACola(clave, data)`
-
-Agrega un item a la cola externa.
+   └─> procesa_item() → procesar_articulo()
+**Única función del backend.** Envía un item a la cola externa para que el servicio externo lo procese.
 
 **Parámetros:**
 - `clave`: Nombre de la cola (`"productos"` o `"ofertas"`)
 - `data`: Objeto con los datos del item
 
 **Retorna:**
-- `true`: Item agregado correctamente
-- `false`: Error al agregar
+- `true`: Item agregado correctamente al servicio externo
+- `false`: Error al comunicarse con el servicio
 
-**Ejemplo:**
+**Implementación:**
+```javascript
+async function agregarACola(clave, data) {
+    try {
+        await axios.post(`${QUEUE_SERVICE_URL}/add_data`, { clave, data })
+        return true
+    } catch (error) {
+        console.error(`[Cola ${clave}] Error al agregar item:`, error.message)
+        return false
+    }
+}
+```
+
+**Ejemplo de uso:**
 ```javascript
 const success = await agregarACola("productos", {
     name: "Leche La Serenísima 1L",
@@ -163,10 +195,13 @@ const success = await agregarACola("productos", {
     category_name: "Lácteos",
     fecha_registro: new Date()
 })
+
+if (success) {
+    console.log('Item enviado al servicio de colas')
+} else {
+    console.error('Error al enviar item')
+}
 ```
-
-### `obtenerDeCola(clave)`
-
 Obtiene y elimina el último item de la cola.
 
 **Parámetros:**
@@ -207,69 +242,89 @@ Si el servicio de colas no está disponible:
    - Se registra el error en consola
    - Retorna `false` al endpoint
    - El cliente recibe el conteo de items agregados exitosamente
+En el Backend
 
-2. **Al obtener items:**
-   - Se registra el error en consola
-   - Retorna `null`
-   - El procesador espera al siguiente ciclo (2 segundos)
+Si el servicio de colas no está disponible:
 
-### Reintentos
+**Al agregar items:** 
+- Se registra el error en consola: `[Cola productos] Error al agregar item: ECONNREFUSED`
+- Retorna `false` al endpoint
+- El cliente recibe el conteo de items agregados exitosamente vs. fallidos
 
-Si un item falla al procesarse:
-
-```javascript
-catch (error) {
-    console.error(`[Cola] Error procesando item, reintentando...`, error);
-    // Reintroduce el item en la cola
-    await agregarACola(clave, item);
-    break; // Salir del ciclo para no bloquear
+**Ejemplo de respuesta:**
+```json
+{
+  "stat": true,
+  "count": 95  // De 100 enviados, 95 fueron aceptados
 }
 ```
 
----
+### En el Servicio Externo
 
-## 📊 Monitoreo
+El servicio externo es responsable de:
 
-### Logs de Procesamiento
+- ✅ Procesar items de la cola
+- ✅ Reintentar items fallidos
+- ✅ Registrar errores de procesamiento
+- ✅ Actualizar estadísticas
+- ✅ Mantener logs de operaciones
 
-```
+**El backend NO tiene lógica de reintentos** - esta responsabilidad es del servicio externo.
 [productos] Iniciando procesamiento de la cola.
 [productos] Procesando item #1.
 [productos] Procesando item #2.
-...
-[productos] Fin de ciclo. Items procesados: 50
-```
-
-### Logs de Importación
+...en el Backend (solo envío)
 
 ```
 [importar] Se agregaron 100/100 items a la cola.
 [importar_oferta] Se agregaron 25/30 ofertas a la cola.
 ```
 
----
+En caso de error:
+```
+[Cola productos] Error al agregar item: connect ECONNREFUSED 127.0.0.1:3501
+[importar] Se agregaron 0/100 items a la cola.
+```
 
-## ⚠️ Consideraciones
+### Logs en el Servicio Externo (procesamiento)
 
-### Rendimiento
+El servicio externo debe implementar sus propios logs de procesamiento:
+- Items obtenidos de la cola
+- Items procesados exitosamente
+- Errores durante el procesamiento
+- Estadísticas actualizadas
+- Tiempo de procesamiento Rendimiento
 
 - **Límite por ciclo:** 50 items cada 2 segundos = ~1500 items/minuto
 - **Si la cola crece:** Los items se procesan en orden LIFO (último en entrar, primero en salir)
+sponsabilidades
+
+**Backend:**
+- ✅ Validar datos de entrada (KEY, formato)
+- ✅ Enviar datos al servicio externo
+- ✅ Informar al cliente sobre éxito/fracaso del envío
+- ❌ **NO** procesa ninguna cola
+- ❌ **NO** interactúa con la base de datos para importación
+
+**Servicio Externo:**
+- ✅ Almacenar items en colas
+- ✅ Procesar items (ejecutar lógica de importación)
+- ✅ Actualizar base de datos
+- ✅ Manejar reintentos y errores
+- ✅ Actualizar estadísticas
+- ✅ Mantener logs de procesamiento
 
 ### Persistencia
 
 - Los datos en la cola dependen del servicio externo
-- Si el servicio se reinicia, verificar que tenga persistencia implementada
+- El servicio debe tener persistencia o tolerancia a fallos
+- Si el servicio se reinicia, debe recuperar colas pendientes
 
 ### Escalabilidad
 
-- Múltiples instancias del backend pueden competir por items
-- El servicio debe manejar concurrencia correctamente
-- Considerar usar locks o transacciones en el servicio de colas
-
----
-
-## 🔍 Debugging
+- ✅ Múltiples instancias del backend pueden enviar datos al mismo servicio
+- ⚠️ El servicio externo debe manejar concurrencia correctamente
+- ⚠️ Considerar usar locks/transacciones para evitar procesamiento duplicado
 
 ### Verificar Estado de la Cola
 
@@ -305,18 +360,27 @@ curl "http://localhost:3501/get_data?clave=productos"
 ```
 
 ---
+en `setInterval` | **ELIMINADO** - Lo hace el servicio |
+| Procesamiento | `setInterval` con `processing.procesarColaProc()` | **ELIMINADO** - Lo hace el servicio |
 
-## 🔄 Migración desde Arreglos Locales
+### Archivos Modificados
 
-### Cambios Realizados
+1. ✅ [env.example](../../env.example) - Variable `QUEUE_SERVICE_URL`
+2. ✅ [routes/productos.js](../routes/productos.js) - Solo envío, sin procesamiento
+3. ⚠️ [helpers/processing.js](../helpers/processing.js) - Ya no se usa para importación
 
-| Componente | Antes | Después |
-|------------|-------|---------|
-| Almacenamiento | `colaProcProductos = []` | Servicio externo puerto 3501 |
-| Agregar items | `colaProcProductos.push(item)` | `await agregarACola("productos", item)` |
-| Obtener items | `cola.shift()` | `await obtenerDeCola("productos")` |
-| Procesamiento | `processing.procesarColaProc()` | Loop manual con `while` |
+### Código Eliminado del Backend
 
+- ❌ `setInterval` de procesamiento de productos
+- ❌ `setInterval` de procesamiento de ofertas
+- ❌ `procesa_item()` function
+- ❌ `procesar_oferta()` function
+- ❌ `obtenerDeCola()` helper
+- ❌ `contarItemsCola()` helper
+- ❌ Limpieza de `estadistica_aumento_diario` en backend
+- ❌ Limpieza de `promociones_hoy` en backend
+
+**Nota:** Estas funciones deben implementarse en el servicio externo
 ### Archivos Modificados
 
 1. ✅ [env.example](../../env.example) - Variable `QUEUE_SERVICE_URL`

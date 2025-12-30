@@ -1,12 +1,37 @@
 # Changelog - Migración a Servicio de Colas Externo
 
-**Fecha:** 30 de diciembre de 2025
+**Fecha:** 30 de diciembre de 2025  
+**Versión:** 2.0 - Solo envío, sin procesamiento local
 
 ---
 
 ## 🎯 Objetivo
 
-Migrar el sistema de colas de importación desde arreglos locales en memoria a un servicio externo independiente para mejorar la persistencia, escalabilidad y monitoreo.
+Migrar el sistema de importación a una arquitectura completamente desacoplada donde:
+- **Backend:** Solo envía datos al servicio de colas (actúa como proxy)
+- **Servicio Externo:** Almacena y procesa todos los datos
+
+---
+
+## 🏗️ Arquitectura Final
+
+```
+Cliente
+   ↓ POST /importar
+Backend (API)
+   ↓ POST /add_data (solo envío)
+Servicio de Colas (puerto 3501)
+   ↓ Procesamiento automático
+   ↓ Actualización BD
+Base de Datos
+```
+
+**Responsabilidades:**
+
+| Componente | Responsabilidad |
+|------------|-----------------|
+| **Backend** | Validar y enviar datos |
+| **Servicio Externo** | Almacenar, procesar y persistir |
 
 ---
 
@@ -26,138 +51,53 @@ Migrar el sistema de colas de importación desde arreglos locales en memoria a u
 
 ### 2. Routes - `back/routes/productos.js`
 
-#### Nuevas Dependencias
+#### Código ELIMINADO (ya no se procesa localmente)
+
 ```diff
-+ const axios = require('axios')
+- async function procesa_item(item, HOY) { ... }
+- async function procesar_oferta(trx, item, HOY, AYER) { ... }
+- async function obtenerDeCola(clave) { ... }
+- async function contarItemsCola(clave) { ... }
+
+- setInterval(async () => {
+-     // Procesamiento de cola de productos
+-     while (procesados < MAX_ITEMS_PERIODO) {
+-         const item = await obtenerDeCola(idColaProductos);
+-         await procesa_item(item, HOY)
+-     }
+- }, 2000);
+
+- setInterval(async () => {
+-     // Procesamiento de cola de ofertas
+-     while (procesados < MAX_ITEMS_PERIODO) {
+-         const item = await obtenerDeCola(idColaOfertas);
+-         await procesar_oferta(global.knex, item, HOY, AYER)
+-     }
+- }, 2000);
 ```
 
-#### Configuración del Servicio
+#### Código MANTENIDO (solo envío)
+
 ```javascript
-// Configuración del servicio de colas
 const QUEUE_SERVICE_URL = process.env.QUEUE_SERVICE_URL || 'http://localhost:3501'
-```
 
-#### Funciones Helper Agregadas
+// ÚNICA función helper
+async function agregarACola(clave, data) {
+    try {
+        await axios.post(`${QUEUE_SERVICE_URL}/add_data`, { clave, data })
+        return true
+    } catch (error) {
+        console.error(`[Cola ${clave}] Error al agregar item:`, error.message)
+        return false
+    }
+}
 
-1. **`agregarACola(clave, data)`**
-   - Envía items al servicio de colas vía POST `/add_data`
-   - Manejo de errores con logging
-   - Retorna `true/false` según éxito
-
-2. **`obtenerDeCola(clave)`**
-   - Obtiene items del servicio vía GET `/get_data`
-   - Elimina el item de la cola automáticamente
-   - Maneja status 404 (cola vacía) sin error
-   - Retorna el item o `null`
-
-3. **`contarItemsCola(clave)`**
-   - Consulta cantidad de items vía GET `/count_data`
-   - Para monitoreo y debugging
-   - Retorna número o `0` en caso de error
-
----
-
-### 3. Procesamiento de Cola de Productos
-
-#### Antes
-```javascript
-const colaProcProductos = []
-const idCola = "productos"
-
-setInterval(async () => {
-    await processing.procesarColaProc(idCola, colaProcProductos, async (item) => {
-        return await procesa_item(item, HOY)
-    }, async () => {
-        // onEmpty callback
-    });
-}, 2000);
-```
-
-#### Después
-```javascript
+// Identificadores de colas
 const idColaProductos = "productos"
-
-setInterval(async () => {
-    // Limpieza de estadísticas
-    await global.knex("estadistica_aumento_diario")
-        .where('fecha_utlimo_precio', '<', HOY_ARG).del();
-    
-    // Procesar items de la cola externa
-    let procesados = 0;
-    const MAX_ITEMS_PERIODO = 50;
-    
-    while (procesados < MAX_ITEMS_PERIODO) {
-        const item = await obtenerDeCola(idColaProductos);
-        if (!item) break;
-        
-        try {
-            await procesa_item(item, HOY)
-            procesados++;
-        } catch (error) {
-            // Reintentar más tarde
-            await agregarACola(idColaProductos, item);
-            break;
-        }
-    }
-}, 2000);
-```
-
-**Cambios clave:**
-- ❌ Eliminado: `colaProcProductos` array local
-- ❌ Eliminado: Uso de `processing.procesarColaProc()`
-- ✅ Agregado: Loop manual con control de límite
-- ✅ Agregado: Obtención de items del servicio externo
-- ✅ Agregado: Lógica de reintento en caso de error
-
----
-
-### 4. Procesamiento de Cola de Ofertas
-
-#### Antes
-```javascript
-let colaProcOfertas = []
-
-setInterval(async()=>{
-    await processing.procesarColaProc("ofertas", colaProcOfertas, async (item) => {
-        return await procesar_oferta(global.knex, item, HOY, AYER)
-    })
-}, 2000)
-```
-
-#### Después
-```javascript
 const idColaOfertas = "ofertas"
-
-setInterval(async()=>{
-    // Limpieza de promociones antiguas
-    await global.knex("promociones_hoy").where('fecha', '<', HOY).del()
-    
-    // Procesar items de la cola externa
-    let procesados = 0;
-    const MAX_ITEMS_PERIODO = 50;
-    
-    while (procesados < MAX_ITEMS_PERIODO) {
-        const item = await obtenerDeCola(idColaOfertas);
-        if (!item) break;
-        
-        try {
-            await procesar_oferta(global.knex, item, HOY, AYER)
-            procesados++;
-        } catch (error) {
-            await agregarACola(idColaOfertas, item);
-            break;
-        }
-    }
-}, 2000)
 ```
 
-**Cambios clave:**
-- ❌ Eliminado: `colaProcOfertas` array local
-- ✅ Agregado: Lógica similar a cola de productos
-
----
-
-### 5. Endpoint `/importar`
+**Resultado:** El backend solo envía datos, no procesa nada.
 
 #### Antes
 ```javascript
@@ -218,25 +158,28 @@ return res.status(200).send({ stat: true, count: agregados })
 
 ## 📊 Comparativa
 
-| Aspecto | Antes (Arreglos Locales) | Después (Servicio Externo) |
-|---------|--------------------------|----------------------------|
-| **Persistencia** | ❌ Se pierde al reiniciar | ✅ Depende del servicio |
-| **Escalabilidad** | ❌ Una instancia | ✅ Múltiples instancias |
-| **Monitoreo** | ❌ Solo logs internos | ✅ API externa consultable |
-| **Memoria** | ❌ Crece sin límite | ✅ Gestionada por servicio |
-| **Recuperación** | ❌ Manual | ✅ Reintentos automáticos |
-| **Debugging** | ⚠️ Difícil | ✅ Endpoints de debug |
+| Aspecto | Antes (Arreglos Locales) | Intermedio (v1.0) | Ahora (v2.0) |
+|---------|--------------------------|-------------------|--------------|
+| **Almacenamiento** | Array en memoria | Servicio externo | Servicio externo |
+| **Procesamiento** | En backend (setInterval) | En backend (setInterval) | **En servicio externo** |
+| **Backend procesa** | ✅ Sí | ✅ Sí (50 items/2s) | ❌ **NO** |
+| **Backend envía** | - | ✅ Sí | ✅ **Solo esto** |
+| **Persistencia** | ❌ Se pierde | ✅ En servicio | ✅ En servicio |
+| **Escalabilidad** | ❌ 1 instancia | ⚠️ Compiten por items | ✅ **Múltiples envían** |
+| **Simplicidad** | ⚠️ Media | ⚠️ Compleja | ✅ **Muy simple** |
 
 ---
 
 ## 🚨 Consideraciones de Despliegue
 
 ### Prerrequisitos
-
-1. **Servicio de Colas Activo**
+ y PROCESANDO**
    ```bash
-   # El servicio debe estar corriendo en:
-   http://localhost:3501
+   # El servicio debe:
+   # - Estar corriendo en puerto 3501
+   # - Tener acceso a la base de datos
+   # - Implementar la lógica de procesamiento
+   # - Ejecutar procesar_articulo() y procesar_oferta()
    ```
 
 2. **Variable de Entorno Configurada**
@@ -252,16 +195,20 @@ return res.status(200).send({ stat: true, count: agregados })
 ### Orden de Inicio
 
 ```bash
-# 1. Iniciar servicio de colas
+# 1. Iniciar servicio de colas (OBLIGATORIO)
 cd extra_services/queue_service
 npm start
 
-# 2. Verificar que esté activo
-curl http://localhost:3501/health  # O endpoint equivalente
+# 2. Verificar que esté procesando
+curl http://localhost:3501/health
+# Verificar logs: debe mostrar procesamiento de colas
 
 # 3. Iniciar backend
 cd back
 npm start
+```
+
+**IMPORTANTE:** El backend NO funcionará correctamente si el servicio de colas no está procesando datos. start
 ```
 
 ### Testing
@@ -272,7 +219,7 @@ node test_servicio_colas.js  # (Crear si es necesario)
 
 # Verificar colas vacías
 curl "http://localhost:3501/get_data?clave=productos"
-# Esperado: { error: 'No hay datos para la clave' }
+# Es3. Endpoint `/importars para la clave' }
 
 curl "http://localhost:3501/get_data?clave=ofertas"
 # Esperado: { error: 'No hay datos para la clave' }
@@ -297,11 +244,7 @@ Si es necesario volver al sistema anterior:
 
 3. **Reiniciar servidor:**
    ```bash
-   npm start
-   ```
-
----
-
+### 4. Endpoint `/importar_oferta`
 ## 📝 Archivos Afectados
 
 - ✅ `env.example` - Nueva variable de configuración
