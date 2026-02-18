@@ -86,6 +86,85 @@ async function generar_diccio_precios(precios_hoy){
   }
 }
 
+// Función para regenerar diccionarios y estructuras de datos
+async function regenerar_diccionarios(){
+  console.log('[regenerar_diccionarios] Iniciando regeneración de diccionarios...')
+  
+  // Limpiar diccionarios existentes
+  global.precios_diccio = {}
+  global.branchs_diccio = {}
+  global.branch_enterprice_diccio = {}
+  global.alias_busqueda = {}
+  global.enterprice_diccio = {}
+  global.category_diccio = {}
+  global.products_diccio = {}
+  global.products_diccio_id = {}
+  global.diccio_name_category = {}
+  
+  console.log('[regenerar_diccionarios] Cargando datos desde la base de datos...')
+  
+  let locales = await global.knex('branch').select()
+  let enterprice = await global.knex('enterprice').select()
+  let alias = await global.knex('alias_busqueda').select()
+  let category = await global.knex('category').select()
+  global.alias_productos = await global.knex('alias_productos').select()
+                              .join('products', 'products.id', 'alias_productos.product_id')
+  let precios_hoy = await global.knex('price_today').select()
+  let product_category = await global.knex('product_category').select()
+
+  console.log('[regenerar_diccionarios] Generando diccionario de precios...')
+  if (precios_hoy)
+    await generar_diccio_precios(precios_hoy)
+
+  console.log('[regenerar_diccionarios] Generando diccionario de categorías...')
+  if (category){
+    for (let i=0; i < category.length; i++)
+      global.diccio_name_category[category[i].name] = category[i]
+  }
+
+  if (product_category && global.alias_productos && locales && enterprice){
+    console.log('[regenerar_diccionarios] Generando diccionarios de empresas y sucursales...')
+    
+    for (let i=0; i < enterprice.length; i++){
+      global.enterprice_diccio[Number(enterprice[i].id)] = enterprice[i]
+      global.branch_enterprice_diccio[Number(enterprice[i].id)] = []
+    }
+
+    for (let i=0; i < locales.length; i++){
+      global.branchs_diccio[Number(locales[i].id)] = locales[i]
+      global.branch_enterprice_diccio[Number(locales[i].enterprise_id)].push( locales[i] )
+    }
+
+    console.log('[regenerar_diccionarios] Generando diccionarios de productos...')
+    for (let i=0; i < global.alias_productos.length; i++){
+      global.alias_productos[i].name = global.alias_productos[i].name.normalize('NFD')
+                                .replace(/([^n\u0300-\u036f]|n(?!\u0303(?![\u0300-\u036f])))[\u0300-\u036f]+/gi,"$1")
+                                .normalize().toLowerCase()
+      global.products_diccio[global.alias_productos[i].name] = global.alias_productos[i]
+      global.products_diccio_id[global.alias_productos[i].id] = global.alias_productos[i]
+    }
+    
+    console.log('[regenerar_diccionarios] Inicializando buscador...')
+    await busqueda_productos.inicializa_buscador()
+  }
+  
+  if (category)
+    for (let i=0; i < category.length; i++)
+      global.category_diccio[Number(category[i].id)] = category[i]
+
+  if (alias)
+    for (let i=0; i < alias.length; i++)
+      global.alias_busqueda[alias[i].alias.toLowerCase()] = alias[i].termino
+
+  console.log('[regenerar_diccionarios] ✓ Regeneración completada exitosamente')
+  console.log(`[regenerar_diccionarios] Estadísticas:`)
+  console.log(`  - Precios: ${Object.keys(global.precios_diccio).length}`)
+  console.log(`  - Productos: ${Object.keys(global.products_diccio_id).length}`)
+  console.log(`  - Sucursales: ${Object.keys(global.branchs_diccio).length}`)
+  console.log(`  - Empresas: ${Object.keys(global.enterprice_diccio).length}`)
+  console.log(`  - Categorías: ${Object.keys(global.category_diccio).length}`)
+}
+
 async function base_de_datos_iniciada(){
   console.log('se establecio conexion DB')
 
@@ -112,58 +191,15 @@ async function base_de_datos_iniciada(){
   server_API.listen(process.env.service_port_api)
   console.log('Servidor escuchando en: ',process.env.service_port_api)
 
-  let locales = await global.knex('branch').select()
-  let enterprice = await global.knex('enterprice').select()
-  let alias = await global.knex('alias_busqueda').select()
-  let category = await global.knex('category').select()
-  global.alias_productos = await global.knex('alias_productos').select()
-                              .join('products', 'products.id', 'alias_productos.product_id')
-  let precios_hoy = await global.knex('price_today').select()
-  global.diccio_name_category = {}
-   
-  let product_category = await global.knex('product_category').select()
-
-  if (precios_hoy)
-    await generar_diccio_precios(precios_hoy)
-
-  if (category){
-    for (let i=0; i < category.length; i++)
-      global.diccio_name_category[category[i].name] = category[i]
-  }
-
-  if (product_category && products && locales && enterprice && global.alias_productos ){
-
-    for (let i=0; i < enterprice.length; i++){
-      global.enterprice_diccio[Number(enterprice[i].id)] = enterprice[i]
-      global.branch_enterprice_diccio[Number(enterprice[i].id)] = []
-    }
-
-    for (let i=0; i < locales.length; i++){
-      global.branchs_diccio[Number(locales[i].id)] = locales[i]
-      global.branch_enterprice_diccio[Number(locales[i].enterprise_id)].push( locales[i] )
-    }
-
-    for (let i=0; i < global.alias_productos.length; i++){
-      global.alias_productos[i].name = global.alias_productos[i].name.normalize('NFD')
-                                .replace(/([^n\u0300-\u036f]|n(?!\u0303(?![\u0300-\u036f])))[\u0300-\u036f]+/gi,"$1")
-                                .normalize().toLowerCase()
-      global.products_diccio[global.alias_productos[i].name] = global.alias_productos[i]
-      global.products_diccio_id[global.alias_productos[i].id] = global.alias_productos[i]
-    }
-    
-    await busqueda_productos.inicializa_buscador()
-
-  }
-  
-  if (category)
-    for (let i=0; i < category.length; i++)
-      global.category_diccio[Number(category[i].id)] = category[i]
-
-  if (alias)
-    for (let i=0; i < alias.length; i++)
-      global.alias_busqueda[alias[i].alias.toLowerCase()] = alias[i].termino
+  // Inicializar diccionarios y estructuras de datos
+  await regenerar_diccionarios()
 
   // La actualización de price_today debe ejecutarse manualmente mediante:
-  // node scripts/recrear_price_today.js
-  console.log('[price_today] Para actualizar price_today, ejecutar: node scripts/recrear_price_today.js')
+  // node scripts/recrear_price_today.js o mediante el endpoint /admin/productos/regenerar_price_today
+  console.log('[price_today] Para actualizar price_today:')
+  console.log('  - Manualmente: node scripts/recrear_price_today.js')
+  console.log('  - Mediante API: POST /admin/productos/regenerar_price_today con key válida')
 }
+
+// Exportar funciones para uso externo
+module.exports = { regenerar_diccionarios }

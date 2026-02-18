@@ -3,6 +3,8 @@ require("dotenv").config({ path: '../.env' })
 var router = express.Router()
 module.exports = router
 const axios = require('axios')
+const { spawn } = require('child_process')
+const path = require('path')
 
 // Configuración del servicio de colas
 const QUEUE_SERVICE_URL = process.env.QUEUE_SERVICE_URL || 'http://localhost:3501'
@@ -58,6 +60,99 @@ router.get('/all', async function (req, res) {
         console.log("error", error)
         res.status(200).send({ stat: false, items: [], error: true })
     }    
+})
+
+// Endpoint para regenerar la tabla price_today y los diccionarios
+router.post('/regenerar_price_today', async function (req, res) {
+    const KEY = req.body?.key
+    try {
+        const KEY_VALID = process.env.KEY_INT
+        
+        console.log('[regenerar_price_today] Recibida petición de regeneración')
+        
+        if (KEY != KEY_VALID) {
+            console.log('[regenerar_price_today] ✗ KEY inválida')
+            res.status(200).send({ stat: false, error: "Error de autenticación" })
+            return
+        }
+        
+        // Responder inmediatamente al cliente
+        res.status(200).send({ 
+            stat: true, 
+            message: "Proceso de regeneración iniciado en segundo plano. Esto puede tardar varios minutos."
+        })
+        
+        // Ejecutar proceso en segundo plano
+        console.log('[regenerar_price_today] ✓ Respuesta enviada al cliente')
+        console.log('[regenerar_price_today] Iniciando proceso de regeneración en segundo plano...')
+        
+        // Marcar inicio del proceso
+        const inicio = Date.now()
+        
+        // Ejecutar script de recreación de price_today
+        const scriptPath = path.join(__dirname, '..', 'scripts', 'recrear_price_today.js')
+        console.log(`[regenerar_price_today] Ejecutando script: ${scriptPath}`)
+        
+        const recrearProcess = spawn('node', [scriptPath], {
+            cwd: path.join(__dirname, '..'),
+            stdio: ['ignore', 'pipe', 'pipe'],
+            detached: false,
+            env: { ...process.env }
+        })
+        
+        // Capturar salida del script
+        recrearProcess.stdout.on('data', (data) => {
+            console.log(data.toString().trim())
+        })
+        
+        recrearProcess.stderr.on('data', (data) => {
+            console.error(`[recrear_price_today.js ERROR] ${data.toString().trim()}`)
+        })
+        
+        // Cuando termine el script, regenerar diccionarios
+        recrearProcess.on('exit', async (code, signal) => {
+            if (code === 0) {
+                console.log('[regenerar_price_today] ✓ Script recrear_price_today.js completado exitosamente')
+                console.log('[regenerar_price_today] Iniciando regeneración de diccionarios...')
+                
+                try {
+                    // Importar función de regeneración de diccionarios
+                    const { regenerar_diccionarios } = require('../server.js')
+                    await regenerar_diccionarios()
+                    
+                    const duracion = ((Date.now() - inicio) / 1000).toFixed(2)
+                    console.log('[regenerar_price_today] ========================================')
+                    console.log('[regenerar_price_today] ✓✓ PROCESO COMPLETO EXITOSO')
+                    console.log(`[regenerar_price_today] Tiempo total: ${duracion} segundos`)
+                    console.log('[regenerar_price_today] ========================================')
+                } catch (error) {
+                    console.error('[regenerar_price_today] ✗ Error al regenerar diccionarios:', error)
+                }
+            } else {
+                const duracion = ((Date.now() - inicio) / 1000).toFixed(2)
+                console.error('[regenerar_price_today] ========================================')
+                console.error('[regenerar_price_today] ✗ ERROR EN EL PROCESO')
+                if (code !== null) {
+                    console.error(`[regenerar_price_today] Script finalizó con código: ${code}`)
+                } else {
+                    console.error(`[regenerar_price_today] Script finalizó por señal: ${signal}`)
+                }
+                console.error(`[regenerar_price_today] Tiempo transcurrido: ${duracion} segundos`)
+                console.error('[regenerar_price_today] ========================================')
+            }
+        })
+        
+        recrearProcess.on('error', (error) => {
+            console.error('[regenerar_price_today] ✗ Error al ejecutar script:', error.message)
+        })
+        
+    } catch (error) {
+        console.error('[regenerar_price_today] ✗ Error en endpoint:', error)
+        // Si aún no se envió la respuesta
+        if (!res.headersSent) {
+            res.status(200).send({ stat: false, error: "Error interno, reintente luego" })
+        }
+    }
 })
 
 
