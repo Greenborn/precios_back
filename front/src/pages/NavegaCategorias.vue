@@ -22,7 +22,7 @@
                     <div class="col-12 col-sm-6 col-lg-4" v-for="cat in menu_lst" :key="cat">
                         
                         <div v-if="fase < 2"
-                            class="card text-bg-success mb-3 category_btn" style="height: 10rem;" 
+                            class="card rounded-0 text-bg-success mb-3 category_btn" style="height: 10rem;" 
                             @click="categoria_click(cat)">
                             <div class="card-body text-center">
                                 <div class="row align-items-center justify-content-center">

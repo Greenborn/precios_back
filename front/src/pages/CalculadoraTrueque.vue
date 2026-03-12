@@ -9,7 +9,7 @@
 
                     <div class="col-12 col-sm-6">
                         
-                        <div class="card text-bg-secundary">
+                        <div class="card rounded-0 text-bg-secundary">
                             <div class="card-header text-center">
                                 <h4><b>Producto 1 - {{elegidos[0]?.price}}</b></h4>
                             </div>
@@ -79,7 +79,7 @@
 
                     <div class="col-12 col-sm-6">
                         
-                        <div class="card text-bg-secundary">
+                        <div class="card rounded-0 text-bg-secundary">
                             <div class="card-header text-center">
                                 <h4><b>Producto 2 - {{elegidos[1]?.price}}</b></h4>
                             </div>
@@ -152,7 +152,7 @@
                 <div class="row">
                     <div class="col">
 
-                        <div class="card text-bg-secundary">
+                        <div class="card rounded-0 text-bg-secundary">
                             <div class="card-header text-center">
                                 <h4><b>Resultado</b></h4>
                             </div>

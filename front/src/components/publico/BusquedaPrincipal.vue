@@ -1,8 +1,8 @@
 <template>
 <div class="container-fluid" id="buscador-cnt">
     <div  class="row align-items-center justify-content-center d-none d-sm-flex">
-        <div class="col-12 col-md-10 col-lg-8">
-            <div class="card mb-1 p-0">
+        <div class="col-12 col-md-10 col-lg-8 p-0 p-md-2">
+            <div class="card mb-1 p-0 rounded-0">
                 <div class="card-header p-4">
                     <h4>Buscá tu precio </h4>
                     <small>Ingrese el nombre del producto que desea consultar:</small>
@@ -38,8 +38,8 @@
     </div>
 
     <div class="row align-items-center justify-content-center">
-        <div class="col-12 col-md-10 col-lg-8 ">
-            <div class="card mb-1 p-0">
+        <div class="col-12 col-md-10 col-lg-8 p-0 p-md-2">
+            <div class="card mb-1 p-0 rounded-0">
 
                 <div class="card-header p-4 pb-0">
                     <div class="row align-items-center justify-content-center">
@@ -158,7 +158,7 @@
     </div>
 
     <div class="row align-items-center justify-content-center" v-if="mostrarDisclaimer">
-        <div class="col-12 col-md-10 col-lg-8">
+        <div class="col-12 col-md-10 col-lg-8 p-0 p-md-2">
             <div class="alert alert-success alert-dismissible fade show" role="alert">
                 <button type="button" class="btn-close" aria-label="Cerrar" @click="mostrarDisclaimer = false"></button>
                 <p><b>Disclaimer:</b></p>
@@ -184,8 +184,8 @@
         </div>
 
     <div class="row align-items-center justify-content-center">
-        <div class="col-12 col-md-10 col-lg-8 ">
-            <div class="card mb-1 p-0">
+        <div class="col-12 col-md-10 col-lg-8 p-0 p-md-2">
+            <div class="card mb-1 p-0 rounded-0">
 
                 <div class="card-header p-4 pb-0">
                     <h4>Estadísticas Generales</h4>

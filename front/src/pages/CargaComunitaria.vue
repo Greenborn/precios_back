@@ -6,7 +6,7 @@
         <div class="row align-items-center justify-content-center">
             <div class="col-12 col-md-10 col-lg-8 ">
 
-                <div class="card mt-1 mb-1 p-0">
+                <div class="card rounded-0 mt-1 mb-1 p-0">
                     <div class="card-header p-4">
                         <h4>Carga Colaborativa de Precios</h4>
                         <p>Este formulario está pensado para que cualquier persona pueda cargar sus propios precios <br>

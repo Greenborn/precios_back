@@ -17,7 +17,7 @@
 
         <div class="row align-items-stretch justify-content-center g-3 mt-2">
             <div class="col-12 col-md-6 col-lg-4" v-for="(comercio, index) in comercios_filtrados" :key="comercio">
-                <div class="card h-100 shadow-sm card-ofertas p-0">
+                <div class="card rounded-0 h-100 shadow-sm card-ofertas p-0">
                     <div class="card-header bg-primary text-white">
                         <b>{{ comercio?.empresa?.name }}</b>
                         <span class="badge bg-light text-dark ms-2">{{ ofertas_filtradas[String(comercio.id)] && ofertas_filtradas[String(comercio.id)].ofertas?.length }} ofertas</span>

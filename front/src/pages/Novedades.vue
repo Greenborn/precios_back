@@ -4,7 +4,7 @@
 <div class="container-fluid" id="novedades-cnt">
     <div class="row align-items-center justify-content-center">
         <div class="col-12 col-md-10 col-lg-8 ">
-            <div class="card mb-1 p-0">
+            <div class="card rounded-0 mb-1 p-0">
 
                 <div class="card-header p-4 pb-0">
                     <h4>Novedades</h4>
