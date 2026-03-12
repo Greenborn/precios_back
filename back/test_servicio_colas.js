@@ -66,6 +66,9 @@ async function testAgregarItems() {
             fecha_registro: new Date().toISOString()
         },
         {
+            tipo: 'regenerar_precios'
+        },
+        {
             tipo: 'producto',
             name: 'Test Producto 2',
             price: 2000,
@@ -105,8 +108,8 @@ async function testObtenerItems() {
         let obtenidos = 0
         const contadorTipos = {}
         
-        // Intentar obtener hasta 5 items (esperamos 3)
-        for (let i = 0; i < 5; i++) {
+        // Intentar obtener hasta 6 items (esperamos 4)
+        for (let i = 0; i < 6; i++) {
             try {
                 const response = await axios.get(`${QUEUE_SERVICE_URL}/get_data`, {
                     params: { clave: 'test_precios' }
@@ -129,11 +132,11 @@ async function testObtenerItems() {
         
         console.log('   Tipos recibidos:', contadorTipos)
         
-        if (obtenidos === 3) {
-            console.log('   ✓ Cantidad correcta de items obtenidos (3)')
+        if (obtenidos === 4) {
+            console.log('   ✓ Cantidad correcta de items obtenidos (4)')
             return true
         } else {
-            console.log(`   ⚠ Se esperaban 3 items, se obtuvieron ${obtenidos}`)
+            console.log(`   ⚠ Se esperaban 4 items, se obtuvieron ${obtenidos}`)
             return obtenidos > 0
         }
     } catch (error) {

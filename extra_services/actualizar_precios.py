@@ -11,6 +11,7 @@ import sys
 import time
 import json
 import requests
+import subprocess
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 import mysql.connector
@@ -730,6 +731,32 @@ def main():
                             print(f"✗ Error al procesar oferta: {resultado.get('text', 'Error desconocido')}")
                         else:
                             print(f"⊘ Oferta descartada: {resultado.get('text', '')}")
+
+                elif tipo == 'regenerar_precios':
+                    print(f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Tarea regenerar_precios obtenida de la cola")
+                    # ejecutar script de Node para recrear price_today
+                    script_path = os.path.join(os.path.dirname(__file__), '..', 'back', 'scripts', 'recrear_price_today.js')
+                    print(f"Ejecutando script: {script_path}")
+                    try:
+                        proc = subprocess.run(
+                            ['node', script_path],
+                            cwd=os.path.join(os.path.dirname(__file__), '..', 'back'),
+                            capture_output=True,
+                            text=True
+                        )
+                        if proc.stdout:
+                            print(proc.stdout)
+                        if proc.stderr:
+                            print(f"[recrear_price_today error] {proc.stderr}")
+                        if proc.returncode == 0:
+                            print("✓ Script completado exitosamente")
+                            # reiniciar servidor pm2
+                            print("Reiniciando servidor con pm2 restart LAB_PRECIOS...")
+                            subprocess.run(['pm2', 'restart', 'LAB_PRECIOS'])
+                        else:
+                            print(f"✗ Script finalizó con código {proc.returncode}")
+                    except Exception as ex:
+                        print(f"✗ Error al ejecutar script regenerar_precios: {ex}")
 
                 else:
                     # tipo desconocido, contar como error y continuar

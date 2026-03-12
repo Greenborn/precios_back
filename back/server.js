@@ -194,11 +194,11 @@ async function base_de_datos_iniciada(){
   // Inicializar diccionarios y estructuras de datos
   await regenerar_diccionarios()
 
-  // La actualización de price_today debe ejecutarse manualmente mediante:
-  // node scripts/recrear_price_today.js o mediante el endpoint /admin/productos/regenerar_price_today
+  // La actualización de price_today debe ejecutarse manualmente o encolando la tarea
+  // node scripts/recrear_price_today.js o POST /admin/productos/regenerar_price_today (agrega elemento a la cola)
   console.log('[price_today] Para actualizar price_today:')
   console.log('  - Manualmente: node scripts/recrear_price_today.js')
-  console.log('  - Mediante API: POST /admin/productos/regenerar_price_today con key válida')
+  console.log('  - Mediante API (encolar): POST /admin/productos/regenerar_price_today con key válida')
 }
 
 // Exportar funciones para uso externo

@@ -77,75 +77,26 @@ router.post('/regenerar_price_today', async function (req, res) {
             return
         }
         
-        // Responder inmediatamente al cliente
+        // Responder inmediatamente al cliente y encolar la tarea
         res.status(200).send({ 
             stat: true, 
-            message: "Proceso de regeneración iniciado en segundo plano. Esto puede tardar varios minutos."
+            message: "Elemento agregado a la cola para regenerar precios"
         })
         
-        // Ejecutar proceso en segundo plano
         console.log('[regenerar_price_today] ✓ Respuesta enviada al cliente')
-        console.log('[regenerar_price_today] Iniciando proceso de regeneración en segundo plano...')
-        
-        // Marcar inicio del proceso
-        const inicio = Date.now()
-        
-        // Ejecutar script de recreación de price_today
-        const scriptPath = path.join(__dirname, '..', 'scripts', 'recrear_price_today.js')
-        console.log(`[regenerar_price_today] Ejecutando script: ${scriptPath}`)
-        
-        const recrearProcess = spawn('node', [scriptPath], {
-            cwd: path.join(__dirname, '..'),
-            stdio: ['ignore', 'pipe', 'pipe'],
-            detached: false,
-            env: { ...process.env }
-        })
-        
-        // Capturar salida del script
-        recrearProcess.stdout.on('data', (data) => {
-            console.log(data.toString().trim())
-        })
-        
-        recrearProcess.stderr.on('data', (data) => {
-            console.error(`[recrear_price_today.js ERROR] ${data.toString().trim()}`)
-        })
-        
-        // Cuando termine el script, regenerar diccionarios
-        recrearProcess.on('exit', async (code, signal) => {
-            if (code === 0) {
-                console.log('[regenerar_price_today] ✓ Script recrear_price_today.js completado exitosamente')
-                console.log('[regenerar_price_today] Iniciando regeneración de diccionarios...')
-                
-                try {
-                    // Importar función de regeneración de diccionarios
-                    const { regenerar_diccionarios } = require('../server.js')
-                    await regenerar_diccionarios()
-                    
-                    const duracion = ((Date.now() - inicio) / 1000).toFixed(2)
-                    console.log('[regenerar_price_today] ========================================')
-                    console.log('[regenerar_price_today] ✓✓ PROCESO COMPLETO EXITOSO')
-                    console.log(`[regenerar_price_today] Tiempo total: ${duracion} segundos`)
-                    console.log('[regenerar_price_today] ========================================')
-                } catch (error) {
-                    console.error('[regenerar_price_today] ✗ Error al regenerar diccionarios:', error)
-                }
+        console.log('[regenerar_price_today] Agregando tarea de tipo "regenerar_precios" a la cola...')
+        try {
+            const agregado = await agregarACola(idColaPrecios, { tipo: 'regenerar_precios' })
+            if (agregado) {
+                console.log('[regenerar_price_today] ✓ Tarea encolada correctamente')
             } else {
-                const duracion = ((Date.now() - inicio) / 1000).toFixed(2)
-                console.error('[regenerar_price_today] ========================================')
-                console.error('[regenerar_price_today] ✗ ERROR EN EL PROCESO')
-                if (code !== null) {
-                    console.error(`[regenerar_price_today] Script finalizó con código: ${code}`)
-                } else {
-                    console.error(`[regenerar_price_today] Script finalizó por señal: ${signal}`)
-                }
-                console.error(`[regenerar_price_today] Tiempo transcurrido: ${duracion} segundos`)
-                console.error('[regenerar_price_today] ========================================')
+                console.error('[regenerar_price_today] ✗ Falló encolar la tarea')
             }
-        })
+        } catch (err) {
+            console.error('[regenerar_price_today] ✗ Error al llamar a agregarACola:', err)
+        }
+        return;
         
-        recrearProcess.on('error', (error) => {
-            console.error('[regenerar_price_today] ✗ Error al ejecutar script:', error.message)
-        })
         
     } catch (error) {
         console.error('[regenerar_price_today] ✗ Error en endpoint:', error)
