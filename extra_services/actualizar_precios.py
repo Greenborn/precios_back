@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Script para procesar productos desde el servicio de colas
-Realiza peticiones periódicas al servicio de colas y procesa los productos
-según el esquema de importar_productos.js
+Script para procesar elementos (productos/ofertas/acciones) desde el servicio de colas
+Realiza peticiones periódicas al servicio de colas unificada y despacha el procesamiento
+según el campo `tipo` del elemento. Basado en el esquema de importar_productos.js
 """
 
 import os
@@ -67,8 +67,8 @@ def obtener_conexion():
         return None
 
 
-def obtener_elemento_cola(clave='productos'):
-    """Obtiene un elemento de la cola desde el servicio de colas"""
+def obtener_elemento_cola(clave='precios'):
+    """Obtiene un elemento de la cola desde el servicio de colas (clave única 'precios')."""
     try:
         response = requests.get(
             GET_DATA_ENDPOINT,
@@ -694,61 +694,54 @@ def main():
     while True:
         try:
             # Obtener elemento de la cola de productos
-            elemento_producto = obtener_elemento_cola('productos')
-            
-            if elemento_producto:
-                print(f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Producto obtenido de la cola")
-                print(f"Producto: {elemento_producto.get('name', 'N/A')}")
-                
-                # Procesar producto
-                resultado = procesar_articulo(elemento_producto)
-                
-                if resultado['stat']:
-                    productos_procesados += 1
-                    print(f"✓ Producto procesado (Total: {productos_procesados})")
-                    
-                    # Actualizar estadísticas cada 10 productos
-                    if productos_procesados % 10 == 0:
-                        actualizar_estadisticas()
-                        print("  → Estadísticas actualizadas")
-                else:
-                    errores_total += 1
-                    print(f"✗ Error al procesar producto: {resultado.get('text', 'Error desconocido')}")
-                
-                # Procesar siguiente inmediatamente
-                continue
-            
-            # Obtener elemento de la cola de ofertas
-            elemento_oferta = obtener_elemento_cola('ofertas')
-            
-            if elemento_oferta:
-                print(f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Oferta obtenida de la cola")
-                print(f"Oferta: {elemento_oferta.get('titulo', 'N/A')}")
-                
-                # Procesar oferta
-                resultado = procesar_oferta(elemento_oferta)
-                
-                if resultado['stat']:
-                    ofertas_procesadas += 1
-                    print(f"✓ Oferta procesada (Total: {ofertas_procesadas})")
-                    
-                    # Actualizar estadísticas cada 10 ofertas
-                    if ofertas_procesadas % 10 == 0:
-                        actualizar_estadisticas()
-                        print("  → Estadísticas actualizadas")
-                else:
-                    if 'duplicada' not in resultado.get('text', '').lower() and 'anterior a ayer' not in resultado.get('text', '').lower():
-                        errores_total += 1
-                        print(f"✗ Error al procesar oferta: {resultado.get('text', 'Error desconocido')}")
+            # Obtener elemento único de la cola
+            elemento = obtener_elemento_cola('precios')
+            if elemento:
+                tipo = elemento.get('tipo')
+                if tipo == 'producto':
+                    print(f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Producto obtenido de la cola")
+                    print(f"Producto: {elemento.get('name', 'N/A')}")
+                    resultado = procesar_articulo(elemento)
+
+                    if resultado['stat']:
+                        productos_procesados += 1
+                        print(f"✓ Producto procesado (Total: {productos_procesados})")
+                        if productos_procesados % 10 == 0:
+                            actualizar_estadisticas()
+                            print("  → Estadísticas actualizadas")
                     else:
-                        print(f"⊘ Oferta descartada: {resultado.get('text', '')}")
-                
-                # Procesar siguiente inmediatamente
+                        errores_total += 1
+                        print(f"✗ Error al procesar producto: {resultado.get('text', 'Error desconocido')}")
+
+                elif tipo == 'oferta':
+                    print(f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Oferta obtenida de la cola")
+                    print(f"Oferta: {elemento.get('titulo', 'N/A')}")
+                    resultado = procesar_oferta(elemento)
+
+                    if resultado['stat']:
+                        ofertas_procesadas += 1
+                        print(f"✓ Oferta procesada (Total: {ofertas_procesadas})")
+                        if ofertas_procesadas % 10 == 0:
+                            actualizar_estadisticas()
+                            print("  → Estadísticas actualizadas")
+                    else:
+                        if 'duplicada' not in resultado.get('text', '').lower() and 'anterior a ayer' not in resultado.get('text', '').lower():
+                            errores_total += 1
+                            print(f"✗ Error al procesar oferta: {resultado.get('text', 'Error desconocido')}")
+                        else:
+                            print(f"⊘ Oferta descartada: {resultado.get('text', '')}")
+
+                else:
+                    # tipo desconocido, contar como error y continuar
+                    errores_total += 1
+                    print(f"⚠ Tipo desconocido recibido: {tipo}")
+
+                # procesar siguiente inmediatamente
                 continue
             
-            # Si no hay elementos en ninguna cola, esperar
-            if not elemento_producto and not elemento_oferta:
-                print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Colas vacías, esperando...", end='\r')
+            # Si no obtuvimos ningún elemento, la cola está vacía
+            if not elemento:
+                print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Cola vacía, esperando...", end='\r')
                 time.sleep(INTERVALO_VERIFICACION)
         
         except KeyboardInterrupt:

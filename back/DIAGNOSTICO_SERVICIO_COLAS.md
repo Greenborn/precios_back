@@ -168,14 +168,14 @@ curl -X POST http://localhost:3000/admin/productos/importar \
 [importar] Recibida petición con 1 productos
 [importar] Enviando 1 productos al servicio de colas...
 [importar] URL del servicio: http://localhost:3501
-[agregarACola] Enviando a http://localhost:3501/add_data, clave: productos
-[Cola productos] ✓ Item agregado exitosamente
+[agregarACola] Enviando a http://localhost:3501/add_data, clave: precios
+[Cola precios] ✓ Item agregado exitosamente
 [importar] ✓ Completado: 1/1 productos enviados
 ```
 
 **Logs esperados en el servicio de colas:**
 ```
-[add_data] Recibida petición, clave: productos
+[add_data] Recibida petición, clave: precios
 [add_data] Item agregado a la cola
 ```
 
@@ -187,8 +187,8 @@ curl -X POST http://localhost:3000/admin/productos/importar \
 
 **Logs del backend:**
 ```
-[Cola productos] ✗ ERROR: No se puede conectar al servicio en http://localhost:3501
-[Cola productos] ✗ Verificar que el servicio esté corriendo en puerto 3501
+[Cola precios] ✗ ERROR: No se puede conectar al servicio en http://localhost:3501
+[Cola precios] ✗ Verificar que el servicio esté corriendo en puerto 3501
 ```
 
 **Causa:** El servicio de colas NO está corriendo
@@ -205,7 +205,7 @@ npm start
 
 **Logs del backend:**
 ```
-[Cola productos] ✗ ERROR: Timeout al conectar con el servicio
+[Cola precios] ✗ ERROR: Timeout al conectar con el servicio
 ```
 
 **Causa:** El servicio está colgado o muy lento

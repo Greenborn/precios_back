@@ -11,6 +11,33 @@ Migrar el sistema de importación a una arquitectura completamente desacoplada d
 - **Backend:** Solo envía datos al servicio de colas (actúa como proxy)
 - **Servicio Externo:** Almacena y procesa todos los datos
 
+
+---
+
+## 📅 2026-03-12 - Unificación de colas
+
+Se decidió consolidar los mensajes de productos y ofertas en una **única cola** llamada
+`precios`. Cada elemento enviado ahora incluye un campo adicional `tipo` que permite distinguir
+su naturaleza (`producto`, `oferta`, y en el futuro `accion`, etc.).
+
+Cambios principales:
+
+- Los endpoints `/importar` y `/importar_oferta` usan ahora la misma clave `precios`.
+- Se agrega el atributo `tipo` a cada objeto antes de encolarlo.
+- Se deprecó el uso de claves separadas (`productos`, `ofertas`) en el backend.
+- Actualización de tests y documentación para reflejar la nueva estructura.
+
+Este ajuste simplifica la gestión de la cola y permite escalabilidad cuando se agreguen más
+tipos de datos.
+
+---
+
+## 🎯 Objetivo
+
+Migrar el sistema de importación a una arquitectura completamente desacoplada donde:
+- **Backend:** Solo envía datos al servicio de colas (actúa como proxy)
+- **Servicio Externo:** Almacena y procesa todos los datos
+
 ---
 
 ## 🏗️ Arquitectura Final

@@ -46,8 +46,11 @@ async function testConectividad() {
 async function testAgregarItems() {
     console.log('\n2. Probando agregar items a la cola...')
     
+    // incluimos tanto productos como ofertas para asegurar que la cola
+    // unificada acepte distintos tipos
     const items = [
         {
+            tipo: 'producto',
             name: 'Test Producto 1',
             price: 1000,
             branch_id: 1,
@@ -55,16 +58,18 @@ async function testAgregarItems() {
             fecha_registro: new Date().toISOString()
         },
         {
-            name: 'Test Producto 2',
-            price: 2000,
-            branch_id: 2,
-            category_name: 'Test',
+            tipo: 'oferta',
+            titulo: 'Oferta Test 1',
+            precio: 500,
+            branch_id: 1,
+            url: 'https://test',
             fecha_registro: new Date().toISOString()
         },
         {
-            name: 'Test Producto 3',
-            price: 3000,
-            branch_id: 3,
+            tipo: 'producto',
+            name: 'Test Producto 2',
+            price: 2000,
+            branch_id: 2,
             category_name: 'Test',
             fecha_registro: new Date().toISOString()
         }
@@ -73,7 +78,7 @@ async function testAgregarItems() {
     try {
         for (let i = 0; i < items.length; i++) {
             const response = await axios.post(`${QUEUE_SERVICE_URL}/add_data`, {
-                clave: 'test_productos',
+                clave: 'test_precios',
                 data: items[i]
             })
             
@@ -98,17 +103,20 @@ async function testObtenerItems() {
     
     try {
         let obtenidos = 0
+        const contadorTipos = {}
         
         // Intentar obtener hasta 5 items (esperamos 3)
         for (let i = 0; i < 5; i++) {
             try {
                 const response = await axios.get(`${QUEUE_SERVICE_URL}/get_data`, {
-                    params: { clave: 'test_productos' }
+                    params: { clave: 'test_precios' }
                 })
                 
                 if (response.data.data) {
-                    console.log(`   ✓ Item ${i + 1} obtenido: ${response.data.data.name}`)
+                    const item = response.data.data
+                    console.log(`   ✓ Item ${i + 1} obtenido: tipo=${item.tipo}`)
                     obtenidos++
+                    contadorTipos[item.tipo] = (contadorTipos[item.tipo] || 0) + 1
                 }
             } catch (error) {
                 if (error.response?.status === 404) {
@@ -118,6 +126,8 @@ async function testObtenerItems() {
                 throw error
             }
         }
+        
+        console.log('   Tipos recibidos:', contadorTipos)
         
         if (obtenidos === 3) {
             console.log('   ✓ Cantidad correcta de items obtenidos (3)')
@@ -226,7 +236,7 @@ async function testConcurrencia() {
 async function limpiarColas() {
     console.log('\n7. Limpiando colas de test...')
     
-    const claves = ['test_productos', 'test_cola_vacia', 'test_concurrencia', 'test_conectividad']
+    const claves = ['test_precios', 'test_cola_vacia', 'test_concurrencia', 'test_conectividad']
     
     for (const clave of claves) {
         let vaciados = 0

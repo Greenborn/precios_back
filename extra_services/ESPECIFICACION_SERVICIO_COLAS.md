@@ -55,132 +55,78 @@ Content-Type: application/json
 
 ## ⚙️ Procesamiento Automático
 
-### Cola: `"productos"`
-
-El servicio debe procesar items de esta cola ejecutando la lógica equivalente a:
+El servicio recopila todos los elementos en una única cola llamada `precios`.
+Cada objeto almacenado debe contener un campo `tipo` que indique cómo se debe
+procesar:
 
 ```javascript
-// Pseudo-código del procesamiento
+{
+  tipo: 'producto' | 'oferta' | 'accion', // campo obligatorio
+  fecha_registro: Date|string,            // obligatorio
+  // demás propiedades según la categoría
+}
+```
+
+El worker principal consulta la cola `precios` de forma periódica y, tras extraer
+un item, despacha el procesamiento basándose en el valor de `tipo`.
+
+```javascript
+async function procesarCaso(item) {
+    switch (item.tipo) {
+        case 'producto':
+            return procesarProducto(item)
+        case 'oferta':
+            return procesarOferta(item)
+        case 'accion':
+            // placeholder para futuras acciones específicas
+            return procesarAccion(item)
+        default:
+            console.error('Tipo desconocido:', item.tipo)
+            return false
+    }
+}
+
+// ejemplo del worker principal
+setInterval(async () => {
+    await procesarCola('precios', procesarCaso)
+}, CONFIG.INTERVALO_PROCESAMIENTO)
+```
+
+### Procesadores existentes
+
+#### `procesarProducto(item)`
+Lógica equivalente a la definida previamente para la cola `productos`.
+
+```javascript
 async function procesarProducto(item) {
-    // 1. Conectar a la base de datos
     const knex = require('knex')(config)
-    
-    // 2. Validar datos requeridos
-    if (!item.name || !item.category_name || !item.branch_id || !item.price || !item.fecha_registro) {
+    // validaciones básicas
+    if (!item.name || !item.category_name || !item.branch_id || !item.price) {
         console.error('Datos incompletos:', item)
         return false
     }
-    
-    // 3. Ejecutar procesar_articulo()
-    // Importar desde: back/controllers/importar_productos.js
     const { procesar_articulo } = require('./controllers/importar_productos')
-    const resultado = await procesar_articulo(item, item.fecha_registro)
-    
-    // 4. Actualizar estadísticas si fue exitoso
-    if (resultado.stat) {
-        // Actualizar incremental_stats
-        const cant_price = await knex('price').count('id').first()
-        await knex('incremental_stats')
-            .update({ value: cant_price['count(`id`)'] })
-            .where('key', 'cant_price')
-        
-        const cant_price_today = await knex('price_today').count('id').first()
-        await knex('incremental_stats')
-            .update({ value: cant_price_today['count(`id`)'] })
-            .where('key', 'precios_hoy')
-    }
-    
-    return resultado.stat
+    return await procesar_articulo(item, item.fecha_registro)
 }
 ```
 
-**Datos esperados en cada item:**
-```javascript
-{
-  name: string,              // REQUERIDO
-  price: number,             // REQUERIDO (>0)
-  branch_id: number,         // REQUERIDO
-  category_name: string,     // REQUERIDO
-  fecha_registro: Date|string, // REQUERIDO
-  vendor_id: string,         // OPCIONAL
-  barcode: string,           // OPCIONAL
-  description: string,       // OPCIONAL
-  url: string,              // OPCIONAL
-  nota: string              // OPCIONAL
-}
-```
-
-### Cola: `"ofertas"`
-
-El servicio debe procesar items de esta cola ejecutando:
+#### `procesarOferta(item)`
+Mismo código que antes para la cola `ofertas`, adaptado a la nueva estructura.
 
 ```javascript
 async function procesarOferta(item) {
     const knex = require('knex')(config)
-    
-    // 1. Validar datos
-    if (!item.titulo || !item.fecha_registro || !item.branch_id || !item.precio || !item.url) {
-        console.error('Datos incompletos:', item)
-        return false
-    }
-    
-    // 2. Verificar si ya existe
-    const existe = await knex('promociones_hoy')
-        .where('titulo', item.titulo)
-        .first()
-    
-    if (existe) {
-        console.log('Oferta duplicada:', item.titulo)
-        return false
-    }
-    
-    // 3. Insertar en tablas
-    const HOY = new Date()
-    HOY.setHours(0, 0, 0, 0)
-    
-    const AYER = new Date()
-    AYER.setDate(AYER.getDate() - 1)
-    AYER.setHours(23, 59, 59)
-    
-    const insert = {
-        orden: 0,
-        fecha: item.fecha_registro,
-        titulo: item.titulo,
-        id_producto: -1,
-        precio: item.precio,
-        datos_extra: item.datos_extra || '{}',
-        branch_id: item.branch_id,
-        url: item.url
-    }
-    
-    // Limpiar ofertas antiguas
-    await knex('promociones_hoy').where('fecha', '<', AYER).del()
-    
-    // Insertar nueva oferta
-    await knex('promociones_hoy').insert(insert)
-    await knex('promociones').insert(insert)
-    
-    // 4. Actualizar estadísticas
-    const cant_promos = await knex('promociones_hoy').count('id').first()
-    await knex('incremental_stats')
-        .update({ value: cant_promos['count(`id`)'] })
-        .where('key', 'cant_promos')
-    
-    return true
+    if (!item.titulo || !item.branch_id || !item.precio || !item.url) return false
+    // (resto de la lógica permanece igual a la versión anterior)
+    // ...
 }
 ```
 
-**Datos esperados en cada item:**
-```javascript
-{
-  titulo: string,           // REQUERIDO
-  precio: number,           // REQUERIDO
-  branch_id: number,        // REQUERIDO
-  url: string,              // REQUERIDO
-  fecha_registro: Date|string, // REQUERIDO
-  datos_extra: object       // OPCIONAL (default: {})
-}
-```
+
+**Nota:** Los ejemplos anteriores están simplificados; el servicio completo debe
+incluír controles de reintentos, timeouts y estadísticas similares a los ya
+especificados en esta documentación.
+
 
 ---
 
@@ -199,8 +145,8 @@ const CONFIG = {
 
 // Worker principal
 setInterval(async () => {
-    await procesarCola('productos', procesarProducto)
-    await procesarCola('ofertas', procesarOferta)
+    // Usamos cola única 'precios' y despachamos según el campo `tipo`
+    await procesarCola('precios', procesarCaso)
 }, CONFIG.INTERVALO_PROCESAMIENTO)
 
 async function procesarCola(clave, procesador) {
@@ -336,9 +282,9 @@ El servicio debe poder importar:
 ### Básico (MVP)
 - [ ] Endpoint POST /add_data funcionando
 - [ ] Almacenamiento en memoria (array/Map)
-- [ ] Procesamiento con setInterval cada 2s
-- [ ] Ejecución de procesar_articulo() para productos
-- [ ] Ejecución de procesar_oferta() para ofertas
+- [ ] Procesamiento con setInterval cada 2s sobre clave `precios`
+- [ ] Despachar a `procesar_articulo()` cuando `tipo === 'producto'`
+- [ ] Despachar a `procesar_oferta()` cuando `tipo === 'oferta'`
 - [ ] Logs básicos de procesamiento
 
 ### Producción
