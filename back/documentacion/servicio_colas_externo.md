@@ -15,8 +15,8 @@ El sistema de importación ahora utiliza un servicio externo de colas que se enc
 
 **Servicio Externo (puerto 3501):**
 - ✅ Almacena datos en colas
-- ✅ Procesa items de las colas
-- ✅ Ejecuta `procesar_articulo()` y `procesar_oferta()`
+- ✅ Procesa items de la cola `precios` según el campo `tipo`
+- ✅ Invoca las rutinas `procesar_articulo()`, `procesar_oferta()` u otras
 - ✅ Actualiza base de datos
 - ✅ Maneja reintentos y errores
 
@@ -91,133 +91,60 @@ QUEUE_SERVICE_URL=http://localhost:3501
 
 ---
 
-## 📦 Colas Utilizadas
+## 📦 Cola utilizada
 
-El sistema utiliza dos colas principales:
+A partir de la actualización de marzo de 2026 la API envía todos los elementos de
+precios (productos, ofertas o futuras acciones) a una única cola llamada
+`precios`. El valor del campo `tipo` dentro del objeto determina cómo será
+procesado por el servicio externo.
 
-### 1. Cola de Productos (`productos`)
-
-**Uso:** Importación de productos y precios
-
-**Procesamiento:** El servicio externo se encarga del procesamiento
-
-**Alimentada por:** 
-- Endpoint `/importar` - Importación masiva de productos
-
-**Datos esperados:**
+### Estructura básica de cada item
 ```json
 {
-  "name": "string",
-  "price": "number",
-  "branch_id": "number",
-  "category_name": "string",
-  "fecha_registro": "Date",
-  "vendor_id": "string (opcional)",
-  "barcode": "string (opcional)",
-  "description": "string (opcional)",
-  "url": "string (opcional)",
-  "nota": "string (opcional)"
+  "tipo": "producto" | "oferta" | "accion", // obligatorio
+  "fecha_registro": "Date|string",            // obligatorio
+  // ... demás propiedades específicas según el tipo
 }
 ```
 
-### 2. Cola de Ofertas (`ofertas`)
-
-**Uso:** Importación de promociones y ofertas
-
-**Procesamiento:** El servi (al backend)
-   └─> Validación de KEY
-   └─> Validación de ARR_IMPORTA
-   
-2. Backend → POST {QUEUE_SERVICE_URL}/add_data
-   └─> clave: "productos"
-   └─> data: cada item del array
-   └─> Responde al cliente con { stat: true, count: N }
-   
-3. Servicio Externo (procesamiento automático)
-   └─> Obtiene items de la cola
-   └─> procesa_item() → procesar_articulo()
-   └─> Actualiza base de datos
-   └─> Actualiza estadísticas
-   └─> Actualiza buscador en tiempo real
-```
-
-### Importación de Ofertas
-
-```
-1. Cliente → POST /importar_oferta (al backend)
-   └─> Validación de KEY
-   └─> Validación de ARR_IMPORTA
-   
-2. Backend → POST {QUEUE_SERVICE_URL}/add_data
-   └─> clave: "ofertas"
-   └─> data: cada item del array
-   └─> Responde al cliente con { stat: true, count: N }
-   
-3. Servicio Externo (procesamiento automático)
-   └─> Obtiene items de la cola
-   └─> procesar_oferta()
-   └─> Actualiza base de datos
-   └─> Actualiza estadísticas de promocioneray
-   
-3. setInterval (cada 2s)
-   └─> GET {QUEUE_SERVICE_URL}/get_data?clave=productos
-   └─> Procesar hasta 50 items
-   └─> procesa_item() → procesar_articulo()
-**Única función del backend.** Envía un item a la cola externa para que el servicio externo lo procese.
-
-**Parámetros:**
-- `clave`: Nombre de la cola (`"productos"` o `"ofertas"`)
-- `data`: Objeto con los datos del item
-
-**Retorna:**
-- `true`: Item agregado correctamente al servicio externo
-- `false`: Error al comunicarse con el servicio
-
-**Implementación:**
-```javascript
-async function agregarACola(clave, data) {
-    try {
-        await axios.post(`${QUEUE_SERVICE_URL}/add_data`, { clave, data })
-        return true
-    } catch (error) {
-        console.error(`[Cola ${clave}] Error al agregar item:`, error.message)
-        return false
-    }
+### Ejemplos de uso
+**Producto:**
+```json
+{
+  "tipo": "producto",
+  "name": "Leche La Serenísima 1L",
+  "price": 850,
+  "branch_id": 10,
+  "category_name": "Lácteos",
+  "fecha_registro": "2025-12-30T15:00:00.000Z"
 }
 ```
 
-**Ejemplo de uso:**
-```javascript
-const success = await agregarACola("productos", {
-    name: "Leche La Serenísima 1L",
-    price: 850,
-    branch_id: 10,
-    category_name: "Lácteos",
-    fecha_registro: new Date()
-})
-
-if (success) {
-    console.log('Item enviado al servicio de colas')
-} else {
-    console.error('Error al enviar item')
+**Oferta:**
+```json
+{
+  "tipo": "oferta",
+  "titulo": "Oferta especial",
+  "precio": 500,
+  "branch_id": 5,
+  "url": "https://...",
+  "fecha_registro": "2025-12-30T15:00:00.000Z"
 }
 ```
-Obtiene y elimina el último item de la cola.
 
-**Parámetros:**
-- `clave`: Nombre de la cola
+### Flujo simplificado
+1. Cliente → Backend (`/importar` ó `/importar_oferta`)
+   - el backend valida KEY y datos, agrega la propiedad `tipo` y reenvía al
+     servicio externo
+2. Backend → `POST {QUEUE_SERVICE_URL}/add_data` con
+   `clave: "precios"` y el objeto completo
+3. Servicio externo procesa items en la cola `precios` y, según `tipo`, llama a
+   la rutina correspondiente (`procesarProducto`, `procesarOferta`, etc.)
+4. El servicio actualiza la base de datos, estadísticas y maneja reintentos.
 
-**Retorna:**
-- `Object`: Item obtenido
-- `null`: No hay items o error
+> Un solo canal de entrada permite escalar más fácilmente y añadir nuevos tipos
+> sin tocar el backend.
 
-**Ejemplo:**
-```javascript
-const item = await obtenerDeCola("productos")
-if (item) {
-    await procesa_item(item, HOY)
-}
-```
 
 ### `contarItemsCola(clave)`
 
@@ -374,7 +301,7 @@ en `setInterval` | **ELIMINADO** - Lo hace el servicio |
 - ❌ `setInterval` de procesamiento de productos
 - ❌ `setInterval` de procesamiento de ofertas
 - ❌ `procesa_item()` function
-- ❌ `procesar_oferta()` function
+- ❌ `procesar_oferta()` function (parte del código backend ya no se usa)
 - ❌ `obtenerDeCola()` helper
 - ❌ `contarItemsCola()` helper
 - ❌ Limpieza de `estadistica_aumento_diario` en backend
