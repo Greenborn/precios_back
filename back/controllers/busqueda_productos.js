@@ -148,6 +148,7 @@ exports.busqueda = async function( termino, limit = -1 ) {
                         break
                     POS_T++
                     if (POS_T == palabra.length) {
+                        // push matching entry
                         encontrados_k.push({
                             'id':e_actual.id,
                             'name':e_actual.name,  // Retornar nombre original con mayúsculas/minúsculas
@@ -166,7 +167,13 @@ exports.busqueda = async function( termino, limit = -1 ) {
         }
         if (encontrados.length == 0)
             return []
+        // ordenar los resultados intermedios por precio ascendente para mantener
+        // la lista ordenada a través de iteraciones de palabras
+        encontrados.sort((a, b) => a.price - b.price)
+        encontrados_k.sort((a, b) => a.price - b.price)
         listado = [...encontrados]
     }
+    // garantía adicional: el arreglo final también debe estar ordenado
+    encontrados_k.sort((a, b) => a.price - b.price)
     return encontrados_k
 }
