@@ -34,7 +34,7 @@
                         </div>
 
                         <div v-if="fase == 2" 
-                            class="card text-bg-secundary mb-3" style="height: 20rem; overflow-y: scroll;" 
+                            class="card rounded-0 text-bg-secundary mb-3" style="height: 20rem; overflow-y: scroll;" 
                         >
                             <div class="card-header text-center">
                                 <b>{{ cat.name }}</b>
