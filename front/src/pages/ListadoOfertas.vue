@@ -160,16 +160,17 @@
             aux = [...listado_empresas.value]
         }
 
-        //filtrado por nombre de oferta
+        // filtrado por nombre de oferta (normalizar y evitar undefined)
+        const terminoNombre = String(params_filtro.value.nombre_prod || '').trim().toLowerCase()
         for (let i=0; i < aux.length; i++){
             ofertas_filtradas.value[ aux[i].id ].ofertas = []
             let ofertas_comercio = listado_por_comercio.value[ aux[i].id ].ofertas           
             let prd_filtrado = []                     
 
             for (let k=0; k < ofertas_comercio.length; k++){
-                if (
-                    encontrado( String(ofertas_comercio[k]?.products?.name).toLowerCase(), 
-                                String(params_filtro.value.nombre_prod).toLowerCase() )
+                if (!terminoNombre ||
+                    encontrado( String(ofertas_comercio[k]?.products?.name || '').toLowerCase(), 
+                                terminoNombre )
                 ) {
                     prd_filtrado.push( {...ofertas_comercio[k]} )
                 }
@@ -177,6 +178,8 @@
             ofertas_filtradas.value[ aux[i].id ].ofertas = prd_filtrado
         }
 
+        // no mostrar comercios que quedaron sin ofertas tras el filtrado
+        aux = aux.filter(c => (ofertas_filtradas.value[c.id].ofertas || []).length > 0)
         comercios_filtrados.value = aux
     }
 
