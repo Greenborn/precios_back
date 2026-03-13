@@ -22,14 +22,14 @@
                             </div>
                         </div>
 
-                        <div class="col-12 col-md-4">
+                       <!-- <div class="col-12 col-md-4">
                             <div class="form-check">
                                 <input class="form-check-input" @change="ofertas_check_change" v-model="solo_ofertas" type="checkbox" value="" id="promoCheck">
                                 <label class="form-check-label" for="promoCheck">
                                     Buscar Promociones y Ofertas
                                 </label>
                             </div>
-                        </div>
+                        </div>-->
 
                     </div>                    
                 </div>
