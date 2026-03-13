@@ -38,7 +38,7 @@
     </div>
 
     <div class="row align-items-center justify-content-center">
-        <div class="col-12 col-md-10 col-lg-8 p-0 p-md-2">
+        <div class="col-12 col-md-10 col-lg-8 p-0 pt-5 p-md-2">
             <div class="card mb-1 p-0 rounded-0">
 
                 <div class="card-header p-4 pb-0">
@@ -53,6 +53,7 @@
                 </div>
 
                 <div class="card-body p-4" aria-live="polite">
+                    <!--
                     <div class="row align-items-center justify-content-center d-sm-none">
                         <div class="col-12">
                             <div class="form-check">
@@ -62,7 +63,7 @@
                                 </label>
                             </div>
                         </div>
-                    </div>
+                    </div>-->
 
                     <template v-if="resultados.length == 0">
                         <div class="alert alert-info">
