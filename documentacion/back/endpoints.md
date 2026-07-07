@@ -18,8 +18,9 @@ Documentación completa de todos los endpoints REST disponibles en la API de Pre
 2. [Categorías](#categorías)
 3. [Productos](#productos)
 4. [Importación](#importación)
-5. [Análisis y Estadísticas](#análisis-y-estadísticas)
-6. [Respuestas Estándar](#respuestas-estándar)
+5. [Comercios](#comercios)
+6. [Análisis y Estadísticas](#análisis-y-estadísticas)
+7. [Respuestas Estándar](#respuestas-estándar)
 
 ---
 
@@ -423,6 +424,93 @@ POST /publico/productos/importar
 {
   "stat": true,
   "message": "Items encolados para procesamiento"
+}
+```
+
+---
+
+## 🏪 Comercios
+
+### Crear Nuevo Comercio
+
+```http
+POST /admin/comercios
+```
+
+**Autenticación**: 🔐 Requiere clave `KEY_INT` (enviada en el body)
+
+**Body JSON**:
+```json
+{
+  "key": "KEY_INT_SECRET",
+  "enterprice": {
+    "name": "Supermercado X",
+    "type": "supermarket",
+    "website": "https://supermercadox.com",
+    "logo_url": "https://supermercadox.com/logo.png",
+    "active": true
+  },
+  "branch": {
+    "branch_name": "Sucursal Centro",
+    "address": "Av. Siempre Viva 123",
+    "latitude": -34.603722,
+    "longitude": -58.381592,
+    "city": "Buenos Aires"
+  }
+}
+```
+
+**Campos**:
+| Campo | Tipo | Requerido | Descripción |
+|-------|------|-----------|-------------|
+| `key` | string | ✅ | Clave de autenticación interna |
+| `enterprice.name` | string | ✅ | Nombre de la empresa (único) |
+| `enterprice.type` | string | ❌ | Tipo de comercio |
+| `enterprice.website` | string | ❌ | Sitio web |
+| `enterprice.logo_url` | string | ❌ | URL del logo |
+| `enterprice.active` | boolean | ❌ | Si está activo (default: true) |
+| `branch.branch_name` | string | ✅ | Nombre de la sucursal |
+| `branch.address` | string | ❌ | Dirección |
+| `branch.latitude` | number | ❌ | Latitud |
+| `branch.longitude` | number | ❌ | Longitud |
+| `branch.city` | string | ❌ | Ciudad |
+
+**Comportamiento**:
+- ✅ Crea registro en `enterprice` y `branch` en una transacción atómica
+- ✅ Refresca automáticamente los diccionarios en memoria
+- ✅ Si el nombre de empresa ya existe, retorna error por duplicado
+
+**Respuesta 200 (Éxito)**:
+```json
+{
+  "stat": true,
+  "items": {
+    "enterprice": {
+      "id": 1,
+      "name": "Supermercado X",
+      "type": "supermarket",
+      "website": "https://supermercadox.com",
+      "logo_url": "https://supermercadox.com/logo.png",
+      "active": true
+    },
+    "branch": {
+      "id": 1,
+      "branch_name": "Sucursal Centro",
+      "enterprise_id": 1,
+      "address": "Av. Siempre Viva 123",
+      "latitude": -34.603722,
+      "longitude": -58.381592,
+      "city": "Buenos Aires"
+    }
+  }
+}
+```
+
+**Respuesta 401 (Autenticación)**:
+```json
+{
+  "stat": false,
+  "error": "Error de autenticación"
 }
 ```
 

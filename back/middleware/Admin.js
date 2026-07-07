@@ -12,8 +12,10 @@ router.use(function (request, response, next) {
 
 
 router.use("/user", require("../routes/userAdmin"))
+router.use("/comercios", require("../routes/comercios"))
 
 var paths = [
   { path: "/user/info" },
-  { path: "/user/login" }
+  { path: "/user/login" },
+  { path: "/comercios" }
 ]
