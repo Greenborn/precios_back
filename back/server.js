@@ -168,6 +168,14 @@ async function regenerar_diccionarios(){
 async function base_de_datos_iniciada(){
   console.log('se establecio conexion DB')
 
+  // Ejecutar migraciones pendientes automáticamente
+  try {
+    await knex.migrate.latest()
+    console.log('[migrate] Migraciones ejecutadas correctamente')
+  } catch (err) {
+    console.error('[migrate] Error al ejecutar migraciones:', err)
+  }
+
   let app_API = require('express')();
   let server_API = require('http').Server(app_API);
 

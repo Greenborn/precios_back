@@ -5,7 +5,7 @@ exports.up = function(knex) {
       table.string('descripcion', 1024);
     })
     .createTable('productos_indice', function(table) {
-      table.integer('id_producto').notNullable();
+      table.bigInteger('id_producto').notNullable();
       table.string('cod_indice', 255).notNullable();
 
       table.primary(['id_producto', 'cod_indice']);
@@ -14,7 +14,7 @@ exports.up = function(knex) {
     })
     .createTable('registro_indice', function(table) {
       table.string('cod_indice', 255).notNullable();
-      table.integer('id_producto').notNullable();
+      table.bigInteger('id_producto').notNullable();
       table.dateTime('datetime').notNullable();
       table.json('data').notNullable();
 
