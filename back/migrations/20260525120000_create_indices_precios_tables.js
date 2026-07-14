@@ -1,10 +1,15 @@
-exports.up = function(knex) {
+exports.up = async function(knex) {
+  await knex.schema
+    .dropTableIfExists('registro_indice')
+    .dropTableIfExists('productos_indice')
+    .dropTableIfExists('indices_precios')
+
   return knex.schema
-    .createTableIfNotExists('indices_precios', function(table) {
+    .createTable('indices_precios', function(table) {
       table.string('cod_indice', 255).primary().notNullable();
       table.string('descripcion', 1024);
     })
-    .createTableIfNotExists('productos_indice', function(table) {
+    .createTable('productos_indice', function(table) {
       table.bigInteger('id_producto').notNullable();
       table.string('cod_indice', 255).notNullable();
 
@@ -12,7 +17,7 @@ exports.up = function(knex) {
       table.foreign('id_producto').references('id').inTable('products').onUpdate('CASCADE').onDelete('CASCADE');
       table.foreign('cod_indice').references('cod_indice').inTable('indices_precios').onUpdate('CASCADE').onDelete('CASCADE');
     })
-    .createTableIfNotExists('registro_indice', function(table) {
+    .createTable('registro_indice', function(table) {
       table.string('cod_indice', 255).notNullable();
       table.bigInteger('id_producto').notNullable();
       table.dateTime('datetime').notNullable();
