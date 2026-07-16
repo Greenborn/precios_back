@@ -28,7 +28,7 @@ async function do_logout( storeApp, router ){
 
   if (logout_rpt) {
     setUserInfo( 'admin', storeApp, undefined, router, null)
-    router.replace({ path: '/dashboard' })
+    router.replace({ path: '/' })
   } else {
     console.log('No se pudo cerrar sessión')
   }
@@ -205,7 +205,7 @@ function actualizar_rutas( router, storeApp){
   }
   
   if (!router.hasRoute('redirect_404'))
-    router.addRoute({ path: '/:error*', name:'redirect_404', redirect: '/dashboard', hidden: true })
+    router.addRoute({ path: '/:error*', name:'redirect_404', redirect: '/', hidden: true })
 //console.log(router.getRoutes())
 }
 
@@ -229,7 +229,7 @@ export async function getRouterConRutas( router, storeApp ){
     return router
   } else {
     if (!router.hasRoute('redirect_404'))
-      router.addRoute({ path: '/:error*', name:'redirect_404', redirect: '/dashboard', hidden: true })
+      router.addRoute({ path: '/:error*', name:'redirect_404', redirect: '/', hidden: true })
     return null
   }
 

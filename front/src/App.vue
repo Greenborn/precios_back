@@ -4,7 +4,6 @@
   <ModalsManager></ModalsManager>
   <!--<ChatBot></ChatBot>-->
   <Spinner :loading="storeApp.loading"></Spinner>
-  <ModalsManager></ModalsManager>
 </template>
 
 <script setup >

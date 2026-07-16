@@ -9,29 +9,29 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@dvuckovic/vue3-bootstrap-icons": "^1.0.5",
+    "@dvuckovic/vue3-bootstrap-icons": "^2.0.0",
     "@popperjs/core": "^2.11.8",
-    "@vuelidate/core": "^2.0.0-alpha.44",
-    "@vuelidate/validators": "^2.0.0-alpha.31",
-    "axios": "^1.7.7",
-    "bootstrap": "^5.3.7",
-    "chart.js": "^4.4.1",
-    "js-cookie": "^3.0.1",
-    "path": "^0.12.7",
-    "pinia": "^2.0.22",
-    "primeflex": "^3.2.1",
-    "primeicons": "^5.0.0",
-    "primevue": "^3.17.0",
-    "quill": "^2.0.2",
-    "sass": "^1.54.9",
-    "terser": "^5.26.0",
-    "uuid": "^11.1.0",
-    "vue": "^3.2.37",
-    "vue-currency-input": "^3.0.5",
-    "vue-router": "^4.1.5"
+    "@primeuix/themes": "^3.0.0",
+    "@vuelidate/core": "^2.0.3",
+    "@vuelidate/validators": "^2.0.4",
+    "axios": "^1.18.1",
+    "bootstrap": "^5.3.8",
+    "chart.js": "^4.5.1",
+    "js-cookie": "^3.0.8",
+    "pinia": "^4.0.2",
+    "primeflex": "^4.0.0",
+    "primeicons": "^8.0.0",
+    "primevue": "^5.0.0",
+    "quill": "^2.0.3",
+    "sass": "^1.101.0",
+    "terser": "^5.49.0",
+    "uuid": "^14.0.1",
+    "vue": "^3.5.40",
+    "vue-currency-input": "^3.2.2",
+    "vue-router": "^5.2.0"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^6.0.0",
-    "vite": "^7.0.5"
+    "@vitejs/plugin-vue": "^6.0.8",
+    "vite": "^8.1.5"
   }
 }

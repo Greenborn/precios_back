@@ -58,6 +58,5 @@ export const routes = [
 
 export const router = createRouter({
   history: createWebHashHistory(),
-  hash: false,
   routes,
 });

@@ -17,7 +17,7 @@
             v-if="campo.form_type == 'text-editor'"
             v-model="modelo[campo.field]" editorStyle="height: 320px"/>
           
-          <Calendar 
+          <DatePicker 
             v-if="campo.form_type == 'date'"
             dateFormat="dd.mm.yy"
             v-model="modelo[campo.field]" />
@@ -33,7 +33,7 @@
                 :data-msg-placeholder="campo.headerName">
           </div>
 
-          <Dropdown 
+          <Select 
              v-if="campo.form_type == 'select' && parametros.selectData[campo.field] !== undefined"
              class="w-100"
              :disabled="campo.editable === false"
@@ -58,10 +58,8 @@
                     :disabled="campo.editable === false"
                     v-model="modelo[campo.field]" :binary="true" />
 
-          <Password v-if="campo.form_type == 'password'"
-                  v-model="modelo[campo.field]" 
-                  :toggleMask="true"
-                  :feedback="true"></Password>
+          <InputPassword v-if="campo.form_type == 'password'"
+                  v-model="modelo[campo.field]"></InputPassword>
 
           <MultiSelect 
                   v-if="campo.form_type == 'multi_select'"

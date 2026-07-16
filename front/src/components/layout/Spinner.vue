@@ -1,6 +1,6 @@
 <template>
   <div v-if="loading" class="portal-spinner-content">
-    <ProgressSpinner class="spinner" style="styleSpinner" />
+    <ProgressSpinner class="spinner" :style="styleSpinner" />
   </div>
 </template>
 

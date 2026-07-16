@@ -19,14 +19,14 @@
         <div class="row">
           <div class="col"> 
             <label for="password1" class="mb-1">Contraseña</label>
-            <Password id="password1" v-model="login_data.password" placeholder="contraseña" :toggleMask="true"
-                class="el-input w-full mb-5" inputClass="w-full" :feedback="false"></Password>
+            <InputPassword id="password1" v-model="login_data.password" placeholder="contraseña" :toggleMask="true"
+                class="el-input w-full mb-5" inputClass="w-full" :feedback="false"></InputPassword>
           </div>
         </div>
 
         <div class="row">
           <div class="col mb-5">
-            <Button label="Login" class="w-full" v-on:click="do_login()"></button>
+            <Button label="Login" class="w-full" v-on:click="do_login()"></Button>
           </div>
         </div>
       </div>

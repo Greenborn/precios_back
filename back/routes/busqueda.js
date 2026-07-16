@@ -46,7 +46,7 @@ async function hacer_busqueda_alquiler( termino, metodo ){
         let PALABRAS = termino.split(" ")
 
         let SQL = "(titulo LIKE ?) "
-        params = ['%'+PALABRAS[0]+'%']
+        let params = ['%'+PALABRAS[0]+'%']
         for (let i=1; i < PALABRAS.length; i++){
           SQL += " AND (titulo LIKE ?) "
           params.push('%'+PALABRAS[i]+'%')
@@ -180,7 +180,7 @@ async function hacer_busqueda_promo( termino, metodo ){
           let PALABRAS = termino.toLowerCase().split(" ")
           // comparación insensible a mayúsculas aplicando LOWER sobre la columna
           let SQL = "(LOWER(titulo) LIKE ?) "
-          params = ['%'+PALABRAS[0]+'%']
+          let params = ['%'+PALABRAS[0]+'%']
           for (let i=1; i < PALABRAS.length; i++){
             SQL += " AND (LOWER(titulo) LIKE ?) "
             params.push('%'+PALABRAS[i]+'%')
