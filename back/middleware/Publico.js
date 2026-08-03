@@ -23,6 +23,7 @@ var paths = [
   { path: "/busqueda/promociones" },
   { path: "/chatbot/chat_bot_rsp" },
   { path: "/busqueda/comercios_promociones" },
+  { path: "/busqueda/info_comercio" },
   { path: "/estadistica/data" },
   { path: "/estadistica/precios_usuarios" },
   { path: "/categorias/all" },
