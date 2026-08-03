@@ -46,7 +46,7 @@ async function hacer_busqueda_alquiler( termino, metodo ){
         let PALABRAS = termino.split(" ")
 
         let SQL = "(titulo LIKE ?) "
-        params = ['%'+PALABRAS[0]+'%']
+        let params = ['%'+PALABRAS[0]+'%']
         for (let i=1; i < PALABRAS.length; i++){
           SQL += " AND (titulo LIKE ?) "
           params.push('%'+PALABRAS[i]+'%')
@@ -180,7 +180,7 @@ async function hacer_busqueda_promo( termino, metodo ){
           let PALABRAS = termino.toLowerCase().split(" ")
           // comparación insensible a mayúsculas aplicando LOWER sobre la columna
           let SQL = "(LOWER(titulo) LIKE ?) "
-          params = ['%'+PALABRAS[0]+'%']
+          let params = ['%'+PALABRAS[0]+'%']
           for (let i=1; i < PALABRAS.length; i++){
             SQL += " AND (LOWER(titulo) LIKE ?) "
             params.push('%'+PALABRAS[i]+'%')
@@ -270,6 +270,36 @@ router.get('/promociones', async function (req, res) {
   } catch {
     res.status(200).send({ stat: false, items: [], error: true })
   }  
+})
+
+router.get('/info_comercio', async function (req, res) {
+    console.log("query ", req.query)
+
+    try {
+        let website = req?.query?.website
+        if (!website) {
+            return res.status(200).send({ stat: false, error: "Falta parametro: website" })
+        }
+
+        let enterprice = await global.knex('enterprice').where('website', website).first()
+        if (!enterprice) {
+            return res.status(200).send({ stat: false, error: "No se encontro comercio con esa URL" })
+        }
+
+        let branches = await global.knex('branch').where('enterprise_id', enterprice.id)
+
+        res.status(200).send({
+            stat: true,
+            items: {
+                enterprice,
+                branches
+            }
+        })
+
+    } catch (error) {
+        console.log("error", error)
+        res.status(200).send({ stat: false, error: "Error interno" })
+    }
 })
 
 router.get('/comercios_promociones', async function (req, res) {

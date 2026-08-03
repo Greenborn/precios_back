@@ -55,7 +55,7 @@ router.get('/all', async function (req, res) {
     console.log("query ", req.query)
     
     try {
-        salida = global.products_category_diccio.by_category_id[req?.query?.category_id]
+        let salida = global.products_category_diccio.by_category_id[req?.query?.category_id]
         res.status(200).send({ stat: true, items: salida, error: true })
     } catch (error) {
         console.log("error", error)
@@ -348,8 +348,8 @@ router.post('/importar_alquiler', async function (req, res) {
         let HOY = new Date()
         //HOY.setHours(0,0,0,1)
 
-        let trx = await knex.transaction()
-        let existe_ = await knex('propiedades_alquiler').select().where('hash', hash).first()
+        let trx = await global.knex.transaction()
+        let existe_ = await global.knex('propiedades_alquiler').select().where('hash', hash).first()
         if (!existe_){
             es_nuevo = 1
             const insert = {
@@ -375,7 +375,7 @@ router.post('/importar_alquiler', async function (req, res) {
         } else {
             console.log("existe")
 
-            let reg_historico_precio = await knex('historico_precios_alquiler').select()
+            let reg_historico_precio = await global.knex('historico_precios_alquiler').select()
                 .where({'id_propiedad': existe_.id, 'precio': req.body.precio }).first()
             if (!reg_historico_precio){
                 es_nuevo = 2

@@ -8,7 +8,7 @@ router.get('/all', async function (req, res) {
     console.log("query ", req.query)
     
     try {
-        salida = await global.knex('categorias_menu')
+        let salida = await global.knex('categorias_menu')
                         .orderBy('nombre', "ASC")
         res.status(200).send({ stat: true, items: salida, error: true })
     } catch (error) {
@@ -21,7 +21,7 @@ router.get('/get_empresas_categoria', async function (req, res) {
     console.log("query ", req.query)
     
     try {
-        salida = await global.knex('enterprice_categorias_menu')
+        let salida = await global.knex('enterprice_categorias_menu')
                         .where('menu_category_id', req.query.menu_category_id)
         if (salida){
             for (let i=0; i < salida.length; i++){
@@ -40,7 +40,7 @@ router.get('/get_sub_categorias', async function (req, res) {
     console.log("query ", req.query)
     
     try {
-        salida = await global.knex('category_obtaineds_category_menu')
+        let salida = await global.knex('category_obtaineds_category_menu')
                         .where('category_menu_id', req.query.cat_menu_id)
         if (salida){
             for (let i=0; i < salida.length; i++){
@@ -58,7 +58,7 @@ router.get('/get_categoria_empresa', async function (req, res) {
     console.log("query ", req.query)
     
     try {
-        salida = await global.knex('enterprise_category')
+        let salida = await global.knex('enterprise_category')
                         .where('enterprise_id', req.query.enterprise_id)
         if (salida){
             for (let i=0; i < salida.length; i++){

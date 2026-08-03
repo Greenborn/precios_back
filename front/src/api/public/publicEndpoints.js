@@ -16,6 +16,10 @@ export function comercios_promociones() {
   return request({ url: '/publico/busqueda/comercios_promociones', method: 'get' })
 }
 
+export function info_comercio( website ) {
+  return request({ url: '/publico/busqueda/info_comercio?website='+encodeURI(website), method: 'get' })
+}
+
 export function public_news() {
   return request({ url: '/public-news', method: 'get' })
 }

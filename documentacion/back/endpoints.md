@@ -139,6 +139,59 @@ GET /publico/busqueda/comercios_promociones
 
 ---
 
+### Información de Comercio por URL
+
+```http
+GET /publico/busqueda/info_comercio?website=URL
+```
+
+**Parámetros Query**:
+| Parámetro | Tipo | Requerido | Descripción |
+|-----------|------|----------|-------------|
+| `website` | string | ✅ | URL del comercio (ej: `https://supermercadox.com`) |
+
+**Comportamiento**:
+- ✅ Busca empresa por el campo `website`
+- ✅ Retorna datos de la empresa + todas sus sucursales
+
+**Respuesta 200**:
+```json
+{
+  "stat": true,
+  "items": {
+    "enterprice": {
+      "id": 1,
+      "name": "Supermercado X",
+      "type": "supermarket",
+      "website": "https://supermercadox.com",
+      "logo_url": "https://supermercadox.com/logo.png",
+      "active": true
+    },
+    "branches": [
+      {
+        "id": 1,
+        "branch_name": "Sucursal Centro",
+        "enterprise_id": 1,
+        "address": "Av. Siempre Viva 123",
+        "latitude": -34.603722,
+        "longitude": -58.381592,
+        "city": "Buenos Aires"
+      }
+    ]
+  }
+}
+```
+
+**Respuesta 404 (No encontrado)**:
+```json
+{
+  "stat": false,
+  "error": "No se encontro comercio con esa URL"
+}
+```
+
+---
+
 ## 🏷️ Categorías
 
 ### Listar Todas las Categorías
@@ -479,6 +532,7 @@ POST /admin/comercios
 - ✅ Crea registro en `enterprice` y `branch` en una transacción atómica
 - ✅ Refresca automáticamente los diccionarios en memoria
 - ✅ Si el nombre de empresa ya existe, retorna error por duplicado
+- ✅ Si el website/URL ya existe, retorna error por duplicado
 
 **Respuesta 200 (Éxito)**:
 ```json
@@ -733,5 +787,5 @@ Para reportar problemas con los endpoints:
 
 ---
 
-**Última actualización**: 30 de noviembre de 2025  
+**Última actualización**: 24 de julio de 2026  
 **Mantenedor**: Equipo de Backend

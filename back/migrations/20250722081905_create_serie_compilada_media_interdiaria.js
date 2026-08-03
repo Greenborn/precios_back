@@ -1,15 +1,14 @@
-/**
- * @param { import("knex").Knex } knex
- * @returns { Promise<void> }
- */
-exports.up = function(knex) {
-  
+exports.up = async function(knex) {
+  await knex.schema.createTable('serie_compilada_media_interdiaria', function(table) {
+    table.increments('id').primary();
+    table.date('date').notNullable();
+    table.float('mean_inc').notNullable();
+    table.float('median_inc').notNullable();
+    table.float('std_inc').notNullable();
+    table.integer('count').notNullable();
+  });
 };
 
-/**
- * @param { import("knex").Knex } knex
- * @returns { Promise<void> }
- */
-exports.down = function(knex) {
-  
+exports.down = async function(knex) {
+  await knex.schema.dropTableIfExists('serie_compilada_media_interdiaria');
 };

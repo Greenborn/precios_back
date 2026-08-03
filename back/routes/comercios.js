@@ -24,6 +24,14 @@ router.post('/', async function (req, res) {
             return
         }
 
+        if (DATOS_ENTERPRICE?.website) {
+            const existente = await global.knex('enterprice').where('website', DATOS_ENTERPRICE.website).first()
+            if (existente) {
+                res.status(200).send({ stat: false, error: "Ya existe un comercio con esa URL" })
+                return
+            }
+        }
+
         const trx = await global.knex.transaction()
         let nuevoEnterpriceId, nuevoBranchId
 
