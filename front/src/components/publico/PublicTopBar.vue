@@ -70,6 +70,12 @@
             <span class="nav-link" @click="click(enlace)"
                 :class="{ active: storeApp.ruta_actual.path == enlace.path }">{{ enlace.title }}</span>
           </li>
+          <li class="nav-item" v-if="!isLogged">
+            <span class="nav-link" @click="irIngresar">Ingresar</span>
+          </li>
+          <li class="nav-item" v-else>
+            <span class="nav-link">{{ storeApp.userInfo?.name }}</span>
+          </li>
         </ul>
       </div>  
     </div>
@@ -81,11 +87,14 @@ import { ref, onMounted } from 'vue'
 
 import { AppStore } from "../../stores/app"
 import { useRouter, useRoute } from 'vue-router'
+import { getToken } from "../../utils/auth"
 
 const emit  = defineEmits(['buscar_evnt', 'agregar_evnt', 'filtrar_evnt'])
 const storeApp = AppStore()
 const router = useRouter()
 const route = useRoute()
+
+const isLogged = !!getToken()
 
 const termino_busqueda = ref('')
 const termino_filtro = ref('')
@@ -108,6 +117,10 @@ function click( item ){
 
     storeApp.ruta_actual = item
     router.push(item.path)
+}
+
+function irIngresar(){
+  router.push('/admin/login')
 }
 
 function filtrar(){
