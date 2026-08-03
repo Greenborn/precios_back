@@ -170,10 +170,13 @@ run_remote "cd $DEPLOY_PATH && git checkout $GIT_BRANCH && git pull origin $GIT_
 
 if [ -n "$RUN_AS" ]; then
   info "Ajustando propietario a $RUN_AS"
-  run_remote "sudo -u $RUN_AS true 2>/dev/null || sudo chown -R $RUN_AS:$RUN_AS $DEPLOY_PATH 2>&1" \
-    || die "Fallo al ajustar propietario. Verifica sudo sin password para $RUN_AS"
-  run_remote "sudo -u $RUN_AS chown -R $RUN_AS:$RUN_AS $DEPLOY_PATH 2>&1" \
-    || die "Fallo al ajustar propietario (chown)"
+  if [ "$SSH_USER" = "root" ]; then
+    CHOWN_CMD="chown -R $RUN_AS:$RUN_AS $DEPLOY_PATH"
+  else
+    CHOWN_CMD="sudo chown -R $RUN_AS:$RUN_AS $DEPLOY_PATH"
+  fi
+  run_remote "$CHOWN_CMD 2>&1" \
+    || die "Fallo al ajustar propietario. Verifica permisos de root/sudo para el chown"
 fi
 
 SUDO=""
