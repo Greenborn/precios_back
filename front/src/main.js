@@ -56,4 +56,13 @@ app.component("DatePicker", DatePicker);
 app.component("Chart", Chart);
 
 app.use(router);
-app.mount("#app");
+
+async function init() {
+  const storeApp = AppStore()
+  storeApp.inic_modals()
+  await getRouterConRutas(router, storeApp)
+  routerBeforeEach(router, storeApp)
+  app.mount("#app")
+}
+
+init()

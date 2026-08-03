@@ -10,6 +10,12 @@ export const routes = [
     component: () => import("./pages/LandingGeneral.vue"),
   },
   {
+    path: "/admin",
+    name: "root",
+    component: Layout,
+    children: [],
+  },
+  {
     path: "/carga_precio",
     name: "carga_precio",
     component: () => import("./pages/CargaComunitaria.vue"),

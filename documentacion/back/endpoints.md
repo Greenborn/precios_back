@@ -715,6 +715,178 @@ X-API-Key: <api_key>
 
 ---
 
+## 🔐 Administración y RBAC
+
+El módulo RBAC gestiona usuarios, roles, permisos y rutas del panel de administración. En esta etapa existe un único rol: **`administrador`**.
+
+### Autenticación (JWT)
+
+- Login público → devuelve `token` y `u_data` (incluye `rutas` para el menú).
+- El token se envía en el header `x-api-key` (o `Authorization: Bearer <token>`) en el resto de los endpoints `/admin/*`.
+- Variable de entorno: `JWT_SECRET`, `JWT_EXPIRES_IN`.
+
+### 1.1 Login
+**POST** `/admin/user/login`
+
+#### Body
+```json
+{ "email": "admin@admin.com", "password": "admin123" }
+```
+
+#### Respuesta Exitosa (200)
+```json
+{
+  "stat": true,
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIs...",
+    "u_data": {
+      "id": 1,
+      "name": "Administrador",
+      "email": "admin@admin.com",
+      "rutas": [
+        { "id": 1, "id_ruta_root": null, "path": "dashboard", "componente": "Dasboard", "icon": "pi-home", "title": "Dashboard", "orden_visualizacion": 1 }
+      ]
+    }
+  }
+}
+```
+
+#### Respuesta de Error (200)
+```json
+{ "stat": false, "text": "Credenciales inválidas" }
+```
+
+#### Características
+- **Autenticación**: No requerida (público)
+- **Validación**: Email y password requeridos
+- **Transaccional**: No
+
+### 1.2 Información de Sesión
+**GET** `/admin/user/info`
+
+#### Headers
+```
+x-api-key: <token>
+```
+
+#### Respuesta Exitosa (200)
+```json
+{
+  "stat": true,
+  "data": {
+    "id": 1,
+    "name": "Administrador",
+    "email": "admin@admin.com",
+    "rutas": [ { "id": 1, "id_ruta_root": null, "path": "dashboard", "componente": "Dasboard", "icon": "pi-home", "title": "Dashboard", "orden_visualizacion": 1 } ]
+  }
+}
+```
+
+#### Características
+- **Autenticación**: Requerida
+
+### 1.3 Logout
+**POST** `/admin/user/logout`
+
+#### Respuesta Exitosa (200)
+```json
+{ "stat": true, "data": { "message": "Sesión cerrada" } }
+```
+
+### 1.4 Actualizar Cuenta Propia
+**PUT** `/admin/user/guardar_config`
+
+#### Body
+```json
+{ "id": 1, "name": "Administrador", "email": "admin@admin.com", "pass": "nueva_clave" }
+```
+
+#### Respuesta Exitosa (200)
+```json
+{ "stat": true, "data": { "message": "Cuenta actualizada correctamente" } }
+```
+
+#### Características
+- **Autenticación**: Requerida. Solo permite editar la propia cuenta.
+- **Permisos**: `perfil.editar`
+
+### 2. Gestión de Usuarios (`/admin/user/*`)
+
+| Endpoint | Método | Permiso | Descripción |
+|----------|--------|---------|-------------|
+| `/user/get_all` | GET | `usuarios.ver` | Listado paginado (rows + fields_def) |
+| `/user/add_one` | POST | `usuarios.crear` | Crear usuario con roles |
+| `/user/put_one` | PUT | `usuarios.editar` | Actualizar usuario y sus roles |
+| `/user/delete_one` | DELETE | `usuarios.eliminar` | Eliminar usuario |
+
+#### Crear usuario
+**POST** `/admin/user/add_one`
+```json
+{ "name": "Analista", "email": "analista@empresa.com", "pass": "clave123", "roles": [1] }
+```
+
+#### Listado (contrato TableEditor)
+**GET** `/admin/user/get_all?page=1&pageSize=25`
+```json
+{
+  "stat": true,
+  "data": {
+    "rows": [ { "id": 1, "name": "Administrador", "email": "admin@admin.com", "roles": [ { "id": 1, "nombre": "administrador" } ] } ],
+    "fields_def": [ { "field": "id", "headerName": "ID", "sortable": true } ]
+  }
+}
+```
+
+### 3. Gestión de Roles (`/admin/rbac/*`)
+
+| Endpoint | Método | Permiso | Descripción |
+|----------|--------|---------|-------------|
+| `/rbac/get_roles` | GET | `roles.ver` | Listar roles |
+| `/rbac/nuevo_rol` | POST | `roles.crear` | Crear rol |
+| `/rbac/editar_rol` | PUT | `roles.editar` | Editar rol |
+| `/rbac/eliminar_rol` | DELETE | `roles.eliminar` | Eliminar rol (protege `administrador`) |
+| `/rbac/asignar_permiso_rol` | POST | `roles.editar` | Vincular permiso a rol |
+| `/rbac/asignar_usuario_rol` | POST | `usuarios.editar` | Asignar rol a usuario |
+
+### 4. Gestión de Permisos (`/admin/rbac/*`)
+
+| Endpoint | Método | Permiso | Descripción |
+|----------|--------|---------|-------------|
+| `/rbac/get_permisos` | GET | `permisos.ver` | Listar permisos |
+| `/rbac/nuevo_permiso` | POST | `permisos.crear` | Crear permiso |
+| `/rbac/editar_permiso` | PUT | `permisos.editar` | Editar permiso |
+| `/rbac/eliminar_permiso` | DELETE | `permisos.eliminar` | Eliminar permiso |
+
+### 5. Gestión de Rutas (`/admin/rbac/*`)
+
+| Endpoint | Método | Permiso | Descripción |
+|----------|--------|---------|-------------|
+| `/rbac/get_rutas` | GET | `rutas.ver` | Listar rutas del panel |
+| `/rbac/nueva_ruta` | POST | `rutas.crear` | Crear ruta |
+| `/rbac/editar_ruta` | PUT | `rutas.editar` | Editar ruta |
+| `/rbac/eliminar_ruta` | DELETE | `rutas.eliminar` | Eliminar ruta |
+
+#### Asignar permiso a rol
+**POST** `/admin/rbac/asignar_permiso_rol`
+```json
+{ "id_rol": 1, "id_permiso": 2 }
+```
+```json
+{ "stat": true, "data": { "message": "Permiso vinculado al rol" } }
+```
+
+#### Características generales del RBAC
+- **Autenticación**: Requerida en todos los endpoints `/admin/*` excepto `/admin/user/login`.
+- **Permisos**: Validados por el middleware `helpers/authorization.js` según el permiso declarado por ruta.
+- **Formato**: Respuestas de listado usan el contrato del `TableEditor` (`rows` + `fields_def`).
+- **Seed**: `scripts/seed_rbac.js` (idempotente) crea el rol `administrador`, 18 permisos base, las rutas del panel y el usuario por defecto `admin@admin.com`.
+
+### Tablas RBAC
+
+`usuarios`, `roles`, `permisos`, `rutas` y las tablas puente `usuarios_roles`, `roles_permisos`, `roles_rutas`.
+
+---
+
 ## 📝 Ejemplos Prácticos
 
 ### 1. Buscar y Obtener Precios

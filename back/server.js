@@ -176,6 +176,15 @@ async function base_de_datos_iniciada(){
     console.error('[migrate] Error al ejecutar migraciones:', err)
   }
 
+  // Seed idempotente de RBAC (rol administrador, permisos, rutas y admin por defecto)
+  try {
+    const { seed_rbac } = require('./scripts/seed_rbac')
+    await seed_rbac()
+    console.log('[seed_rbac] Seed RBAC ejecutado correctamente')
+  } catch (err) {
+    console.error('[seed_rbac] Error al ejecutar seed:', err)
+  }
+
   let app_API = require('express')();
   let server_API = require('http').Server(app_API);
 

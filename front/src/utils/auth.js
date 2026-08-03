@@ -210,8 +210,10 @@ function actualizar_rutas( router, storeApp){
 }
 
 function getTipoUsuarioFURL(){
-  let url_actual = window.location 
-  return String(url_actual).split('/#/')[1].split('/')[0]
+  let url_actual = window.location
+  let partes = String(url_actual).split('/#/')
+  if (partes.length < 2) return ''
+  return partes[1].split('/')[0]
 }
 
 export async function getRouterConRutas( router, storeApp ){
