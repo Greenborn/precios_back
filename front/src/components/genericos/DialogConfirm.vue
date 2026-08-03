@@ -22,8 +22,8 @@
   const storeApp = AppStore()
 
   const botones = ref([
-    { label: 'No', icon: 'pi pi-times', class: 'p-button-text', autofocus:false, onClick: cerrar_dialog_confirmar },
-    { label: 'Si', icon: 'pi pi-check', class: 'p-button-text', autofocus:true,  onClick: confirmar_accion }
+    { label: 'No', icon: 'pi-times', class: 'p-button-text', autofocus:false, onClick: cerrar_dialog_confirmar },
+    { label: 'Si', icon: 'pi-check', class: 'p-button-text', autofocus:true,  onClick: confirmar_accion }
   ])
 
   function cerrar_dialog_confirmar(){

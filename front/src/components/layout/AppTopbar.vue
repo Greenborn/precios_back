@@ -1,7 +1,7 @@
 <template>
   <div class="row container-topbar align-items-center p-3">
-    <div class="col-auto ml-2">
-      <Button icon="pi pi-bars" @click="storeApp.toggle_sidebar" />
+    <div class="col-auto ms-2">
+      <Button icon="pi-bars" @click="storeApp.toggle_sidebar" />
     </div>
     <div class="col">
       <h2 class="m-0 title">{{storeApp.ruta_actual.title}}</h2>

@@ -1,28 +1,14 @@
 <template>
-  <Toast />
+  <Toast ref="toastRef" />
 </template>
 
 <script setup>
-import { onMounted } from 'vue';
-import { useToast } from "primevue/usetoast";
-const toast = useToast();
+import { ref } from 'vue';
+import Toast from "../ui/Toast.vue";
 
-interface IToast {
-  severity: string;
-  summary: string;
-  detail: string;
-  life: numeric;
-}
+const toastRef = ref(null);
 
-const props = defineProps({
-  config: Object,
+defineExpose({
+  toast: (config) => toastRef.value && toastRef.value.add(config),
 });
-
-onMounted(() => {
-  
-});
-
-const toastLoad = (toast:IToast) => {
-  return toast;
-};
 </script>

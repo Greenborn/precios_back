@@ -1,4 +1,4 @@
-import { FilterMatchMode } from '@primevue/core/api';
+export const FilterMatchMode = { CONTAINS: 'contains', EQUALS: 'equals', STARTS_WITH: 'startsWith' }
 
 export function getProcessFieldDef( fields_def ){
   let arr = []

@@ -4,7 +4,7 @@
       <a class="navbar-brand" href="#/">
         <div class="row align-items-center justify-content-center">
           <div class="col">
-            <b class="ml-3">Precios de Tandil</b>
+            <b class="ms-3">Precios de Tandil</b>
           </div>
         </div>
       </a>
@@ -36,7 +36,7 @@
       <div class="d-flex" v-if="storeApp.ruta_actual.path == '/'">
         <div class="w-100" id="cont_busca">
           <div class="row align-items-center justify-content-center">
-            <div class="col-auto p-0 mr-1">
+            <div class="col-auto p-0 me-1">
               <div class="input-group">
                 <input class="form-control" v-model="termino_busqueda" type="text" placeholder="Por ej: Manzana" aria-label="Buscar" 
                   @keyup.enter="buscar" ref="caja_busqueda">
@@ -54,7 +54,7 @@
       <div class="d-flex" v-if="storeApp.ruta_actual.path == '/categorias'">
         <div class="w-100" id="cont_busca">
           <div class="row align-items-center justify-content-center">
-            <div class="col-auto p-0 mr-1">
+            <div class="col-auto p-0 me-1">
               <input class="form-control me-2" v-model="termino_filtro" type="text" placeholder="Filtrar" aria-label="Filtrar" 
               @keyup="filtrar" ref="caja_busqueda">
             </div>

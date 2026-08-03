@@ -75,8 +75,8 @@
 
   <div class="row">
     <div class="col">
-      <Button label="Cancelar" icon="pi pi-times" iconPos="right" 
-              class="mr-1"
+      <Button label="Cancelar" icon="pi-times" iconPos="right" 
+              class="me-1"
               v-if="buttons.cancel.visible"
               @click="cancelar" />
       <Button :label="btnSubmit.label" :icon="btnSubmit.icon" iconPos="right" 
@@ -105,7 +105,7 @@
   const buttons = ref({
     'cancel': { 'visible':true }
   })
-  const btnSubmit = ref({ label: "Guardar", icon: 'pi pi-save' })
+  const btnSubmit = ref({ label: "Guardar", icon: 'pi-save' })
 
   async function guardar(){
     traducir_campos_a_out()

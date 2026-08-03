@@ -2,18 +2,18 @@
   <div v-if="abm_load" class="row">
     <div class="col">
       <Button v-if="api.create"
-              :label="textos['create']" icon="pi pi-plus" iconPos="right" 
+              :label="textos['create']" icon="pi-plus" iconPos="right" 
               @click="nuevo" />
 
       <Button v-if="api.edit"
-              :label="textos['edit']" icon="pi pi-pencil" iconPos="right" 
-              class="ml-2"
+              :label="textos['edit']" icon="pi-pencil" iconPos="right" 
+              class="ms-2"
               :disabled="habilita_edicion"
               @click="editar" />
 
       <Button v-if="api.delete"
-              :label="textos['delete']" icon="pi pi-trash" iconPos="right" 
-              class="p-button-danger ml-2"
+              :label="textos['delete']" icon="pi-trash" iconPos="right" 
+              class="p-button-danger ms-2"
               :disabled="habilita_edicion"
               @click="borrar" />
 
@@ -25,47 +25,30 @@
 
       <DataTable 
         :value="registros" 
-        stripedRows responsiveLayout="scroll" 
-        class="p-datatable-sm w-100"
-        filterDisplay="row" v-model:filters="filtros"
+        :striped="true"
+        :showFilterRow="true"
+        v-model:filters="filtros"
 
         :paginator="true" :rows="cant_registros_show" 
-        paginatorTemplate="CurrentPageReport FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown"
         :rowsPerPageOptions="rows_per_page_options"
-        currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords}"
+        pageReportTemplate="Mostrando {first} a {last} de {totalRecords}"
 
-        removableSort
-        v-model:selection="filasSeleccionadas" :selectionMode="modo_seleccion"
+        :selection="filasSeleccionadas" :selectionMode="modo_seleccion"
+        @update:selection="filasSeleccionadas = $event"
         @row-select="onRowChange" @row-unselect="onRowChange" @row-dblclick="onDobleClick"
-        scrollHeight="80vh" scrollDirection="both"
-        :resizableColumns="true" columnResizeMode="expand" showGridlines
-        :reorderableColumns="true"
-        :globalFilterFields="getFieldsForFilter( listado_columnas )">
+        :globalFilterFields="getFieldsForFilter( listado_columnas )"
+        :columns="columnas_tabla"
+        :gridLines="true">
 
         <template #header>
-            <div style="text-align:left">
+            <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
                 <MultiSelect :modelValue="selectedColumns" :options="seleccionGlobal" optionLabel="headerName" @update:modelValue="onToggleColumnSelect"
                     placeholder="Columnas" style="width: 20em"/>
-            </div>
-            <div class="flex justify-content-end">
-                <span class="p-input-icon-left " v-if="filtros['global']">
-                    <i class="pi pi-search" />
+                <span v-if="filtros['global']">
                     <InputText v-model="filtros['global'].value" placeholder="Busqueda" />
                 </span>
             </div>
         </template>
-        <Column :selectionMode="modo_seleccion" headerStyle="width: 3em"></Column>
-        <Column v-for="col of selectedColumns" 
-                :sortable="col.sortable" 
-                :field="col.field" :header="col.headerName" :key="col.field">
-          <template #body="{data}">
-            {{data[col.field]}}
-          </template>
-          <template #filter="{filterModel}">
-              <InputText v-if="filterModel != undefined"  type="text" v-model="filterModel.value" class="p-column-filter" placeholder=""/>
-          </template>
-        </Column>
-        
       </DataTable>
 
     </div>
@@ -74,7 +57,7 @@
 </template>
 
 <script setup>
-  import { ref, onMounted } from 'vue';
+  import { ref, computed, onMounted } from 'vue';
   import  DialogConfirm       from '@/components/genericos/DialogConfirm'
   import  FormularioGenerico  from '@/components/genericos/FormularioGenerico'
   import { mapFilaJSONtabla, getCamposJSONyFieldDef, getCamposJson } from '@/helpers/mapCampoJSON'
@@ -94,6 +77,15 @@
   const cant_registros_show = ref(10)
   const rows_per_page_options = ref([10,15,20,50,100,200])
   const habilita_edicion    = ref(true)
+
+  const columnas_tabla = computed(() => {
+    return (selectedColumns.value || []).map(col => ({
+      key: col.field,
+      field: col.field,
+      header: col.headerName || col.field,
+      sortable: col.sortable !== false
+    }))
+  })
     
   const textos = ref({
     'create': 'Nuevo',

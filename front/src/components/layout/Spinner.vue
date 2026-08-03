@@ -1,12 +1,12 @@
 <template>
   <div v-if="loading" class="portal-spinner-content">
-    <ProgressSpinner class="spinner" :style="styleSpinner" />
+    <ProgressSpinner :style="styleSpinner" />
   </div>
 </template>
 
 <script setup>
 import { reactive } from 'vue'
-import ProgressSpinner from "primevue/progressspinner";
+import ProgressSpinner from "../ui/ProgressSpinner.vue";
 
 const styleSpinner = reactive({
   width: "50px",

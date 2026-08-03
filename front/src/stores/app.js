@@ -118,7 +118,7 @@ export const AppStore = defineStore('app',() =>  {
     let modal_id = this.modals_.length-1
     this.mostrar_modal( DialogConfirm, 'Info', { "texto": texto, 
       "botones": [ 
-        { label: 'Aceptar', icon: 'pi pi-check', class: 'p-button-text', autofocus:true, onClick: ()=>{ this.ocultar_modal(this.modals_[modal_id].code); } } 
+        { label: 'Aceptar', icon: 'pi-check', class: 'p-button-text', autofocus:true, onClick: ()=>{ this.ocultar_modal(this.modals_[modal_id].code); } } 
       ] }, { id:modal_id } )
   }
 
@@ -128,8 +128,8 @@ export const AppStore = defineStore('app',() =>  {
     let modal_id = this.modals_.length-1
     this.mostrar_modal(DialogConfirm, params.title, { "texto": params.text, 
       "botones": [
-        { label: 'No', icon: 'pi pi-times', class: 'p-button-text', autofocus:true, onClick: ()=>{ this.ocultar_modal(this.modals_[modal_id].code); params.no_confirma_accion() } },
-        { label: 'Si', icon: 'pi pi-check', class: 'p-button-text', autofocus:false,  onClick: ()=>{ this.ocultar_modal(this.modals_[modal_id].code); params.confirmar_accion() } }
+        { label: 'No', icon: 'pi-times', class: 'p-button-text', autofocus:true, onClick: ()=>{ this.ocultar_modal(this.modals_[modal_id].code); params.no_confirma_accion() } },
+        { label: 'Si', icon: 'pi-check', class: 'p-button-text', autofocus:false,  onClick: ()=>{ this.ocultar_modal(this.modals_[modal_id].code); params.confirmar_accion() } }
       ],
       after_hide: params.no_confirma_accion
     }, { id:modal_id } )

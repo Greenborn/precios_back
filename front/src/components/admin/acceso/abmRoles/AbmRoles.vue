@@ -2,11 +2,11 @@
   <div class="row" v-if="abm_listo">
     <div class="col">
       
-      <Button label="Vincular permiso" icon="pi pi-link" iconPos="right" 
-              class="ml-2"
+      <Button label="Vincular permiso" icon="pi-link" iconPos="right" 
+              class="ms-2"
               @click="vincular_permiso" />
-      <Button label="Vincular usuario" icon="pi pi-link" iconPos="right" 
-              class="ml-2"
+      <Button label="Vincular usuario" icon="pi-link" iconPos="right" 
+              class="ms-2"
               @click="vincular_permiso" />
     </div>
   </div>

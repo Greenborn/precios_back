@@ -12,7 +12,7 @@
         <div class="row">
           <div class="col">
             <label for="email1" class="mb-1">Email</label>
-            <InputText id="email1" v-model="login_data.email" type="text" class="el-input w-full mb-3" placeholder="usuario@usuario.com"/>
+            <InputText id="email1" v-model="login_data.email" type="text" class="el-input w-100 mb-3" placeholder="usuario@usuario.com"/>
           </div>
         </div>
 
@@ -20,13 +20,13 @@
           <div class="col"> 
             <label for="password1" class="mb-1">Contraseña</label>
             <InputPassword id="password1" v-model="login_data.password" placeholder="contraseña" :toggleMask="true"
-                class="el-input w-full mb-5" inputClass="w-full" :feedback="false"></InputPassword>
+                class="el-input w-100 mb-5" inputClass="w-100" :feedback="false"></InputPassword>
           </div>
         </div>
 
         <div class="row">
           <div class="col mb-5">
-            <Button label="Login" class="w-full" v-on:click="do_login()"></Button>
+            <Button label="Login" class="w-100" v-on:click="do_login()"></Button>
           </div>
         </div>
       </div>
@@ -72,13 +72,4 @@ async function do_login() {
 </script>
 
 <style scoped>
-.pi-eye {
-  transform: scale(1.6);
-  margin-right: 1rem;
-}
-
-.pi-eye-slash {
-  transform: scale(1.6);
-  margin-right: 1rem;
-}
 </style>

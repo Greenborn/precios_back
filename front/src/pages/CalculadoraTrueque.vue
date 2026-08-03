@@ -17,7 +17,7 @@
                             <div class="card-body text-center">
                                 
                                 <div class="row align-items-center justify-content-center">
-                                    <div class="col-auto p-0 mr-1">
+                                    <div class="col-auto p-0 me-1">
                                         <input class="form-control me-2" v-model="terminos[0]" type="text"
                                             placeholder="Por ej: Manzana" aria-label="termino1" @keyup.enter="buscar(0)">
                                     </div>
@@ -87,7 +87,7 @@
                             <div class="card-body text-center">
                                 
                                 <div class="row align-items-center justify-content-center">
-                                    <div class="col-auto p-0 mr-1">
+                                    <div class="col-auto p-0 me-1">
                                         <input class="form-control me-2" v-model="terminos[1]" type="text"
                                             placeholder="Por ej: Manzana" aria-label="termino1" @keyup.enter="buscar(1)">
                                     </div>
@@ -160,7 +160,7 @@
                             <div class="card-body text-center" v-if="elegidos[0] != undefined && elegidos[1] != undefined">
 
                                 <div class="row align-items-center justify-content-center">
-                                    <div class="col-auto p-0 mr-1">
+                                    <div class="col-auto p-0 me-1">
                                         <input class="form-control me-2" v-model="cantidad_prod1" type="number" min="1"
                                             placeholder="1" step="1">
                                     </div>

@@ -12,8 +12,8 @@
 
     <div class="row border-top">
         <div class="col pt-3">
-            <Button label="Cancelar" icon="pi pi-times" iconPos="right" 
-                    class="mr-1" @click="cancelar" />
+            <Button label="Cancelar" icon="pi-times" iconPos="right" 
+                    class="me-1" @click="cancelar" />
             <Button label="Guardar" iconPos="right" 
                     @click="guardar" />
         </div>

@@ -16,7 +16,7 @@
               @click="click(item)">
           <div class="row align-items-center">
             <div class="col-auto">
-              <i :class="'pi menu-icon ' + item.icon"></i>
+              <Icon :name="item.icon" class="menu-icon" />
             </div>
             <div class="col title-cont">
               <span>{{item.title}}</span>
@@ -25,18 +25,18 @@
         </div>
 <!-- SI TIENE SUB ITEMS-->
         <div v-if="item.sub_items.length > 0">
-          <div class="row justify-content-cente">
+          <div class="row justify-content-center">
             <div class="col menu-item-l0 mt-1"  
                   @click="click(item)">
               <div class="row align-items-center">
                 <div class="col-auto">
-                  <i :class="'pi menu-icon ' + item.icon"></i>
+                  <Icon :name="item.icon" class="menu-icon" />
                 </div>
                 <div class="col title-cont">
                   <span>{{item.title}}</span>
                 </div>
                 <div class="col-auto icon-expand">
-                  <i :class="'pi menu-icon ' + (item.expanded ? storeApp.sidebarVisible ? 'pi-chevron-up' : 'pi-chevron-left': storeApp.sidebarVisible ? 'pi-chevron-down' : 'pi-chevron-right')"></i>
+                  <Icon :name="item.expanded ? (storeApp.sidebarVisible ? 'pi-chevron-up' : 'pi-chevron-left') : (storeApp.sidebarVisible ? 'pi-chevron-down' : 'pi-chevron-right')" class="menu-icon" />
                 </div>
               </div>
             </div>
@@ -51,7 +51,7 @@
                     :class="{ active: storeApp.ruta_actual.path == subitem.path }"
                     @click="click(subitem)">
                 <div class="col-auto">
-                  <i :class="'pi menu-icon ' + subitem.icon"></i>
+                  <Icon :name="subitem.icon" class="menu-icon" />
                 </div>
                 <div class="col title-cont">
                   <span>{{subitem.title}}</span>
@@ -73,6 +73,7 @@
   import { ref }      from "vue"
   import { AppStore } from "../../stores/app";
   import { useRouter } from 'vue-router'
+  import Icon from "../ui/Icon.vue"
 
   const storeApp = AppStore();
   const router = useRouter()

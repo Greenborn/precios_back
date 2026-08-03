@@ -7,7 +7,7 @@
     
     <div class="row align-items-center justify-content-center">
         <div class="col-12">
-            <Chart type="line" :data="chartData" :options="chartOptions" class="w-full" />
+            <Chart type="line" :data="chartData" :options="chartOptions" class="w-100" />
         </div>
     </div>
 </template>
