@@ -1,27 +1,29 @@
 <template>
   <div class="row" v-if="abm_listo">
     <div class="col">
-      
-      <Button label="Vincular permiso" icon="pi-link" iconPos="right" 
+
+      <Button label="Vincular permiso" icon="pi-link" iconPos="right"
               class="ms-2"
               @click="vincular_permiso" />
-      <Button label="Vincular usuario" icon="pi-link" iconPos="right" 
+      <Button label="Vincular usuario" icon="pi-link" iconPos="right"
               class="ms-2"
               @click="vincular_permiso" />
     </div>
   </div>
 
-  <TableEditor
-      :api="{ 'get_all': getAllRoles, 'create': crearRol, 'edit': editarRol, 'delete': borrarRol }"
-      :funcionalidad="funcionalidad_config"
-      :permisos="{ 'creacion':[], 'edicion': [], 'eliminacion':[] }"
-      @abm_cargado="abm_listo = true"
-      @fila_selecionada="fila_selecionada"></TableEditor>
+  <VteTableEditor
+    ref="table_ref"
+    :api="vteApi"
+    :config="vteConfig"
+    @loaded="abm_listo = true"
+    @rowSelected="onRowSelected"
+    @rowDoubleClick="crud.editarFila"></VteTableEditor>
 </template>
 
 <script setup>
-  import TableEditor from '../../../genericos/TableEditor.vue';
-  import { ref, onMounted } from 'vue';
+  import { ref, computed, onMounted } from 'vue';
+  import { TableEditor as VteTableEditor } from 'vue-table-editor'
+  import { buildVteList, buildCrud, toVteElementName } from '@/helpers/tableEditorVue'
   import { getAllRoles, crearRol, borrarRol, editarRol, vincularPermiso, getAllPermisos } from '@/api/admin/gestionRBAC'
   import { AppStore } from '@/stores/app'
 
@@ -30,12 +32,32 @@
   const storeApp = AppStore()
   const abm_listo = ref(false)
 
-  const filasSeleccionadas = ref([])
+  const table_ref = ref()
+  const campos = ref([])
+  const seleccionado = ref(null)
 
-  const funcionalidad_config = ref({
-    'modo_seleccion': 'single',
-    'nombre_elemento':{ singular: 'Rol', plural: 'Roles', genero: 'M' },
+  const nombre_elemento = { singular: 'Rol', plural: 'Roles', genero: 'M' }
+
+  const vteApi = {
+    list: buildVteList(getAllRoles, { onFieldsDef: (fd) => { campos.value = fd } }),
+  }
+
+  const crud = buildCrud({
+    api: { create: crearRol, edit: editarRol, delete: borrarRol },
+    campos: () => campos.value,
+    singular: nombre_elemento.singular,
+    gender: nombre_elemento.genero,
+    storeApp,
+    getTable: () => table_ref.value,
+    getSelected: () => seleccionado.value,
   })
+
+  const vteConfig = computed(() => ({
+    lazy: true,
+    selectionMode: 'single',
+    elementName: toVteElementName(nombre_elemento),
+    buttons: { toolbar: crud.toolbar },
+  }))
 
   const modelo_vinculo_permiso = ref({
     id_rol: '',
@@ -43,12 +65,12 @@
     nombre_rol: ''
   })
 
-  function fila_selecionada( seleccionada ){
-    filasSeleccionadas.value = seleccionada
+  function onRowSelected( sel ){
+    seleccionado.value = sel
   }
 
   async function vincular_permiso(){
-    if ( filasSeleccionadas.value.length == 0 ){
+    if ( !seleccionado.value ){
       storeApp.mostrar_alerta( "Es necesario seleccionar un rol" )
       return
     }
@@ -57,13 +79,13 @@
     let permisos_req = await getAllPermisos()
     if (permisos_req){
       storeApp.loading = false
-      modelo_vinculo_permiso.value.id_rol     = filasSeleccionadas.value.id
-      modelo_vinculo_permiso.value.nombre_rol = filasSeleccionadas.value.nombre
+      modelo_vinculo_permiso.value.id_rol     = seleccionado.value.id
+      modelo_vinculo_permiso.value.nombre_rol = seleccionado.value.nombre
 
-      storeApp.mostrar_modal( FormularioGenerico, 'Vincular Permiso', 
-        { 
-          "onSubmit": vincularPermiso, 
-          "guardado": permiso_vinculado, 
+      storeApp.mostrar_modal( FormularioGenerico, 'Vincular Permiso',
+        {
+          "onSubmit": vincularPermiso,
+          "guardado": permiso_vinculado,
           "modelo": modelo_vinculo_permiso.value,
           "campos": [
             { "field":"id_rol",     "headerName": "ID Rol", "visible_form": false },

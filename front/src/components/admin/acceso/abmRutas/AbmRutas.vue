@@ -1,28 +1,49 @@
 <template>
-  <TableEditor
-        :api="{ 'get_all': getAllRutas, 'create': crearRuta, 'edit': editarRuta, 'delete': borrarRuta }"
-        :funcionalidad="funcionalidad_config"
-        :permisos="{ 'creacion':[], 'edicion': [], 'eliminacion':[] }"
-        @abm_cargado="abm_listo = true"
-        ref="table_editor"></TableEditor>
+  <VteTableEditor
+    ref="table_ref"
+    :api="vteApi"
+    :config="vteConfig"
+    @loaded="abm_listo = true"
+    @rowDoubleClick="crud.editarFila"></VteTableEditor>
 
 </template>
 
 <script setup>
-  import { ref, onMounted } from 'vue';
+  import { ref, computed, onMounted } from 'vue';
+  import { TableEditor as VteTableEditor } from 'vue-table-editor'
+  import { buildVteList, buildCrud, toVteElementName } from '@/helpers/tableEditorVue'
   import { getAllRutas, crearRuta, borrarRuta, editarRuta } from '@/api/admin/gestionRBAC'
   import { AppStore } from '@/stores/app'
-  import TableEditor from '../../../genericos/TableEditor.vue';
 
   const storeApp = AppStore()
   const abm_listo = ref(false)
 
-  const table_editor       = ref()
-  const funcionalidad_config = ref({
-    'modo_seleccion': 'single',
-    'nombre_elemento':{ singular: 'Ruta', plural: 'Rutas', genero: 'F' },
+  const table_ref = ref()
+  const campos = ref([])
+  const seleccionado = ref(null)
+
+  const nombre_elemento = { singular: 'Ruta', plural: 'Rutas', genero: 'F' }
+
+  const vteApi = {
+    list: buildVteList(getAllRutas, { onFieldsDef: (fd) => { campos.value = fd } }),
+  }
+
+  const crud = buildCrud({
+    api: { create: crearRuta, edit: editarRuta, delete: borrarRuta },
+    campos: () => campos.value,
+    singular: nombre_elemento.singular,
+    gender: nombre_elemento.genero,
+    storeApp,
+    getTable: () => table_ref.value,
+    getSelected: () => seleccionado.value,
   })
 
+  const vteConfig = computed(() => ({
+    lazy: true,
+    selectionMode: 'single',
+    elementName: toVteElementName(nombre_elemento),
+    buttons: { toolbar: crud.toolbar },
+  }))
 
   onMounted(async ()=>{
     abm_listo.value = false

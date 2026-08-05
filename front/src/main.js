@@ -3,6 +3,7 @@ import "bootstrap"
 import "bootstrap-icons/font/bootstrap-icons.css"
 
 import "./assets/styles/layout.scss";
+import "vue-table-editor/style.css";
 
 import { createApp, reactive } from "vue";
 import { getRouterConRutas } from './utils/auth'

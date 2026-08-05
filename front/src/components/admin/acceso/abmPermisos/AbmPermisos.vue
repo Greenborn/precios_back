@@ -1,46 +1,50 @@
 <template>
-  <TableEditor
-        :api="{ 'get_all': getAllPermisos, 'create': crearPermiso, 'edit': editarPermiso, 'delete': borrarPermiso  }"
-        :funcionalidad="funcionalidad_config"
-        :permisos="{ 'creacion':[], 'edicion': [], 'eliminacion':[] }"
-         @fila_selecionada="fila_selecionada"></TableEditor>
+  <VteTableEditor
+    ref="table_ref"
+    :api="vteApi"
+    :config="vteConfig"
+    @rowSelected="onRowSelected"
+    @rowDoubleClick="crud.editarFila"></VteTableEditor>
 </template>
 
 <script setup>
-  import TableEditor from '../../../genericos/TableEditor.vue';
-  import { ref, onMounted } from 'vue';
+  import { ref, computed, onMounted } from 'vue';
+  import { TableEditor as VteTableEditor } from 'vue-table-editor'
+  import { buildVteList, buildCrud, toVteElementName } from '@/helpers/tableEditorVue'
   import { getAllPermisos, crearPermiso, borrarPermiso, editarPermiso } from '@/api/admin/gestionRBAC'
   import { AppStore } from '@/stores/app'
 
   const storeApp = AppStore()
 
-  const filasSeleccionadas = ref([])
+  const table_ref = ref()
+  const campos = ref([])
+  const seleccionado = ref(null)
 
-  const funcionalidad_config = ref({
-    'modo_seleccion': 'single',
-    'nombre_elemento':{ singular: 'Permiso', plural: 'Permisos', genero: 'M' },
-  })
+  const nombre_elemento = { singular: 'Permiso', plural: 'Permisos', genero: 'M' }
 
-  function fila_selecionada( seleccionada ){
-    filasSeleccionadas.value = seleccionada
+  const vteApi = {
+    list: buildVteList(getAllPermisos, { onFieldsDef: (fd) => { campos.value = fd } }),
   }
 
-  async function borrar_seleccionado(){
-    if ( filasSeleccionadas.value.length == 0 ){
-      storeApp.mostrar_alerta( "Es necesario seleccionar un permiso" )
-      return
-    }
+  const crud = buildCrud({
+    api: { create: crearPermiso, edit: editarPermiso, delete: borrarPermiso },
+    campos: () => campos.value,
+    singular: nombre_elemento.singular,
+    gender: nombre_elemento.genero,
+    storeApp,
+    getTable: () => table_ref.value,
+    getSelected: () => seleccionado.value,
+  })
 
-    let res_borrar = await borrarPermiso({ id: filasSeleccionadas.value.id })
-    if (res_borrar){
-      if (res_borrar.stat){
-        storeApp.mostrar_alerta( "Permiso eliminado correctamente" )
-      } else {
-        storeApp.mostrar_alerta( res_borrar.text )
-      }
-    } else {
-      storeApp.mostrar_alerta( "Error al realizar petición" )
-    }
+  const vteConfig = computed(() => ({
+    lazy: true,
+    selectionMode: 'single',
+    elementName: toVteElementName(nombre_elemento),
+    buttons: { toolbar: crud.toolbar },
+  }))
+
+  function onRowSelected( sel ){
+    seleccionado.value = sel
   }
 
   onMounted(async ()=>{
