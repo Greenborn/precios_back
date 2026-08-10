@@ -9,13 +9,14 @@ set -uo pipefail
 #  Ruta del proyecto:  ~/ejecucion/lab_precios
 #  Proceso PM2:        LAB_PRECIOS
 #  Backend:            back/   (server.js, knex en back/migrations)
-#  Frontend:           front/  (npm run build)
+#  Frontend:           /var/www/PRECIOS (checkout aparte, build en front/)
 # ============================================================
 
 # ---------- defaults adaptados a lab_precios ----------
 DEFAULT_PM2_NAME="LAB_PRECIOS"
 DEFAULT_RUN_AS="apps"
 DEFAULT_DEPLOY_PATH="~/ejecucion/lab_precios"
+DEFAULT_FRONT_PATH="/var/www/PRECIOS"
 DEFAULT_BRANCH="dev"
 
 # ---------- variables configurables ----------
@@ -26,6 +27,7 @@ SSH_PASS=""
 SSH_KEY=""
 GIT_BRANCH="$DEFAULT_BRANCH"
 DEPLOY_PATH="$DEFAULT_DEPLOY_PATH"
+FRONT_PATH="$DEFAULT_FRONT_PATH"
 PM2_NAME="$DEFAULT_PM2_NAME"
 RUN_AS="$DEFAULT_RUN_AS"
 GIT_USER=""
@@ -50,7 +52,8 @@ Flags:
   -P, --password=CLAVE   Contraseña SSH (alternativa a -k)
   -k, --key=RUTA         Ruta a archivo .pem (alternativa a -P)
   -b, --branch=RAMA      Rama de git a desplegar (default: dev)
-  -d, --deploy-path=RUTA Ruta del proyecto en el servidor (default: ~/ejecucion/lab_precios)
+  -d, --deploy-path=RUTA Ruta del proyecto backend en el servidor (default: ~/ejecucion/lab_precios)
+      --front-path=RUTA  Ruta del frontend (checkout aparte) en el servidor (default: /var/www/PRECIOS)
   -n, --pm2-name=NOMBRE  Nombre del proceso PM2 (default: LAB_PRECIOS)
   -r, --run-as=USUARIO   Usuario dueño del deploy (default: apps)
       --git-user=USUARIO Usuario de GitHub (solo repos HTTPS privados)
@@ -68,6 +71,7 @@ for arg in "$@"; do
     --key=*)         SSH_KEY="${arg#*=}" ;;
     --branch=*)      GIT_BRANCH="${arg#*=}"; INTERACTIVE_BRANCH="no" ;;
     --deploy-path=*) DEPLOY_PATH="${arg#*=}" ;;
+    --front-path=*)  FRONT_PATH="${arg#*=}" ;;
     --pm2-name=*)    PM2_NAME="${arg#*=}" ;;
     --run-as=*)      RUN_AS="${arg#*=}" ;;
     --git-user=*)    GIT_USER="${arg#*=}" ;;
@@ -87,6 +91,7 @@ while [ "$#" -gt 0 ]; do
     -k) SSH_KEY="$2"; shift 2 ;;
     -b) GIT_BRANCH="$2"; INTERACTIVE_BRANCH="no"; shift 2 ;;
     -d) DEPLOY_PATH="$2"; shift 2 ;;
+    --front-path) FRONT_PATH="$2"; shift 2 ;;
     -n) PM2_NAME="$2"; shift 2 ;;
     -r) RUN_AS="$2"; shift 2 ;;
     *) shift ;;
@@ -157,26 +162,36 @@ info "Conectando a $SSH_USER@$SSH_HOST (puerto $SSH_PORT)..."
 
 run_remote "test -d $DEPLOY_PATH/.git && echo OK || echo NO_GIT" | grep -q "OK" \
   || die "No se encontró un repo git en $DEPLOY_PATH (usa deploy-produccion para el despliegue inicial)"
+run_remote "test -d $FRONT_PATH/.git && echo OK || echo NO_GIT" | grep -q "OK" \
+  || die "No se encontró un repo git en $FRONT_PATH (usa deploy-produccion para el despliegue inicial)"
 
-info "Cambios locales no commiteados -> git stash"
+info "Cambios locales no commiteados -> git stash (backend y frontend)"
 run_remote "cd $DEPLOY_PATH && git stash 2>&1 || true"
+run_remote "cd $FRONT_PATH && git stash 2>&1 || true"
 
 info "Checkout y pull de la rama $GIT_BRANCH"
 if [ -n "$GIT_USER" ] && [ -n "$GIT_TOKEN" ]; then
   run_remote "cd $DEPLOY_PATH && git config credential.helper store && printf 'protocol=https\nhost=github.com\nusername=${GIT_USER}\npassword=${GIT_TOKEN}\n' | git credential approve"
+  run_remote "cd $FRONT_PATH && git config credential.helper store && printf 'protocol=https\nhost=github.com\nusername=${GIT_USER}\npassword=${GIT_TOKEN}\n' | git credential approve"
 fi
 run_remote "cd $DEPLOY_PATH && git checkout $GIT_BRANCH && git pull origin $GIT_BRANCH" \
-  || die "Falló el pull de la rama $GIT_BRANCH"
+  || die "Falló el pull de la rama $GIT_BRANCH en $DEPLOY_PATH"
+run_remote "cd $FRONT_PATH && git checkout $GIT_BRANCH && git pull origin $GIT_BRANCH" \
+  || die "Falló el pull de la rama $GIT_BRANCH en $FRONT_PATH"
 
 if [ -n "$RUN_AS" ]; then
   info "Ajustando propietario a $RUN_AS"
   if [ "$SSH_USER" = "root" ]; then
     CHOWN_CMD="chown -R $RUN_AS:$RUN_AS $DEPLOY_PATH"
+    CHOWN_FRONT_CMD="chown -R $RUN_AS:$RUN_AS $FRONT_PATH"
   else
     CHOWN_CMD="sudo chown -R $RUN_AS:$RUN_AS $DEPLOY_PATH"
+    CHOWN_FRONT_CMD="sudo chown -R $RUN_AS:$RUN_AS $FRONT_PATH"
   fi
   run_remote "$CHOWN_CMD 2>&1" \
     || die "Fallo al ajustar propietario. Verifica permisos de root/sudo para el chown"
+  run_remote "$CHOWN_FRONT_CMD 2>&1" \
+    || die "Fallo al ajustar propietario de $FRONT_PATH. Verifica permisos de root/sudo para el chown"
 fi
 
 SUDO=""
@@ -185,12 +200,12 @@ SUDO=""
 info "npm install en back/"
 run_remote "cd $DEPLOY_PATH/back && $SUDO npm install 2>&1" || die "Falló npm install en back/"
 
-info "npm install en front/"
-run_remote "cd $DEPLOY_PATH/front && $SUDO npm install 2>&1" || die "Falló npm install en front/"
+info "npm install en $FRONT_PATH/front"
+run_remote "cd $FRONT_PATH/front && $SUDO npm install 2>&1" || die "Falló npm install en front/"
 
 info "Build del frontend"
-run_remote "cd $DEPLOY_PATH/front && $SUDO npm run build 2>&1" || die "Falló el build del frontend"
-run_remote "test -d $DEPLOY_PATH/front/dist && echo OK || echo NO_DIST" | grep -q "OK" \
+run_remote "cd $FRONT_PATH/front && $SUDO npm run build 2>&1" || die "Falló el build del frontend"
+run_remote "test -d $FRONT_PATH/front/dist && echo OK || echo NO_DIST" | grep -q "OK" \
   || die "No se generó dist/ en front"
 
 info "Migraciones de base de datos (knex)"
@@ -204,7 +219,8 @@ echo "============================================="
 echo "  ACTUALIZACIÓN COMPLETADA"
 echo "============================================="
 echo "  Host:       $SSH_USER@$SSH_HOST"
-echo "  Ruta:       $DEPLOY_PATH"
+echo "  Ruta backend:   $DEPLOY_PATH"
+echo "  Ruta front:     $FRONT_PATH"
 echo "  Rama:       $GIT_BRANCH"
 echo "  PM2:        $PM2_NAME"
 echo "  run-as:     ${RUN_AS:-usuario SSH}"
