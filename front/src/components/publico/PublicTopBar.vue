@@ -71,10 +71,12 @@
                 :class="{ active: storeApp.ruta_actual.path == enlace.path }">{{ enlace.title }}</span>
           </li>
           <li class="nav-item" v-if="!isLogged">
-            <span class="nav-link" @click="irIngresar">Ingresar</span>
+            <button class="btn btn-success" type="button" @click="irIngresar">Ingresar</button>
           </li>
           <li class="nav-item" v-else>
-            <span class="nav-link">{{ storeApp.userInfo?.name }}</span>
+            <button class="btn btn-success" type="button" @click="irDashboard">
+              <i class="bi bi-person-circle me-1"></i>{{ storeApp.userInfo?.name || 'Mi cuenta' }}
+            </button>
           </li>
         </ul>
       </div>  
@@ -86,12 +88,12 @@
 import { ref, onMounted } from 'vue'
 
 import { AppStore } from "../../stores/app"
-import { useRouter, useRoute } from 'vue-router'
-import { getToken } from "../../utils/auth"
+import { useRoute } from 'vue-router'
+import { router } from "../../router"
+import { getToken, getUserInfo, setUserInfo } from "../../utils/auth"
 
 const emit  = defineEmits(['buscar_evnt', 'agregar_evnt', 'filtrar_evnt'])
 const storeApp = AppStore()
-const router = useRouter()
 const route = useRoute()
 
 const isLogged = !!getToken()
@@ -121,6 +123,19 @@ function click( item ){
 
 function irIngresar(){
   router.push('/admin/login')
+}
+
+async function irDashboard(){
+  const token = getToken()
+  if (!token) return router.push('/admin/login')
+
+  const userInfo = await getUserInfo('admin')
+  if (userInfo && userInfo.stat) {
+    setUserInfo('admin', storeApp, userInfo.data, router, token)
+    router.push('/admin/dashboard')
+  } else {
+    router.push('/admin/login')
+  }
 }
 
 function filtrar(){
