@@ -66,7 +66,14 @@ async function do_login() {
     router.replace('/admin/dashboard')
   } else {
     storeApp.loading = false
-    console.log('login fallido')
+    console.log('login fallido', {
+      stat: login_req?.stat,
+      texto: login_req?.text,
+      error: login_req?.error,
+      msg: login_req?.msg,
+      origin: window.location.origin,
+      email: login_data.value.email,
+    })
   }
 }
 </script>

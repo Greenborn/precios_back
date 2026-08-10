@@ -38,5 +38,5 @@ var paths = [
   { path: "/rbac/nueva_ruta", permisos: ["rutas.crear"] },
   { path: "/rbac/editar_ruta", permisos: ["rutas.editar"] },
   { path: "/rbac/eliminar_ruta", permisos: ["rutas.eliminar"] },
-  { path: "/comercios" },
+  { path: "/comercios", public: true },
 ]
