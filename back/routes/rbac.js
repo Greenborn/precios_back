@@ -27,11 +27,45 @@ const FIELDS_DEF_RUTAS = [
 function ok(res, data) { return res.status(200).send({ stat: true, data }) }
 function err(res, text) { return res.status(200).send({ stat: false, text }) }
 
+// Construye un query paginado/filtrado/ordenado con el contrato de vue-table-editor.
+// Recibe req.query: page, pageSize, search, sortField, sortOrder, filters (JSON string).
+function buildListQuery(baseQuery, req, searchFields, sortWhitelist) {
+  const page = parseInt(req.query.page) || 1
+  const pageSize = parseInt(req.query.pageSize) || 25
+  const search = req.query.search || ''
+  const sortField = req.query.sortField || 'id'
+  const sortOrder = req.query.sortOrder || 'asc'
+
+  let query = baseQuery
+  if (search) {
+    query = query.where(function () {
+      for (const f of searchFields) this.orWhere(f, 'like', `%${search}%`)
+    })
+  }
+
+  // Filtros por columna: { campo: "valor" } (JSON string desde la libreria)
+  let filters = {}
+  try { filters = req.query.filters ? JSON.parse(req.query.filters) : {} } catch (e) { filters = {} }
+  for (const [field, value] of Object.entries(filters)) {
+    if (value) query = query.where(field, 'like', `%${value}%`)
+  }
+
+  const orderField = sortWhitelist.includes(sortField) ? sortField : 'id'
+  query = query.orderBy(orderField, sortOrder === 'desc' ? 'desc' : 'asc')
+
+  return { page, pageSize, query }
+}
+
 // ============================ ROLES ============================
 router.get('/get_roles', async function (req, res) {
   try {
-    const rows = await global.knex('roles').select('*').orderBy('id', 'asc')
-    ok(res, { rows, fields_def: FIELDS_DEF_ROLES })
+    const { page, pageSize, query } = buildListQuery(
+      global.knex('roles').select('*'), req,
+      ['nombre', 'descripcion'], ['id', 'nombre', 'descripcion']
+    )
+    const total = parseInt((await query.clone().clearOrder().count('* as c'))[0].c)
+    const rows = await query.offset((page - 1) * pageSize).limit(pageSize)
+    ok(res, { rows, fields_def: FIELDS_DEF_ROLES, total, page, pageSize })
   } catch (e) { console.log('[rbac] get_roles:', e); err(res, 'Error al listar roles') }
 })
 
@@ -95,8 +129,13 @@ router.post('/asignar_usuario_rol', async function (req, res) {
 // ============================ PERMISOS ============================
 router.get('/get_permisos', async function (req, res) {
   try {
-    const rows = await global.knex('permisos').select('*').orderBy('id', 'asc')
-    ok(res, { rows, fields_def: FIELDS_DEF_PERMISOS })
+    const { page, pageSize, query } = buildListQuery(
+      global.knex('permisos').select('*'), req,
+      ['nombre', 'descripcion'], ['id', 'nombre', 'descripcion']
+    )
+    const total = parseInt((await query.clone().clearOrder().count('* as c'))[0].c)
+    const rows = await query.offset((page - 1) * pageSize).limit(pageSize)
+    ok(res, { rows, fields_def: FIELDS_DEF_PERMISOS, total, page, pageSize })
   } catch (e) { console.log('[rbac] get_permisos:', e); err(res, 'Error al listar permisos') }
 })
 
@@ -139,8 +178,13 @@ router.delete('/eliminar_permiso', async function (req, res) {
 // ============================ RUTAS ============================
 router.get('/get_rutas', async function (req, res) {
   try {
-    const rows = await global.knex('rutas').select('*').orderBy('orden_visualizacion', 'asc')
-    ok(res, { rows, fields_def: FIELDS_DEF_RUTAS })
+    const { page, pageSize, query } = buildListQuery(
+      global.knex('rutas').select('*'), req,
+      ['path', 'title', 'componente', 'icon'], ['id', 'id_ruta_root', 'path', 'componente', 'icon', 'title', 'orden_visualizacion']
+    )
+    const total = parseInt((await query.clone().clearOrder().count('* as c'))[0].c)
+    const rows = await query.offset((page - 1) * pageSize).limit(pageSize)
+    ok(res, { rows, fields_def: FIELDS_DEF_RUTAS, total, page, pageSize })
   } catch (e) { console.log('[rbac] get_rutas:', e); err(res, 'Error al listar rutas') }
 })
 

@@ -274,11 +274,13 @@
     }
 
     setTimeout(()=>{
-      $(".file").fileinput({
-        language: 'es',
-        showRemove: false,
-        showUpload: false,
-      });
+      if (typeof $ !== 'undefined' && $.fn && $.fn.fileinput) {
+        $(".file").fileinput({
+          language: 'es',
+          showRemove: false,
+          showUpload: false,
+        });
+      }
     }, 200)
   }
 

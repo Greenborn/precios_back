@@ -826,16 +826,32 @@ x-api-key: <token>
 ```
 
 #### Listado (contrato TableEditor)
-**GET** `/admin/user/get_all?page=1&pageSize=25`
+**GET** `/admin/user/get_all?page=1&pageSize=25&search=&sortField=id&sortOrder=asc&filters={}`
 ```json
 {
   "stat": true,
   "data": {
     "rows": [ { "id": 1, "name": "Administrador", "email": "admin@admin.com", "roles": [ { "id": 1, "nombre": "administrador" } ] } ],
-    "fields_def": [ { "field": "id", "headerName": "ID", "sortable": true } ]
+    "fields_def": [ { "field": "id", "headerName": "ID", "sortable": true } ],
+    "total": 1,
+    "page": 1,
+    "pageSize": 25
   }
 }
 ```
+
+**Contrato de listado paginado** (aplica a `user/get_all` y a `rbac/get_roles`, `rbac/get_permisos`, `rbac/get_rutas`):
+
+| Query param | Tipo | Descripción |
+|-------------|------|-------------|
+| `page` | int | Página (default 1) |
+| `pageSize` | int | Tamaño de página (default 25) |
+| `search` | string | Búsqueda global (LIKE sobre campos principales) |
+| `sortField` | string | Campo de orden (whitelist por recurso; default `id`) |
+| `sortOrder` | string | `asc` o `desc` (default `asc`) |
+| `filters` | JSON string | Filtros por columna `{ "campo": "valor" }` (LIKE) |
+
+Respuesta: `{ stat: true, data: { rows, fields_def, total, page, pageSize } }`.
 
 ### 3. Gestión de Roles (`/admin/rbac/*`)
 

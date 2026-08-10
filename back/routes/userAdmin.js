@@ -105,22 +105,35 @@ router.get('/get_all', async function (req, res) {
   const page = parseInt(req.query.page) || 1
   const pageSize = parseInt(req.query.pageSize) || 25
   const search = req.query.search || ''
+  const sortField = req.query.sortField || 'id'
+  const sortOrder = req.query.sortOrder || 'asc'
 
-  let query = global.knex('usuarios')
-  let countQuery = global.knex('usuarios')
+  const query = global.knex('usuarios').select('*')
+  const countQuery = global.knex('usuarios')
 
   if (search) {
-    query = query.where(function () {
+    query.where(function () {
       this.where('name', 'like', `%${search}%`).orWhere('email', 'like', `%${search}%`)
     })
-    countQuery = countQuery.where(function () {
+    countQuery.where(function () {
       this.where('name', 'like', `%${search}%`).orWhere('email', 'like', `%${search}%`)
     })
   }
 
+  // Filtros por columna: { campo: "valor" } (JSON string desde la libreria)
+  let filters = {}
+  try { filters = req.query.filters ? JSON.parse(req.query.filters) : {} } catch (e) { filters = {} }
+  for (const [field, value] of Object.entries(filters)) {
+    if (value && ['id', 'name', 'email'].includes(field)) {
+      query.where(field, 'like', `%${value}%`)
+      countQuery.where(field, 'like', `%${value}%`)
+    }
+  }
+
+  const orderField = ['id', 'name', 'email'].includes(sortField) ? sortField : 'id'
   const total = parseInt((await countQuery.count('* as c'))[0].c)
   const offset = (page - 1) * pageSize
-  const rows = await query.orderBy('id', 'desc').offset(offset).limit(pageSize)
+  const rows = await query.orderBy(orderField, sortOrder === 'desc' ? 'desc' : 'asc').offset(offset).limit(pageSize)
 
   for (const u of rows) {
     u.roles = await global.knex('usuarios_roles')

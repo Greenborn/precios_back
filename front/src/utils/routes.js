@@ -1,6 +1,6 @@
 
 export async function routerBeforeEach( router, storeApp ){
-  router.beforeEach(async (to, from, next) => {
+  router.beforeEach(async (to, from) => {
     
     //Se comprueba si la ruta a la que accede existe en el arreglo de rutas, si es así
     //se debe atualizar el valor de la ruta actual
@@ -22,7 +22,5 @@ export async function routerBeforeEach( router, storeApp ){
         break;
       }
     }
-    
-    next()
   })
 }
