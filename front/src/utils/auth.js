@@ -1,4 +1,5 @@
 import Cookies from 'js-cookie'
+import { markRaw } from 'vue'
 import Layout from '../components/layout/Layout.vue'
 import { routes as rutas_iniciales } from "../router";
 
@@ -153,10 +154,11 @@ function rutas_parseadas( rutas, tipo_usuario ){
   let rutas_tmp = []
 
   for (let c = 0; c < rutas.length; c++){
+    let comp = referencias_componentes[rutas[c].componente]
     let ruta = {
       name: rutas[c].id,
       path: '',
-      component: referencias_componentes[rutas[c].componente],//import(rutas[c].componente),//, //
+      component: comp ? markRaw(comp) : comp,//import(rutas[c].componente),//, //
       children: [],
       meta: { }
     }
