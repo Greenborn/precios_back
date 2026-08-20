@@ -20,6 +20,13 @@ async function nuevo_reg_precio( trx, articulo, producto_db, fecha_registro ){
             return false;
         }
 
+        // Limpiar price_today: conservar solo hoy y ayer
+        // (borrar todo registro con date_time anterior al inicio del día de ayer)
+        let AYER = new Date(fecha);
+        AYER.setHours(0,0,0,0);
+        AYER.setDate(AYER.getDate() - 1);
+        await trx('price_today').where('date_time', '<', AYER).del();
+
         const insert = {
             "id": uuid.v7(),
             "product_id": producto_db.id,

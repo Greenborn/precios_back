@@ -233,7 +233,12 @@ def nuevo_reg_precio(cursor, conexion, articulo, producto_db, fecha_registro):
     if not fecha:
         print('Error: fecha_registro es obligatorio')
         return False
-    
+
+    # Limpiar price_today: conservar solo hoy y ayer
+    # (borrar todo registro con date_time anterior al inicio del día de ayer)
+    ayer = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=1)
+    cursor.execute("DELETE FROM price_today WHERE date_time < %s", (ayer,))
+
     # Preparar insert
     id_precio = generar_uuid_v7()
     insert_data = {
@@ -625,6 +630,11 @@ def actualizar_estadisticas():
     
     try:
         cursor = conexion.cursor()
+
+        # Limpieza periódica (red de seguridad): conservar solo hoy y ayer
+        ayer = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=1)
+        cursor.execute("DELETE FROM price_today WHERE date_time < %s", (ayer,))
+        cursor.execute("DELETE FROM estadistica_aumento_diario WHERE fecha_utlimo_precio < %s", (ayer,))
         
         # Actualizar cant_price
         cursor.execute("SELECT COUNT(id) FROM price")
@@ -691,6 +701,13 @@ def main():
     productos_procesados = 0
     ofertas_procesadas = 0
     errores_total = 0
+
+    # Limpieza inicial de price_today (red de seguridad al arrancar)
+    try:
+        actualizar_estadisticas()
+        print("✓ Limpieza inicial de price_today / estadistica_aumento_diario completada")
+    except Exception as e:
+        print(f"⚠️  Error en limpieza inicial: {e}")
     
     while True:
         try:

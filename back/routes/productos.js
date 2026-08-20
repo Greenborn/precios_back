@@ -5,6 +5,8 @@ module.exports = router
 const axios = require('axios')
 const { spawn } = require('child_process')
 const path = require('path')
+const uuid = require('uuid')
+const busqueda_productos = require("../controllers/busqueda_productos")
 
 // Configuración del servicio de colas
 const QUEUE_SERVICE_URL = process.env.QUEUE_SERVICE_URL || 'http://localhost:3501'
@@ -153,6 +155,12 @@ router.put('/cargar_nuevo_precio', async function (req, res) {
 
         const HOY = new Date()
 
+        // Limpiar price_today: conservar solo hoy y ayer
+        // (borrar todo registro con date_time anterior al inicio del día de ayer)
+        let AYER = new Date(HOY)
+        AYER.setHours(0,0,0,0)
+        AYER.setDate(AYER.getDate() - 1)
+
         const insert = {
             "product_id": PROD_ID,
             "price": PRICE,
@@ -163,8 +171,75 @@ router.put('/cargar_nuevo_precio', async function (req, res) {
             "url": null,
             "notas": "Precios de la Gente - ingresado por formulario de corrección de precio"
         }
-        
-        res.status(200).send({ stat: await global.knex('price').insert( insert ) })
+
+        try {
+            const trx = await global.knex.transaction()
+            const [nuevo_id] = await trx('price').insert( insert )
+            insert.id = nuevo_id
+
+            // Limpiar price_today (misma ventana hoy+ayer)
+            await trx('price_today').where('date_time', '<', AYER).del()
+
+            // Obtener el nombre del producto para price_today
+            const producto_db = await trx('products').where('id', PROD_ID).first()
+            const product_name = producto_db?.name || null
+
+            // Buscar si ya existe registro para product_id y branch_id
+            let existe = await trx('price_today')
+                .where({ product_id: PROD_ID, branch_id: BRANCH_ID })
+                .first()
+
+            if (!existe) {
+                await trx('price_today').insert({
+                    "id": uuid.v7(),
+                    "product_id": PROD_ID,
+                    "price": PRICE,
+                    "date_time": insert.date_time,
+                    "branch_id": BRANCH_ID,
+                    "es_oferta": 0,
+                    "confiabilidad": 50,
+                    "url": null,
+                    "notas": insert.notas,
+                    "time": insert.date_time,
+                    "product_name": product_name,
+                    "price_id": nuevo_id
+                });
+            } else {
+                await trx('price_today')
+                    .where({ product_id: PROD_ID, branch_id: BRANCH_ID })
+                    .update({
+                        price: PRICE,
+                        date_time: insert.date_time,
+                        es_oferta: 0,
+                        confiabilidad: 50,
+                        url: null,
+                        notas: insert.notas,
+                        time: insert.date_time,
+                        product_name: product_name,
+                        price_id: nuevo_id
+                    });
+            }
+
+            await trx.commit()
+
+            // Sincronizar estructura de búsqueda en tiempo real
+            if (product_name) {
+                busqueda_productos.agregar_a_buscador({
+                    product_name: product_name,
+                    product_id: PROD_ID,
+                    price: PRICE,
+                    branch_id: BRANCH_ID,
+                    date_time: insert.date_time,
+                    time: insert.date_time,
+                    url: null
+                });
+            }
+
+            res.status(200).send({ stat: true })
+        } catch (error) {
+            console.log("error al registrar precio corregido", error)
+            res.status(200).send({ stat: false, error: "Error interno, reintente luego" })
+        }
     } catch (error) {
         console.log("error", error)
         res.status(200).send({ stat: false,  error: "Error interno, reintente luego" })

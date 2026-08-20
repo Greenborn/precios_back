@@ -599,31 +599,37 @@ Esto actualiza la tabla `serie_compilada_media_interdiaria` solo para los días 
 
 ### Mecanismo de limpieza automática de `price_today`
 
-La tabla `price_today` está diseñada para contener únicamente los precios correspondientes al día actual. Para garantizar esto, el sistema implementa la siguiente lógica:
+La tabla `price_today` está diseñada para contener únicamente los precios correspondientes al día actual y al día anterior (ventana "hoy + ayer"). Para garantizar esto, el sistema implementa la siguiente lógica:
 
 - **Limpieza automática al registrar un nuevo precio:**
   - Cada vez que se registra un nuevo precio (ya sea por importación masiva, carga manual o actualización), el controlador ejecuta una limpieza previa de la tabla `price_today`.
-  - Se eliminan todos los registros cuya columna `date_time` sea anterior al día actual (es decir, menor a las 00:00:00 del día en curso).
-  - Solo después de esta limpieza se inserta el nuevo precio correspondiente.
+  - Se eliminan todos los registros cuya columna `date_time` sea anterior al inicio del día de ayer (es decir, menor a las 00:00:00 del día anterior).
+  - Solo después de esta limpieza se inserta/actualiza el nuevo precio correspondiente.
+- **Limpieza periódica (red de seguridad):**
+  - El worker de procesamiento (`extra_services/actualizar_precios.py`) ejecuta la misma limpieza al arrancar y periódicamente (dentro de `actualizar_estadisticas`), cubriendo registros que se hayan acumulado fuera del flujo normal.
+- **Regeneración manual / por API:**
+  - El endpoint `POST /admin/productos/regenerar_price_today` encola la tarea `regenerar_precios`, que ejecuta `node scripts/recrear_price_today.js`. Este script borra lo anterior a "ayer" y reconstruye desde `price` el precio más reciente por producto/sucursal de la ventana.
 
 **Ventajas de este enfoque:**
 - La limpieza es centralizada y automática, sin depender del endpoint específico que realice la operación.
-- Se evita la acumulación de precios antiguos y se garantiza que los análisis y reportes sobre `price_today` reflejen únicamente los datos vigentes.
+- Se evita la acumulación de precios antiguos y se garantiza que los análisis y reportes sobre `price_today` reflejen únicamente los datos vigentes (hoy y ayer).
 
 **Referencia de implementación:**
 - Ver función `nuevo_reg_precio` en `back/controllers/importar_productos.js`:
   ```js
-  // Limpiar price_today para dejar solo los precios del día actual
-  const HOY = new Date(fecha_registro)
-  HOY.setHours(0,0,0,0)
-  await trx('price_today').where('date_time', '<', HOY).del();
+  // Limpiar price_today para dejar solo los precios de hoy y ayer
+  const AYER = new Date(fecha_registro)
+  AYER.setHours(0,0,0,0)
+  AYER.setDate(AYER.getDate() - 1)
+  await trx('price_today').where('date_time', '<', AYER).del();
   ```
+- Ver también `back/routes/productos.js` (`PUT /cargar_nuevo_precio`), `extra_services/actualizar_precios.py` y `back/scripts/recrear_price_today.js`.
 
 ### Limpieza automática de `estadistica_aumento_diario` y `promociones_hoy`
 
 La limpieza de datos temporales usa inicio de día en hora local (UTC-3):
 
-- Al vaciarse `colaProcProductos` se ejecuta un callback `onEmpty` que, además de actualizar la serie compilada, elimina registros en `estadistica_aumento_diario` con `fecha_utlimo_precio` anterior a `HOY` (inicio del día local).
+- Al vaciarse `colaProcProductos` se ejecuta un callback `onEmpty` que, además de actualizar la serie compilada, elimina registros en `estadistica_aumento_diario` con `fecha_utlimo_precio` anterior a `AYER` (inicio del día anterior local). En la implementación real, esta limpieza corre periódicamente en `extra_services/actualizar_precios.py` (dentro de `actualizar_estadisticas`).
 - Al vaciarse `colaProcOfertas` se eliminan registros en `promociones_hoy` con `fecha` anterior a `HOY`.
 - Cálculo de `HOY`:
   ```js
