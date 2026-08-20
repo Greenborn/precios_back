@@ -165,19 +165,34 @@ run_remote "test -d $DEPLOY_PATH/.git && echo OK || echo NO_GIT" | grep -q "OK" 
 run_remote "test -d $FRONT_PATH/.git && echo OK || echo NO_GIT" | grep -q "OK" \
   || die "No se encontró un repo git en $FRONT_PATH (usa deploy-produccion para el despliegue inicial)"
 
+# Evitar el error de git "posesión dudosa" (dubious ownership): el repo puede estar
+# bajo un propietario distinto al usuario SSH (p.ej. apps/www-data). Cada comando git
+# se ejecuta con -c safe.directory='*' inline para que la confianza se aplique en el
+# mismo proceso que ejecuta la operación, sin depender de config entre sesiones SSH.
+# Adicionalmente se registra safe.directory a nivel de sistema como respaldo persistente.
+info "Registrando safe.directory para git (evita 'posesión dudosa')"
+run_remote "git config --system --add safe.directory $DEPLOY_PATH 2>&1 || true"
+run_remote "git config --system --add safe.directory $FRONT_PATH 2>&1 || true"
+
+GIT() { run_remote "git -c safe.directory='*' $@"; }
+
 info "Cambios locales no commiteados -> git stash (backend y frontend)"
-run_remote "cd $DEPLOY_PATH && git stash 2>&1 || true"
-run_remote "cd $FRONT_PATH && git stash 2>&1 || true"
+GIT -C $DEPLOY_PATH stash 2>&1 || true
+GIT -C $FRONT_PATH stash 2>&1 || true
 
 info "Checkout y pull de la rama $GIT_BRANCH"
 if [ -n "$GIT_USER" ] && [ -n "$GIT_TOKEN" ]; then
   run_remote "cd $DEPLOY_PATH && git config credential.helper store && printf 'protocol=https\nhost=github.com\nusername=${GIT_USER}\npassword=${GIT_TOKEN}\n' | git credential approve"
   run_remote "cd $FRONT_PATH && git config credential.helper store && printf 'protocol=https\nhost=github.com\nusername=${GIT_USER}\npassword=${GIT_TOKEN}\n' | git credential approve"
 fi
-run_remote "cd $DEPLOY_PATH && git checkout $GIT_BRANCH && git pull origin $GIT_BRANCH" \
+GIT -C $DEPLOY_PATH checkout "$GIT_BRANCH" && GIT -C $DEPLOY_PATH pull origin "$GIT_BRANCH" \
   || die "Falló el pull de la rama $GIT_BRANCH en $DEPLOY_PATH"
-run_remote "cd $FRONT_PATH && git checkout $GIT_BRANCH && git pull origin $GIT_BRANCH" \
+GIT -C $FRONT_PATH checkout "$GIT_BRANCH" && GIT -C $FRONT_PATH pull origin "$GIT_BRANCH" \
   || die "Falló el pull de la rama $GIT_BRANCH en $FRONT_PATH"
+
+info "Verificando rama desplegada en frontend"
+GIT -C $FRONT_PATH branch --show-current | grep -q "^$GIT_BRANCH$" \
+  || die "El frontend no quedó en la rama $GIT_BRANCH"
 
 if [ -n "$RUN_AS" ]; then
   info "Ajustando propietario a $RUN_AS"
