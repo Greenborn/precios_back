@@ -7,6 +7,7 @@ const { spawn } = require('child_process')
 const path = require('path')
 const uuid = require('uuid')
 const busqueda_productos = require("../controllers/busqueda_productos")
+const sync_cache = require("../controllers/sync_cache")
 
 // Configuración del servicio de colas
 const QUEUE_SERVICE_URL = process.env.QUEUE_SERVICE_URL || 'http://localhost:3501'
@@ -232,6 +233,22 @@ router.put('/cargar_nuevo_precio', async function (req, res) {
                     date_time: insert.date_time,
                     time: insert.date_time,
                     url: null
+                });
+
+                // Actualizar caches de precios y productos por categoría
+                await sync_cache.actualizar_precio({
+                    id: uuid.v7(),
+                    product_id: PROD_ID,
+                    branch_id: BRANCH_ID,
+                    price: PRICE,
+                    product_name: product_name,
+                    date_time: insert.date_time,
+                    time: insert.date_time,
+                    es_oferta: 0,
+                    confiabilidad: 50,
+                    notas: insert.notas,
+                    url: null,
+                    price_id: nuevo_id
                 });
             }
 

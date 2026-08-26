@@ -12,7 +12,7 @@ import time
 import json
 import requests
 import subprocess
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from dotenv import load_dotenv
 import mysql.connector
 from mysql.connector import Error
@@ -38,6 +38,36 @@ DB_CONFIG = {
 QUEUE_SERVICE_URL = os.getenv('QUEUE_SERVICE_URL', 'http://localhost:3501')
 GET_DATA_ENDPOINT = f"{QUEUE_SERVICE_URL}/get_data"
 INTERVALO_VERIFICACION = 1  # 1 segundo
+
+# Configuración de sincronización de cache en memoria del servidor API
+API_BASE_URL = os.getenv('API_BASE_URL', 'http://localhost')
+API_PORT = os.getenv('service_port_api', '3001')
+INTERNAL_SYNC_KEY = os.getenv('internal_sync_key', '')
+SYNC_CACHE_ENDPOINT = f"{API_BASE_URL}:{API_PORT}/interno/sync_cache"
+
+
+def sincronizar_cache_precio(precio_hoy):
+    """Notifica al servidor API para actualizar el cache en memoria con el
+    registro de price_today recién insertado/actualizado."""
+    if not INTERNAL_SYNC_KEY or not precio_hoy:
+        return False
+
+    def _ser(obj):
+        if isinstance(obj, (datetime, date)):
+            return obj.isoformat()
+        return str(obj)
+
+    try:
+        response = requests.post(
+            SYNC_CACHE_ENDPOINT,
+            json=json.loads(json.dumps(precio_hoy, default=_ser)),
+            headers={'Content-Type': 'application/json', 'x-internal-key': INTERNAL_SYNC_KEY},
+            timeout=5
+        )
+        return bool(response.ok and response.json().get('stat'))
+    except Exception as e:
+        print(f"⚠️  Error al sincronizar cache de precios: {e}")
+        return False
 
 # Caches globales para evitar consultas repetidas
 cache_productos = {}
@@ -304,6 +334,20 @@ def nuevo_reg_precio(cursor, conexion, articulo, producto_db, fecha_registro):
         ))
     
     conexion.commit()
+    sincronizar_cache_precio({
+        'id': id_precio_hoy,
+        'product_id': producto_db['id'],
+        'branch_id': articulo['branch_id'],
+        'price': articulo['price'],
+        'product_name': articulo['name'],
+        'date_time': fecha,
+        'time': fecha,
+        'es_oferta': 0,
+        'confiabilidad': 100,
+        'notas': insert_data['notas'],
+        'url': insert_data['url'],
+        'price_id': id_precio
+    })
     return insert_data
 
 
@@ -425,6 +469,20 @@ def procesa_precio(cursor, conexion, producto_db, articulo, fecha_registro):
                     articulo.get('url'), datetime.now(), articulo['name'],
                     ultimo_precio['id']
                 ))
+                sincronizar_cache_precio({
+                    'id': id_precio_hoy,
+                    'product_id': producto_db['id'],
+                    'branch_id': articulo['branch_id'],
+                    'price': ultimo_precio['price'],
+                    'product_name': articulo['name'],
+                    'date_time': datetime.now(),
+                    'time': datetime.now(),
+                    'es_oferta': 0,
+                    'confiabilidad': 100,
+                    'notas': None,
+                    'url': articulo.get('url'),
+                    'price_id': ultimo_precio['id']
+                })
             
             conexion.commit()
             return True

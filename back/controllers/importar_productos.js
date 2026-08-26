@@ -2,6 +2,7 @@ require("dotenv").config({ path: '../.env' })
 const uuid = require("uuid")
 const utils = require("../helpers/utils")
 const busqueda_productos = require("./busqueda_productos")
+const sync_cache = require("./sync_cache")
 
 let precios_actualizados = []
 let nuevos_precios_creados = []
@@ -85,6 +86,8 @@ async function nuevo_reg_precio( trx, articulo, producto_db, fecha_registro ){
                 time: insert.time,
                 url: insert.url
             });
+            // Actualizar caches de precios y productos por categoría
+            await sync_cache.actualizar_precio(precio_hoy);
             return insert;
         } else {
             return false;
@@ -218,6 +221,8 @@ async function procesa_precio( trx, producto_db, articulo, fecha_registro ){
                         time: new Date(),
                         url: articulo.url
                     });
+                    // Actualizar caches de precios y productos por categoría
+                    await sync_cache.actualizar_precio(precio_hoy);
                 }
                 return resolve(true)
             } else  if (!ultimo_precio) {

@@ -1,5 +1,6 @@
 require("dotenv").config({ path: '.env' })
 const busqueda_productos = require("./controllers/busqueda_productos")
+const sync_cache = require("./controllers/sync_cache")
 const { spawn } = require('child_process')
 const path = require('path')
 
@@ -116,6 +117,9 @@ async function regenerar_diccionarios(){
   if (precios_hoy)
     await generar_diccio_precios(precios_hoy)
 
+  console.log('[regenerar_diccionarios] Generando diccionario de productos por categoría...')
+  await sync_cache.construir_categorias()
+
   console.log('[regenerar_diccionarios] Generando diccionario de categorías...')
   if (category){
     for (let i=0; i < category.length; i++)
@@ -204,6 +208,31 @@ async function base_de_datos_iniciada(){
   //MIDLEWARE
   app_API.use("/publico", require("./middleware/Publico"))
   app_API.use("/admin", require("./middleware/Admin"))
+
+  //RUTA INTERNA (solo para procesos internos, protegida por clave)
+  const INTERNAL_SYNC_KEY = process.env.internal_sync_key
+  app_API.post("/interno/sync_cache", async (req, res) => {
+    try {
+      const key = req.get('x-internal-key')
+      if (!INTERNAL_SYNC_KEY || key !== INTERNAL_SYNC_KEY) {
+        return res.status(401).send({ stat: false, error: "unauthorized" })
+      }
+      const ph = req.body
+      if (!ph || !ph.product_id || !ph.branch_id) {
+        return res.status(400).send({ stat: false, error: "campos faltantes" })
+      }
+      if (!global.precios_diccio || !global.products_category_diccio) {
+        return res.status(500).send({ stat: false, error: "diccionarios no inicializados" })
+      }
+      ph.product_id = String(ph.product_id)
+      ph.branch_id = String(ph.branch_id)
+      await sync_cache.actualizar_precio(ph)
+      res.status(200).send({ stat: true })
+    } catch (error) {
+      console.log("[interno/sync_cache] error", error)
+      res.status(500).send({ stat: false, error: "error interno" })
+    }
+  })
 
   server_API.listen(process.env.service_port_api)
   console.log('Servidor escuchando en: ',process.env.service_port_api)
